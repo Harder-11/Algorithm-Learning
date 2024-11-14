@@ -1,0 +1,82 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+受欢迎的牛G(p2341)
+没头奶牛都梦想成为牛棚里的明星,被所有奶牛喜欢的奶牛就是一头明星奶牛,所有奶牛
+都是自恋狂.奶牛之间的喜欢是可以传递的,如果a喜欢b,b喜欢c,那么a也喜欢c
+牛栏里有N头奶牛,给定一些奶牛之间的爱慕关系,请你算出有多少头就可以当明星
+
+思路:tarjan算法求强联通分量,然后进行缩点,统计出度为0的SCC点的个数
+如果图不联通(出度为0的缩点大于1),那么答案就是0
+*/
+
+int n,m,a,b;
+std::vector<int> e[N];
+int dfn[N],low[N],tot;
+int stk[N],instk[N],top;
+int scc[N],siz[N],cnt;
+int dout[N];
+
+void tarjan(int x){
+    low[x] = dfn[x] = ++tot;
+    stk[++top] = x,instk[x] = 1;
+    for(int y : e[x]){
+        if(!dfn[y]){
+            tarjan(y);
+            low[x] = min(low[x],low[y]);
+        } else if(instk[y]){
+            low[x] = min(low[x],dfn[y]);
+        }
+    }
+    if(dfn[x] == low[x]){
+        int y;
+        cnt++;
+        do {
+            y = stk[top--];
+            instk[y] = 0;
+            scc[y] = cnt;
+            siz[cnt]++;
+        } while(y != x);
+    }
+}
+
+void solve(){
+    cin >> n >> m;
+    while(m--){
+        cin >> a >> b;
+        e[a].push_back(b);
+    }
+    for(int i = 1;i <= n;i++){
+        if(!dfn[i]) tarjan(i);
+    }
+    for(int x = 1;x <= n;x++){
+        for(int y : e[x]){
+            if(scc[x] != scc[y]){
+                dout[scc[x]]++;
+            }
+        }
+    }
+    int sum = 0,zeros = 0;
+    for(int i = 1;i <= cnt;i++){
+        if(dout[i] == 0){
+            sum = siz[i];
+            zeros++;
+        }
+    }
+    if(zeros > 1) sum = 0;
+    cout << sum << '\n';
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,227 @@
+import java.io.*;
+import java.math.*;
+import java.util.*;
+
+
+public class learn {
+    //拓扑排序例题
+    /*
+    字典序最小的拓扑排序
+    返回所有拓扑排序中字典序最小的那一个
+
+    思路:
+    (典型的错误思路)每次把入度为0的点进行排序,然后加入队列中,这样得到字典序最小
+    但是如果是1->2->3->4,5号结点是个孤立结点,这样得到的答案就是15234,但是其实答案是12345
+    正确做法:将队列换成小根堆,建立一个小根堆,先把入度为0的点放入堆,弹出堆顶元素后,消去其影响,然后把入度为
+    0的点加入堆中,以此类推
+     */
+    public static int MAXN = 100001;
+    public static int MAXM = 100001;
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXM];
+    public static int[] to = new int[MAXM];
+    public static int cnt;
+    public static PriorityQueue<Integer> heap = new PriorityQueue<>();
+    public static int[] indegree = new int[MAXN];
+    public static int[] ans = new int[MAXN];
+    public static int n,m;
+    public static void build(int n){
+        cnt = 1;
+        heap.clear();
+        Arrays.fill(head,0);
+        Arrays.fill(indegree,0);
+    }
+    public static void addEdge(int f,int t){
+        next[cnt] = head[f];
+        to[cnt] = t;
+        head[f] = cnt++;
+    }
+    public static void topoSort(){
+        for(int i = 1;i <= n;i++){
+            if(indegree[i] == 0){
+                heap.offer(i);
+            }
+        }
+        int fill = 0;
+        while(!heap.isEmpty()){
+            int cur = heap.poll();
+            ans[fill++] = cur;
+            for(int ei = head[cur];ei != 0;ei = next[ei]){
+                if(--indegree[to[ei]] == 0){
+                    heap.offer(to[ei]);
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            in.nextToken();
+            m = (int) in.nval;
+            build(n);
+            for(int i = 0,from,to;i < m;i++){
+                in.nextToken();
+                from = (int) in.nval;
+                in.nextToken();
+                to = (int) in.nval;
+                addEdge(from,to);
+                indegree[to]++;
+            }
+            topoSort();
+            for(int i = 0;i < n - 1;i++){
+                out.print(ans[i] + " ");
+            }
+            out.println(ans[n - 1]);
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    火星词典
+    现有一种使用英语字母的火星语言,这门语言的字母顺序对你来说是未知的。
+    给你一个来自这种外星语言字典的字符串列表words,words中的字符串已经按这门新语言的字典序进行了排序 。
+    如果这种说法是错误的,并且给出的words不能对应任何字母的顺序,则返回 "" 。
+    否则，返回一个按新语言规则的字典递增顺序排序的独特字符串。
+    如果有多个解决方案,则返回其中任意一个 。
+
+    思路:由于给的所有的word都是按照字典序排的,说明了如果第一个word的首单词与后面的word首单词不同,那么此时
+    第一个word的首单词的字典序是最小的,所以是拓扑排序,假设word分别是"xc","abe","abc",所以此时认为x->c
+    有一条边,然后对于abe和abc,前者的字典序更小,那么认为e->c有一条边
+     */
+    public static String alienOrder(String[] words){
+        int[] indegree = new int[26];
+        //为了区别出现过的字符和没出现的字符串,就将数组下标全部置为-1,将出现过的字符下标置为0
+        //此时j已经到达了next的末端,说明了next前面的所有都和cur一样,但是现在cur长度却更大,说明不符合字典序了
+        Arrays.fill(indegree,-1);
+        for(String w : words){
+            for(int i = 0;i < w.length();i++){
+                indegree[w.charAt(i) - 'a'] = 0;
+            }
+        }
+        ArrayList<ArrayList<Integer>> graph = new ArrayList<>();
+        for(int i = 0;i < 26;i++){
+            graph.add(new ArrayList<>());
+        }
+        for(int i = 0,j,len;i < words.length - 1;i++){
+            String cur = words[i];
+            String next = words[i + 1];
+            j = 0;
+            len = Math.min(cur.length(),next.length());
+            for(;j < len;j++){
+                if(cur.charAt(j) != next.charAt(j)){
+                    graph.get(cur.charAt(j) - 'a').add(next.charAt(j) - 'a');
+                    indegree[next.charAt(j) - 'a']++;
+                    break;
+                }
+            }
+            //这是处理"abcd"在"abc"之前的情况
+            if(j < cur.length() && j == next.length()){
+                return "";
+            }
+        }
+        int[] queue = new int[26];
+        int l = 0,r = 0;
+        int kinds = 0;//出现过的字符数
+        for(int i = 0;i < 26;i++){
+            if(indegree[i] != -1){
+                kinds++;
+            }
+            if(indegree[i] == 0){
+                queue[r++] = i;
+            }
+        }
+        StringBuilder ans = new StringBuilder();
+        while(l < r){
+            int cur = queue[l++];
+            ans.append((char)(cur + 'a'));
+            for(int next : graph.get(cur)){
+                if(--indegree[next] == 0){
+                    queue[r++] = next;
+                }
+            }
+        }
+        return ans.length() == kinds ? ans.toString() : "";
+    }
+    /*
+    戳印序列
+    你想要用小写字母组成一个目标字符串 target。
+    开始的时候，序列由 target.length 个 '?' 记号组成。而你有一个小写字母印章 stamp。
+    在每个回合，你可以将印章放在序列上，并将序列中的每个字母替换为印章上的相应字母。
+    你最多可以进行 10 * target.length  个回合。
+    举个例子，如果初始序列为 "?????"，而你的印章 stamp 是 "abc"，那么在第一回合，
+    你可以得到 "abc??"、"?abc?"、"??abc"。（请注意，印章必须完全包含在序列的边界内才能盖下去。）
+    如果可以印出序列，那么返回一个数组，该数组由每个回合中被印下的最左边字母的索引组成。
+    如果不能印出序列，就返回一个空数组。
+    例如，如果序列是 "ababc",印章是 "abc",那么我们就可以返回与操作"?????"->"abc??"->"ababc"相对应的答案[0, 2]；
+    另外，如果可以印出序列，那么需要保证可以在 10 * target.length 个回合内完成。任何超过此数字的答案将不被接受。
+
+    思路:假设stamp是abc,target是aabcbc,当从0开始戳时对应target下标,就有0√,1×,2×,同理
+    1开头:1√,2√,3√,2开头:2,3,4都是×,3开头:3×,4√,5√,后面的由于会超出范围,所以不能戳,然后倒过来思考
+    那么很明显,1开头所有都是正确的,所以1开头的这一次戳印一定是最后一次,然后对于0开头的戳印,由于1,2都是不对的,但是1开头
+    的戳印1,2位置是正确的,所以1开头的戳印可以覆盖0开头的戳印,此时0开头的戳印错误数从2变成0
+    对于2开头的戳印,1开头的戳印可以将2,3位置覆盖变为正确的,此时2开头的戳印的错误数目从3变成1
+    对于3开头的错误点,1开头的戳印可以把他的错误点变成0;这样一来,又将0开头和3开头的戳印本身正确的位置,去找能覆盖哪些
+    错误,以此类推,此时3开头的能把2开头的第4位置的错误覆盖
+     */
+    public int[] movesToStamp(String stamp, String target) {
+        char[] s = stamp.toCharArray();
+        char[] t = target.toCharArray();
+        int m = s.length;
+        int n = t.length;
+        int[] indegree = new int[n - m + 1];
+        //把入度全部填成m表示全是错
+        Arrays.fill(indegree,m);
+        ArrayList<ArrayList<Integer>> graph = new ArrayList<>();
+        for(int i = 0;i < n;i++){
+            graph.add(new ArrayList<>());
+        }
+        int[] queue = new int[n - m + 1];
+        int l = 0,r = 0;
+        for(int i = 0;i <= n - m;i++){
+            //i开头的字符串一个一个字符和印章对
+            for(int j = 0;j < m;j++){
+                if(t[i + j] == s[j]){
+                    if(--indegree[i] == 0){
+                        queue[r++] = i;
+                    }
+                } else {
+                    //i + j:错误的位置->i开头的印章
+                    graph.get(i + j).add(i);
+                }
+            }
+        }
+        //visited:同一个位置取消错误不要重复统计
+        boolean[] visited = new boolean[n];
+        //用来收集入度为0的结点,并且要逆序
+        int[] path = new int[n - m + 1];
+        int size = 0;
+        while(l < r){
+            int cur = queue[l++];
+            path[size++] = cur;
+            for(int i = 0;i < m;i++){
+                if(!visited[cur + i]){
+                    visited[cur + i] = true;
+                    for(int next : graph.get(cur + i)){
+                        if(--indegree[next] == 0){
+                            queue[r++] = next;
+                        }
+                    }
+                }
+            }
+        }
+        if(size != n - m + 1){
+            return new int[0];
+        }
+        for(int i = 0,j = size - 1;i < j;i++,j--){
+            int tmp = path[i];
+            path[i] = path[j];
+            path[j] = tmp;
+        }
+        return path;
+    }
+}

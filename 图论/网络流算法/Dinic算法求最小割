@@ -1,0 +1,131 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+Dinic算法求网络流最小割(本题模版是p1344,但是似乎本题的数据有问题,所以会WA #11)
+对于一个网络G = (V,E),我们切一刀,将所有的点划分为S和T两个集合,称为割(S,T)
+其中源点s∈S,汇点t∈T,对于任意一个割,都会使网络断流
+
+割的容量:割的容量c(s,t)表示所有从S到T的出边的容量之和
+最大流最小割定理:f(s,t)max = c(s,t)min
+证明:假设最小割 < 最大流,割断一些边之后,网络流还没有到达最大,还可以找到s和t的增广路
+这与割的定义矛盾,所以最小割 >= 最大流
+那么此时给出一个最小割 = 最大流的构造方案即可,求出最大流之后,从源点开始对残留网进行DFS
+标记能够达到的点,则标记的点构成S集合,未标记的点构成T集合,此割就是最小割
+(由于是对残留网进行DFS,那么满流的边就是属于最小割的部分)
+*/
+
+struct edge {
+    ll to,c,nxt;
+} e[N];
+int head[N],idx = 1;
+int d[N],cur[N];
+//a和b是存储图的每条边的两个端点
+int a[N],b[N];
+int vis[N];
+int S,T,n,m,u,v,w;
+
+void add(int u,int v,int w){
+    e[++idx] = {v,w,head[u]};
+    head[u] = idx;
+}
+
+bool bfs(){
+    memset(d,0,sizeof d);
+    std::queue<int> q;
+    q.push(S);
+    d[S] = 1; 
+    while(q.size()){
+        int u = q.front();
+        q.pop();
+        for(int i = head[u];i;i = e[i].nxt){
+            int v = e[i].to;
+            if(d[v] == 0 && e[i].c){
+                d[v] = d[u] + 1;
+                q.push(v);
+                if(v == T) return true;
+            }
+        }
+    }
+    return false;
+}
+
+ll dfs(int u,ll mf){
+    if(u == T) return mf;
+    ll sum = 0;
+    for(int i = cur[u];i;i = e[i].nxt){
+        cur[u] = i;
+        int v = e[i].to;
+        if(d[v] == d[u] + 1 && e[i].c){
+            ll f = dfs(v,min(mf,e[i].c));
+            e[i].c -= f;
+            e[i ^ 1].c += f;
+            sum += f;
+            mf -= f;
+            if(mf == 0) break;
+        }
+    }
+    if(sum == 0) d[u] = 0;
+    return sum;
+}
+
+ll dinic(){
+    ll flow = 0;
+    while(bfs()){
+        memcpy(cur,head,sizeof head);
+        flow += dfs(S,INF);
+    }
+    return flow;
+}
+
+void mincut(int u){
+    vis[u] = 1;
+    for(int i = head[u];i;i = e[i].nxt){
+        int v = e[i].to;
+        if(!vis[v] && e[i].c){
+            mincut(v);
+        }
+    }
+}
+
+void solve(){
+    cin >> n >> m;
+    cin >> S >> T;
+    for(int i = 1;i <= m;i++){
+        cin >> a[i] >> b[i] >> w;
+        add(a[i],b[i],w);
+        add(b[i],a[i],0);
+    }
+    cout << dinic() << endl;
+    mincut(S);
+    for(int i = 1;i <= n;i++){
+        if(vis[i]) cout << i << " ";
+    }
+    cout << endl;
+    for(int i = 1;i <= n;i++){
+        if(!vis[i]) cout << i << " ";
+    }
+    cout << endl;
+    //求最小割的最少边数
+    //那么重新建图,然后边权全部变成1,这样跑一遍dinic算法求出的值就是最小割的边数
+    idx = 1;
+    memset(head,0,sizeof head);
+    for(int i = 1;i <= m;i++){
+        add(a[i],b[i],1);
+        add(b[i],a[i],0);
+    }
+    cout << dinic() << endl;
+}
+
+int main(){
+    int t;
+    cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

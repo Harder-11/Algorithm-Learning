@@ -1,0 +1,91 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+缩点(模版)(p3387)
+给定一个n个点m条边的有向图,每个点有一个权值,求一条路径,使路径经过的点的权值之和最大
+你只需要求出这个权值和,允许多次经过一个点或者一条边,但是重复经过的点权值只计算一次
+
+思路:先用tarjan算法缩点,将图转化为一个无换图
+然后用新的点建立拓扑图,SCC的团号是拓扑逆序的
+对拓扑图进行递推,找出权值之和最大的最长路
+*/
+int n,m;
+std::vector<int> e[N],ne[N];
+int dfn[N],low[N],tot;
+int stk[N],instk[N],top;
+int scc[N],cnt;
+//w是每个点的点权,nw是缩点之后新点的点权,dp是递推权值(树型dp)
+int w[N],nw[N],dp[N];
+
+void tarjan(int x){
+    dfn[x] = low[x] = ++tot;
+    stk[++top] = x,instk[x] = 1;
+    for(int y : e[x]){
+        if(!dfn[y]){
+            tarjan(y);
+            low[x] = min(low[x],low[y]);
+        } else if(instk[y]){
+            low[x] = min(low[x],dfn[y]);
+        }
+    }
+    if(dfn[x] == low[x]){
+        int y;
+        cnt++;
+        do {
+            y = stk[top--];
+            instk[y] = 0;
+            scc[y] = cnt;
+        } while(y != x);
+    }
+}
+
+void solve(){
+    int a,b,ans = 0;
+    cin >> n >> m;
+    for(int i = 1;i <= n;i++){
+        cin >> w[i];
+    }
+    for(int i = 1;i <= m;i++){
+        cin >> a >> b;
+        e[a].push_back(b);
+    }
+    for(int i = 1;i <= n;i++){
+        if(!dfn[i]) tarjan(i);
+    }
+    for(int x = 1;x <= n;x++){
+        nw[scc[x]] += w[x];
+        for(int y : e[x]){
+            a = scc[x];
+            b = scc[y];
+            if(a != b) ne[a].push_back(b);
+        }
+    }
+    //缩点之后的图拓扑序是逆序的所以逆序遍历
+    for(int x = cnt;x >= 1;x--){
+        //dp[x]==0,说明是起点
+        if(dp[x] == 0){
+            dp[x] = nw[x];
+        }
+        for(int y : ne[x]){
+            dp[y] = max(dp[y],dp[x] + nw[y]);
+        }
+    }
+    for(int i = 1;i <= cnt;i++){
+        ans = max(ans,dp[i]);
+    }
+    cout << ans << '\n';
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

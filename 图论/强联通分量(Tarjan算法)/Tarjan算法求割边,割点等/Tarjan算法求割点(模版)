@@ -1,0 +1,81 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+Tarjan割点
+对图深搜的时候,每个结点只访问一次,被访问过的结点与边构成搜索树
+仍然是Tarjan算法,dfn时间戳,low追溯值
+割点:对于一个无向图,如果把一个点删除之后联通块的个数增加了,那么这个点就是割点(割顶)
+割点判断法则:
+1.如果x不是根节点,当搜索树上存在x的一个子节点满足low[y]>=dfn[x],那么x就是割点
+2.如果x是根节点,当搜索树上至少存在两个子节点y1,y2满足上述条件,那么x就是割点
+low[y]>=dfn[x]说明从y出发,在不通过x的前提下,不管走那一条边,都无法到达比x更早访问的结点
+所以删除x之后,以y为根的子树也就断开了,即环顶的点割得掉
+反之如果low[y]<dfn[x],那么说明y能绕行其他边到达比x更早的访问的结点,x就不是割点
+*/
+std::vector<int> e[N];
+int dfn[N],low[N],tot;
+//cut是记录当前点是不是割点,root是记录那个点是根节点,用于特判
+int cut[N],root;
+
+
+void tarjan(int x){
+    dfn[x] = low[x] = ++tot;
+    int child = 0;
+    for(int y : e[x]){
+        if(!dfn[y]){
+            tarjan(y);
+            low[x] = min(low[x],low[y]);
+            //此时满足割点条件,后面还需判断是否x是根节点
+            //如果此时x不是root或者root > 1(就算是根节点也满足条件了),那么记录割点
+            if(low[y] >= dfn[x]){
+                child++;
+                if(x != root || child > 1){
+                 //记录割点
+                    cut[x] = 1;
+                }
+            }
+            //此时y已经访问(一定是环)
+            //这里一定是dfn[y],因为要找的是low[y] >= dfn[x],这样更换的是low值就会出错
+        } else {
+            low[x] = min(low[x],dfn[y]);
+        }
+    }
+}
+
+void solve(){
+    int n,m,a,b;
+    cin >> n >> m;
+    for(int i = 0;i < m;i++){
+        cin >> a >> b;
+        e[a].push_back(b);
+        e[b].push_back(a);
+    }
+    for(root = 1;root <= n;root++){
+        if(!dfn[root]) tarjan(root);
+    }
+    int res = 0;
+    for(int i = 1;i <= n;i++){
+        if(cut[i] == 1) res++;
+    }
+    cout << res << '\n';
+    for(int i = 1;i <= n;i++){
+        if(cut[i]){
+            cout << i << " ";
+        }
+    }
+    cout << '\n';
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,84 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+Tarjan SCC缩点(p2812)
+一共有n所学校,他们实现设计好的网络共有m条路线,为了保证高速,网络是单向的
+现在请你告诉他们至少选几所学校作为共享软件的母机能使所有的学校都能用上
+再告诉他们至少需要添加几条线路能使任意一所学校作为母机都可以让别的学校用上软件
+(注意输入格式)
+
+思路:建图后使用tarjan求强联通分量就可以求到强联通分量的个数,然后将每个分量
+收缩成一个点,然后研究缩点后的图,看至少添加几条边能使整个图变成环就是添加的线路
+(统计所有结点的入度和出度,答案就是取max(din == 0,dout == 0))
+看缩点后入度为0的点,有几个就是至少选的母机数量
+
+*/
+
+std::vector<int> e[N];
+int dfn[N],low[N],tot;
+int stk[N],instk[N],top;
+int scc[N],cnt;
+int din[N],dout[N];
+
+void tarjan(int x){
+    dfn[x] = low[x] = ++tot;
+    stk[++top] = x,instk[x] = 1;
+    for(int y : e[x]){
+        if(!dfn[y]){
+            tarjan(y);
+            low[x] = min(low[x],low[y]);
+        } else if(instk[y]) low[x] = min(low[x],dfn[y]);
+    }
+    if(dfn[x] == low[x]){
+        int y;
+        cnt++;
+        do{
+            y = stk[top--];
+            instk[y] = 0;
+            scc[y] = cnt;
+        } while(y != x);
+    }
+}
+
+void solve(){
+    int n;
+    cin >> n;
+    for(int i = 1,a;i <= n;i++){
+        while(cin >> a,a) e[i].push_back(a);
+    }
+    for(int i = 1;i <= n;i++){
+        if(!dfn[i]) tarjan(i);
+    }
+    //进行缩点操作,统计出缩点之后的每个结点的入度和出度
+    //这里scc[x] != scc[y] 就是缩点操作
+    for(int x = 1;x <= n;x++){
+        for(int y : e[x]){
+            if(scc[x] != scc[y]){
+                din[scc[y]]++;
+                dout[scc[x]]++;
+            }
+        }
+    }
+    int a = 0,b = 0;
+    for(int i = 1;i <= cnt;i++){
+        if(!din[i]) a++;
+        if(!dout[i]) b++;
+    }
+    cout << a << '\n';
+    if(cnt == 1) cout << 0 << '\n';
+    else cout << max(a,b) << '\n';
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

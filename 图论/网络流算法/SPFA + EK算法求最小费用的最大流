@@ -1,0 +1,105 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+网络流 费用流 EK算法
+给定一个网络G = (V,E),每条边有容量限制c(u,v),还有单位流量的费用w(u,v)
+当(u,v)的流量为f(u,v)时,需要花费f(u,v) * w(u,v)的费用
+该网络中总花费最小的最大流称为最小费用最大流,总花费最大的最大流称为最大费用
+最大流,二者合称为费用流模型,即在最大流的前提下考虑费用的最值
+一个网络的最大流是唯一的,不同的路径有不同的费用
+用w f/c表示边的边权 流量/容量
+
+EK算法:在EK算法求最大流的基础上,把用BFS寻找一条增广路改成用SPFA寻找一条单位费用
+之和最小的增广路,即把w(u,v)当做边权,在残留网上求最短路,即可就出最小费用的最大流
+为了退流,反向边的初始容量为0,反向边的容量每次+f
+为了退费,反向边的初始费用为-w,走反向边的花费为+f*(-w)
+注意:如果图上存在负环,无法求出该网络最小费用的最大流,此时需要先使用消环算法消去负环
+
+*/
+
+struct edge {
+    ll v,c,w,ne;
+} e[N];
+int head[N],idx = 1;
+int d[N],mf[N],pre[N],vis[N];
+int flow,cost;
+int S,T,n,m;
+
+void add(int a,int b,int c,int d){
+    e[++idx] = {b,c,d,head[a]};
+    head[a] = idx;
+}
+
+//spfa找最短路的增广路
+//最小费用的最大流模版
+
+bool spfa(){
+    memset(d,0x3f,sizeof d);
+    memset(mf,0,sizeof mf);
+    std::queue<int> q;
+    q.push(S);
+    d[S] = 0;
+    mf[S] = INF;
+    vis[S] = 1;
+    while(q.size()){
+        int u = q.front();
+        q.pop();
+        vis[u] = 0;
+        for(int i = head[u];i;i = e[i].ne){
+            int v = e[i].v;
+            int c = e[i].c;
+            int w = e[i].w;
+            if(d[v] > d[u] + w && c){
+                d[v] = d[u] + w;
+                //求最大流量
+                mf[v] = min(mf[u],c);
+                //v的前驱边
+                pre[v] = i;
+                if(!vis[v]){
+                    q.push(v);
+                    vis[v] = 1;
+                }
+            }
+        }
+    }
+    return mf[T] > 0;
+}
+
+void EK(){
+    while(spfa()){
+        for(int v = T;v != S;){
+            int i = pre[v];
+            e[i].c -= mf[T];
+            e[i ^ 1].c += mf[T];
+            v = e[i ^ 1].v;
+        }//更新残留网
+        flow += mf[T];//累加可行流
+        cost += mf[T] * d[T];//累加费用
+    }
+}
+
+void solve(){
+    cin >> n >> m >> S >> T;
+    int a,b,c,d;
+    while(m--){
+        cin >> a >> b >> c >> d;
+        add(a,b,c,d);
+        add(b,a,0,-d);
+    }
+    EK();
+    cout << flow << " " << cost << '\n';
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

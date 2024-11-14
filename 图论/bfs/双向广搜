@@ -1,0 +1,225 @@
+import java.io.*;
+import java.math.*;
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+
+
+public class learn {
+    /*
+    双向广搜
+    用途:1.小优化,bfs的剪枝策略,分两侧展开分支,哪侧数量少就从哪侧展开
+    !!!2.用于解决特征很明显的一类问题,特征:全量样本不允许递归完全展开,但是半量样板可以完全展开
+    把数据分成两个部分,每部分各自展开计算结果,然后设计两部分结果的整合逻辑
+    比如说,一个数据有n = 40,如果从一侧开始搜索,那么复杂度就是2^40,一定会超时,但是可以从双向开始每向搜索20,这样复杂度
+    变成了2 * 2^20,这样就不会超时
+     */
+
+
+    /*
+    单词接龙
+    同单词接龙II,但是只需要求最短转化路径的单词数目,如果不存在,就返回0
+
+    思路:从begin和end同时开始dfs,然后每次将数量更大的set往后一层扩展,直到两边的set相遇(更大的set包含了变出来的单词)
+    将两侧的层数加起来即可
+     */
+    public int ladderLength(String begin, String end, List<String> wordList) {
+        Set<String> dict = new HashSet<>(wordList);
+        if(!dict.contains(end)){
+            return 0;
+        }
+        //数量小的一侧
+        Set<String> smallLevel = new HashSet<>();
+        Set<String> bigLevel = new HashSet<>();
+        //由数量小的一侧,所扩展出来的下一层列表
+        Set<String> nextLevel = new HashSet<>();
+        smallLevel.add(begin);
+        bigLevel.add(end);
+        //此时len = 2,因为开始和结尾各有一层,每次都括小的那一层,从而降低复杂度
+        for(int len = 2;!smallLevel.isEmpty();len++){
+            //从小侧开始扩展
+            for(String w : smallLevel){
+                char[] word = w.toCharArray();
+                for(int j = 0;j < word.length;j++){
+                    char old = word[j];
+                    for(char change = 'a';change <= 'z';change++){
+                        if(change != old){
+                            word[j] = change;
+                            String next = String.valueOf(word);
+                            if(bigLevel.contains(next)){
+                                return len;
+                            }
+                            if(dict.contains(next)){
+                                dict.remove(next);
+                                nextLevel.add(next);
+                            }
+                        }
+                    }
+                    word[j] = old;
+                }
+            }
+            //此时小的set的next仍然比大的set小,那么只需要把smallLevel和nextLevel交换.然后将next置空
+            if(nextLevel.size() <= bigLevel.size()){
+                Set<String> tmp = smallLevel;
+                smallLevel = nextLevel;
+                nextLevel = tmp;
+                //否则的话,将小的set和大的set交换,然后再将大的set和next换,然后将next置为空
+            } else {
+                Set<String> tmp = smallLevel;
+                smallLevel = bigLevel;
+                bigLevel = nextLevel;
+                nextLevel = tmp;
+            }
+            nextLevel.clear();
+        }
+        return 0;
+    }
+    /*
+    零食问题
+    背包容量为w,一个有n袋零食,第i袋的零食为v[i],在总体积不超过背包容量的情况下,一共有多少种零食
+    放法(总体积为0也算一种放法),由于背包体积过大,使用动态规划的话,第二维参数是背包的剩余体积,会直接超内存,所以不能用dp
+    1 <= n <= 40,1 <= w <= 2 * 10^9,0 <= v[i] <= 10^9;
+
+    思路:对半展开,比如说零食是[1,2,3,2,3,2],那么将零食分为左右两部分,然后将左右两部分全展开
+    这样左边可以得到0,1,2,3,3,4,5,6(可以不选),右边可以得到0,2,2,3,4,5,5,7
+    假设w为7,如果左侧什么都不要,右侧什么都要时仍然达标,所以此时右侧不管怎么要都达标,
+    那么利用双指针,左侧指针在左边0位置时,右侧指针在右边7位置
+    所以此时左侧来到0的时候,右侧有8种方案,然后左侧指针向右移动,此时右侧指针回退到5位置,所以
+    此时有7种方案,以此类推
+     */
+    public static int MAXN = 40;
+    public static int MAXM = 1 << 20;
+    public static long[] arr = new long[MAXN];
+    public static long[] lsum = new long[MAXM];
+    public static long[] rsum = new long[MAXM];
+    public static int n;
+    public static long w;
+    public static long compute(){
+        int lsize = f(0,n >> 1,0,w,lsum,0);
+        int rsize = f(n >> 1,n,0,w,rsum,0);
+        Arrays.sort(lsum,0,lsize);
+        Arrays.sort(rsum,0,rsize);
+        long ans = 0;
+        //由于此时lsum和rsum的含义是累加和,所以此时随便固定哪一边,滑动另一边都是一样的答案
+        //如果两侧都计算的话则会重复,比如上述例子,左侧累加和是3的时候,将右侧累加和为3已经计入了
+        //答案中,如果右固定右边的话,右侧累加和为3又要将左侧列结合为3重复计算进去
+        for(int i = lsize - 1,j = 0;i >= 0;i--){
+            while(j < rsize && lsum[i] + rsum[j] <= w){
+                j++;
+            }
+            ans += j;
+        }
+        return ans;
+    }
+    //f方法:暴力展开
+    //arr[i...e]结束,e再往右就不展开了(中间位置或者末尾)
+    //s:之前做的决定的累加和,所以递归两次,一直是s(不选),一直是s+arr[i](选)
+    //f的返回值:ans数组填到了什么位置
+    //当s大于背包的最大容量w时就直接返回,否则就一直j往后移动
+    //这里的e是n >> 1和n,是因为要求所有的元素的s,所以此时要让i一直递归到范围的后一个才行
+    //每次递归到i == e时就将此时的s添加到ans中,并且j++
+    public static int f(int i,int e,long s,long w,long[] ans,int j){
+        if(s > w){
+            return j;
+        }
+        if(i == e){
+            ans[j++] = s;
+        } else {
+            j = f(i + 1,e,s,w,ans,j);
+            j = f(i + 1,e,s + arr[i],w,ans,j);
+        }
+        return j;
+    }
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            in.nextToken();
+            w = (long) in.nval;
+            for(int i = 0;i < n;i++){
+                in.nextToken();
+                arr[i] = (long) in.nval;
+            }
+            out.println(compute());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    最接近目标值的子序列和
+    给你一个整数数组 nums 和一个目标值 goal 。
+    你需要从 nums 中选出一个子序列，使子序列元素总和最接近 goal 。
+    也就是说，如果子序列元素和为 sum ，你需要 最小化绝对差 abs(sum - goal) 。
+    返回 abs(sum - goal) 可能的 最小值 。
+    注意，数组的子序列是通过移除原始数组中的某些元素（可能全部或无）而形成的数组。
+    1 <= nums.length <= 40
+    -10^7 <= nums[i] <= 10^7
+    -10^9 <= goal <= 10^9
+
+    思路:仍然是双向广搜,对于左右两边分别将所有的累加和求出来存在lsum和rsum中,然后固定一边,
+    另一边滑动求到最小的差值(双指针)
+     */
+    public static int MAX = 1 << 20;
+    public static int[] l = new int[MAX];
+    public static int[] r = new int[MAX];
+    //fill就是代表l和r数组填到了哪儿
+    public static int fill;
+    //collect方法:分组展开,将每一组的相同的元素一起处理
+    public static void collect(int[] nums,int i,int e,int s,int[] sum){
+        if(i == e){
+            sum[fill++] = s;
+        } else {
+            int j = i + 1;
+            while(j < e && nums[j] == nums[i]){
+                j++;
+            }
+            //j - i就代表有几个相同的元素
+            for(int k = 0;k <= j - i;k++){
+                //此时直接从j位置递归,然后s = k * nums[i] + s
+                collect(nums,j,e,s + k * nums[i],sum);
+            }
+        }
+    }
+    public static int minAbsDifference(int[] nums, int goal) {
+        int n = nums.length;
+        //剪枝,将所有的非负数和负数都加起来,如果max < goal,那么答案就是goal - max
+        //如果min > goal,那么答案就是min - goal
+        long min = 0;
+        long max = 0;
+        for(int i = 0;i < n;i++){
+            if(nums[i] >= 0){
+                max += nums[i];
+            } else {
+                min += nums[i];
+            }
+        }
+        if(max < goal){
+            return (int) Math.abs(max - goal);
+        }
+        if(min > goal){
+            return (int) Math.abs(min - goal);
+        }
+        //将原始数组排序,为了后面递归的时候还能剪枝
+        Arrays.sort(nums);
+        fill = 0;
+        collect(nums,0,n >> 1,0,l);
+        int lsize = fill;
+        fill = 0;
+        collect(nums,n >> 1,n,0,r);
+        int rsize = fill;
+        Arrays.sort(l,0,lsize);
+        Arrays.sort(r,0,rsize);
+        //ans最大就是Math.abs(goal),因为可以全部都不选
+        int ans = Math.abs(goal);
+        for(int i = 0,j = rsize - 1;i < lsize;i++){
+            while(j > 0 && Math.abs(goal - l[i] - r[j - 1]) <= Math.abs(goal - l[i] - r[j])){
+                j--;
+            }
+            ans = Math.min(ans,Math.abs(goal - l[i] - r[j]));
+        }
+        return ans;
+    }
+}

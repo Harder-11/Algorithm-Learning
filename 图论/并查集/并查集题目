@@ -1,0 +1,310 @@
+import java.io.*;
+import java.math.*;
+import java.util.*;
+
+
+public class learn {
+    /*
+    例题:情侣牵手
+    n 对情侣坐在连续排列的 2n 个座位上，想要牵到对方的手。
+    人和座位由一个整数数组 row 表示，其中 row[i] 是坐在第 i 个座位上的人的 ID。
+    情侣们按顺序编号，第一对是 (0, 1)，第二对是 (2, 3)，以此类推，最后一对是 (2n-2, 2n-1)。
+    返回最少交换座位的次数,以便每对情侣可以并肩坐在一起。
+    每次交换可选择任意两人,让他们站起来交换座位。
+
+    思路:如果一个集合里面有k对情侣,那么要交换k - 1次
+    比如一个集合是{6,0,8,9,1,7,3,4,5,2},那么每两个所属的情侣对数下标为{3,0},{4,4},{0,3},{1,2},{2,1}
+    加入有n个人,m个集合,每个集合分别有a,b,c对情侣,那么最终交换次数就是n / 2 - m次
+     */
+    public static int MAXN = 31;
+    public static int[] father = new int[MAXN];
+    public static int sets;
+    public int minSwapsCouples(int[] row) {
+        int n = row.length;
+        build(n / 2);
+        for(int i = 0;i < n;i += 2){
+            union(row[i] / 2,row[i + 1] / 2);
+        }
+        return n / 2 - sets;
+    }
+    public static void build(int m){
+        for(int i = 0;i < m;i++){
+            father[i] = i;
+        }
+        sets = m;
+    }
+    public static int find(int i){
+        if(i != father[i]){
+            father[i] = find(father[i]);
+        }
+        return father[i];
+    }
+    public static void union(int x,int y){
+        int fx = find(x);
+        int fy = find(y);
+        if(fx != fy){
+            father[fx] = fy;
+            sets--;
+        }
+    }
+    /*
+    例题:相似字符串组
+    如果交换字符串 X 中的两个不同位置的字母，使得它和字符串 Y 相等，那么称 X 和 Y 两个字符串相似。
+    如果这两个字符串本身是相等的，那它们也是相似的。
+    例如,"tars"和 "rats"是相似的(交换0与2的位置);
+    "rats"和 "arts"也是相似的,但是"star"不与"tars","rats"，或 "arts" 相似。
+    总之，它们通过相似性形成了两个关联组：{"tars", "rats", "arts"} 和 {"star"}。
+    注意，"tars" 和 "arts" 是在同一组中，即使它们并不相似。
+    形式上，对每个组而言，要确定一个单词在组中，只需要这个词和该组中至少一个单词相似。
+    给你一个字符串列表 strs。列表中的每个字符串都是 strs 中其它所有字符串的一个字母异位词。
+    请问 strs 中有多少个相似字符串组？
+
+    思路:用boolean f函数判断str1和str2是否是相似的,然后并查集即可
+     */
+    public static int MAX = 301;
+    public static int[] father1 = new int[MAX];
+    public static int sets1;
+    public static void build1(int n){
+        for(int i = 0;i <= n;i++){
+            father1[i] = i;
+        }
+        sets1 = n;
+    }
+    public static int find1(int i){
+        if(i != father1[i]){
+            father1[i] = find1(father1[i]);
+        }
+        return father1[i];
+    }
+    public static void union1(int x,int y){
+        int fx = find1(x);
+        int fy = find1(y);
+        if(fx != fy){
+            father1[fx] = fy;
+            sets1--;
+        }
+    }
+    public int numSimilarGroups(String[] strs) {
+        int n = strs.length;
+        int m = strs[0].length();
+        build1(n);
+        for(int i = 0;i < n;i++){
+            for(int j = i + 1;j < n;j++){
+                if(find1(i) != find1(j)){
+                    int diff = 0;
+                    for(int k = 0;k < m && diff < 3;k++){
+                        if(strs[i].charAt(k) != strs[j].charAt(k)){
+                            diff++;
+                        }
+                    }
+                    if(diff == 0 || diff == 2){
+                        union1(i,j);
+                    }
+                }
+            }
+        }
+        return sets1;
+    }
+    /*
+    移除最多的同行或者同列的石头
+    n 块石头放置在二维平面中的一些整数坐标点上。每个坐标点上最多只能有一块石头。
+    如果一块石头的同行或者同列上有其他石头存在，那么就可以移除这块石头。
+    给你一个长度为 n 的数组 stones ，其中 stones[i] = [xi, yi] 表示第 i 块石头的位置
+    返回 可以移除的石子 的最大数量。
+
+    思路:只要在同一行或者同一列的石头就合并在一个集合里面,并且一个集合中的石头一定被消得只剩下一个
+    又由于坐标的数比较大(1e4),那么用两个map,分别记录在行和列上的石头坐标,比如对于第0块石头,在第17行
+    第38列,那么在map(行)里面存(17,0),在map(列)里面存(38,0),如果以后的室友有列或者行一样的石头,那么就
+    union两块石头
+
+     */
+    public static Map<Integer,Integer> rowFirst = new HashMap<>();
+    public static Map<Integer,Integer> colFirst = new HashMap<>();
+    public static int MAXN2 = 1001;
+    public static int[] father2 = new int[MAXN2];
+    public static int sets2;
+    public static void build2(int n){
+        rowFirst.clear();
+        colFirst.clear();
+        for(int i = 0;i < n;i++){
+            father2[i] = i;
+        }
+        sets2 = n;
+    }
+    public static int find2(int i){
+        if(father2[i] != i){
+            father2[i] = find2(father2[i]);
+        }
+        return father2[i];
+    }
+    public static void union2(int x,int y){
+        int fx = find2(x);
+        int fy = find2(y);
+        if(fx != fy){
+            father2[fx] = fy;
+            sets2--;
+        }
+    }
+    public static int removeStones(int[][] stones){
+        int n = stones.length;
+        build2(n);
+        for(int i = 0;i < n;i++){
+            int row = stones[i][0];
+            int col = stones[i][1];
+            if(!rowFirst.containsKey(row)){
+                rowFirst.put(row,i);
+            } else {
+                union2(i,rowFirst.get(row));
+            }
+            if(!colFirst.containsKey(col)){
+                colFirst.put(col,i);
+            } else {
+                union2(i,colFirst.get(col));
+            }
+        }
+        return n - sets2;
+    }
+    /*
+    找出知晓秘密的所有专家
+    给你一个整数 n ，表示有 n 个专家从 0 到 n - 1 编号。
+    另外给你一个下标从0开始的二维整数数组 meetings,
+    其中 meetings[i]=[xi,yi,timei]表示专家xi和专家yi在时间timei要开一场会。
+    一个专家可以同时参加多场会议.最后,给你一个整数 firstPerson.
+    专家 0有一个秘密,最初,他在时间 0 将这个秘密分享给了专家 firstPerson.
+    接着,这个秘密会在每次有知晓这个秘密的专家参加会议时进行传播。
+    更正式的表达是,每次会议,如果专家xi在时间timei时知晓这个秘密,那么他将会与专家yi分享这个秘密，反之亦然。
+    秘密共享是 瞬时发生的.也就是说,在同一时间,一个专家不光可以接收到秘密,还能在其他会议上与其他专家分享。
+    在所有会议都结束之后,返回所有知晓这个秘密的专家列表.你可以按任何顺序返回答案。
+
+     题意:比如有数组[[4,3,0],[2,6,0],[5,6,0],[3,5,0]],在t = 0时0专家把秘密传给了4,那么同一时间
+     4传给3,3传给5,5传给6,6传给2,此时这些专家就都知道秘密了,并且一旦专家知道秘密,以后时间也都知道秘密
+    这道题要使用标签,对于根节点,只要知道秘密,那就将标签根节点对应的值作为下标置为true,然后将meeting按照时间
+    顺序排序,每次验证xi和yi如果标签是true,那么就union两个节点,如果是false,那么将xi和yi拆开,不能并在一起
+     */
+    public static int MAXN3 = 100001;
+    public static int[] father3 = new int[MAXN3];
+    //secret数组代表集合的属性
+    public static boolean[] secret = new boolean[MAXN3];
+    public static void build3(int n,int first){
+        for(int i = 0;i < n;i++){
+            father3[i] = i;
+            secret[i] = false;
+        }
+        father3[first] = 0;
+        secret[0] = true;
+    }
+    public static int find3(int i){
+        if(i != father3[i]){
+            father3[i] = find3(father3[i]);
+        }
+        return father3[i];
+    }
+    public static void union3(int x,int y){
+        int fx = find3(x);
+        int fy = find3(y);
+        if(fx != fy){
+            father3[fx] = fy;
+            secret[fy] |= secret[fx];
+        }
+    }
+    public static List<Integer> findAllPeople(int n,int[][] meetings,int first){
+        build3(n,first);
+        Arrays.sort(meetings,(a,b)->a[2] - b[2]);
+        int m = meetings.length;
+        //对于每个不同的时间,l位于该时间的第一个位置,r从l开始到下一个不同时间之前结束
+        for(int l = 0,r;l < m;){
+            r = l;
+            while(r + 1 < m && meetings[l][2] == meetings[r + 1][2]){
+                r++;
+            }
+            for(int i = l;i <= r;i++){
+                union3(meetings[i][0],meetings[i][1]);
+            }
+            //撤销结点,如果不知道秘密,那么就撤销,将father3[i]重新置为i
+            for(int i = l,a,b;i <= r;i++){
+                a = meetings[i][0];
+                b = meetings[i][1];
+                if(!secret[find3(a)]){
+                    father3[a] = a;
+                }
+                if(!secret[find3(b)]){
+                    father3[b] = b;
+                }
+            }
+            l = r + 1;
+        }
+        List<Integer> ans = new ArrayList<>();
+        for(int i = 0;i < n;i++){
+            if(secret[find3(i)]){
+                ans.add(i);
+            }
+        }
+        return ans;
+    }
+    /*
+    好路径的数目:
+    给你一棵 n 个节点的树（连通无向无环的图）,节点编号从 0 到 n - 1 且恰好有 n - 1 条边。
+    给你一个长度为n下标从0开始的整数数组vals,分别表示每个节点的值。同时给你一个二维整数数组edges,
+    其中edges[i] = [ai, bi]表示节点ai和bi之间有一条无向边。
+    一条 好路径 需要满足以下条件：
+    开始节点和结束节点的值 相同 。
+    开始节点和结束节点中间的所有节点值都小于等于开始节点的值(也就是说开始节点的值应该是路径上所有节点的最大值)。
+    请你返回不同好路径的数目。
+    注意，一条路径和它反向的路径算作同一路径。比方说，0 -> 1与 1 -> 0视为同一条路径。
+    单个节点也视为一条合法路径。
+
+    思路:对于每个无向边,每次计算两个节点的最大值,将最大值排序,然后从1开始为每条边贴上标签,然后按标签顺序
+    处理边,对于两个结点,分别找其所在集合的最大值,如果最大值一样,那么就union两个集合,并且记录此时这条边
+    会出现一条好路径
+    如果两个结点的值不同,那么还是union,但是不记录会出现好路径,此时更新此时集合里面的最大值的个数和最大值
+    (因为只要最大值不一样,那么肯定不会有好路径出现,最大值一样,那么好路径 += 此时两个集合最大值的个数总和)
+
+
+     */
+    public static int MAXN4 = 30001;
+    public static int[] father4 = new int[MAXN4];
+    public static int[] maxcnt = new int[MAXN4];
+    public static void build4(int n){
+        for(int i = 0;i < n;i++){
+            father4[i] = i;
+            maxcnt[i] = 1;
+        }
+    }
+    public static int find4(int i){
+        if(i != father4[i]){
+            father4[i] = find4(father4[i]);
+        }
+        return father4[i];
+    }
+    //核心!
+    //谁的值大,谁作为代表节点,同时注意maxcnt的更新
+    public static int union4(int x,int y,int[] vals){
+        int fx = find4(x);
+        int fy = find4(y);
+        int path = 0;
+        if(vals[fx] > vals[fy]){
+            father4[fy] = fx;
+        } else if(vals[fx] < vals[fy]){
+            father4[fx] = fy;
+        } else {
+            //乘法原理,一个集合有maxcnt[fx]个最大值,另一个有maxcnt[fy]个最大值,这样总的好路径就有
+            //maxcnt[fx] * maxcnt[fy]
+            path = maxcnt[fx] * maxcnt[fy];
+            father4[fy] = fx;
+            maxcnt[fx] += maxcnt[fy];
+        }
+        return path;
+    }
+    public static int numberOfGoodPaths(int[] vals,int[][] edges){
+        int n = vals.length;
+        //单个节点也是好路径,直接将ans置为n
+        int ans = n;
+        build4(n);
+        //核心排序,从最小标签的边开始操作,否则会漏掉很多情况
+        Arrays.sort(edges,(e1,e2)->(Math.max(vals[e1[0]],vals[e1[1]]) - Math.max(vals[e2[0]],vals[e2[1]])));
+        for(int[] edge : edges){
+            ans += union4(edge[0],edge[1],vals);
+        }
+        return ans;
+    }
+}

@@ -1,0 +1,85 @@
+import java.io.*;
+import java.math.*;
+import java.util.*;
+
+
+public class learn {
+    /*
+    并查集:
+    (1)int find(a):查找这个元素的根
+    (2)boolean isSameSet(a,b)查找两个元素是否在同一个集合中
+    (3)void union(a,b):将a集合中所有的元素和b中所有的元素都集合起来
+    复杂度:O(α),阿克曼函数(增长极慢的函数)
+
+    并查集的优化:
+    (1)记录每个集合元素的个数,小树挂大树上
+    使用father数组和size数组,初识时father数组的元素father[i] = i,所有size[i] = 1
+    如果调用的union(0,1),那么此时将size[1] = 2,father[0] = 1
+    (2)从一个点往上走的过程中,将所有的结点都接到头结点(扁平化),这样每次查找根节点都是O(1)
+     */
+    public static int MAXN = 100001;
+    public static int[] father = new int[MAXN];
+    public static int[] size = new int[MAXN];
+    public static int[] stack = new int[MAXN];
+    public static int n;
+    public static void build(){
+        for(int i = 0;i <= n;i++){
+            father[i] = i;
+            size[i] = 1;
+        }
+    }
+    //扁平化,利用栈来实现(不用递归)
+    public static int find(int i){
+        int size = 0;
+        //用栈收集从叶到根沿途的所有元素,直到i = father[i],说明此时到达根节点
+        while(i != father[i]){
+            stack[size++] = i;
+            i = father[i];
+        }
+        //此时i就是代表节点(根节点)
+        while(size > 0){
+            //由于之前size最后还++了一次,所以这里要先--再赋值
+            father[stack[--size]] = i;
+        }
+        return i;
+    }
+    public static boolean isSameSet(int x,int y){
+        return find(x) == find(y);
+    }
+    public static void union(int x,int y){
+        int fx = find(x);
+        int fy = find(y);
+        if(fx != fy){
+            //小挂大
+            if(size[fx] >= size[fy]){
+                size[fx] += size[fy];
+                father[fy] = fx;
+            } else {
+                size[fy] += size[fx];
+                father[fx] = fy;
+            }
+        }
+    }
+    //--------------------------------------------------------------------------//
+    //并查集简略版(使用递归实现find,不小挂大)
+    public static int MAX = 10001;
+    public static int[] father1 = new int[MAX];
+    public static int n1;
+    public static void build1(){
+        for(int i = 0;i <= n;i++){
+            father[i] = i;
+        }
+    }
+    public static int find1(int i){
+        if(i != father1[i]){
+            father1[i] = find1(father1[i]);
+        }
+        return father1[i];
+    }
+    public static boolean isSameSet1(int x,int y){
+        return find(x) == find(y);
+    }
+    public static void union1(int x,int y) {
+        father[find(x)] = find(y);
+    }
+}

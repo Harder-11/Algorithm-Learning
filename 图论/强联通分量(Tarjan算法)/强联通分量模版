@@ -1,0 +1,75 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+//Tarjan算法求强联通分量
+//1.时间戳:dfn[x]:节点x第一次被访问的顺序
+//2.追溯值:low[x]:从节点x出发,所能访问到的最早的时间戳(最早的祖先节点)
+//过程:1.入x时,盖戳,入栈
+//2.枚举x的领点y,分三种情况
+//(1)若y尚未被访问,对y进行深搜,回x时,用low[y]更新low[x],因为x是y的父节点,y能访问到的x也能
+//(2)若y已经访问并且在栈中,说明y是祖先节点或者左子树节点,用dfn[y]更新low[x]
+//(3)若y已经访问并且不在栈中,说明y已经搜索完毕,其所在的联通分量已经被处理,所以不用操作
+//3.离x时,记录SCC,只有遍历完一个SCC才可以出栈,更新low的意义:避免SCC的节点提前出栈
+
+std::vector<int> e[N];
+//tot给时间戳进行编号
+int dfn[N],low[N],tot;
+//stk是手写栈,instk是是否在栈中,top是栈的指针
+int stk[N],instk[N],top;
+//SCC记录强联通分量(某个点在哪个强联通分量中)
+//siz是强联通分量的大小(包含的节点数)
+//cnt给强联通分量进行编号
+int scc[N],siz[N],cnt;
+
+void tarjan(int x){
+    dfn[x] = low[x] = ++tot;
+    stk[++top] = x,instk[x] = 1;
+    for(int y : e[x]){
+        if(!dfn[y]){
+            tarjan(y);
+            low[x] = min(low[x],low[y]);
+        } else if(instk[y]){
+            low[x] = min(low[x],dfn[y]);
+        }
+    }
+    if(dfn[x] == low[x]){
+        int y;
+        cnt++;
+        do{
+            y = stk[top--];
+            instk[y] = 0;
+            scc[y] = cnt;
+            siz[cnt]++; 
+        } while (y != x);  
+    }
+}
+
+void solve(){
+    int n,m,a,b;
+    cin >> n >> m;
+    for(int i = 1;i <= m;i++){
+        cin >> a >> b;
+        e[a].push_back(b);
+    }
+    for(int i = 1;i <= m;i++){
+        tarjan(i);
+    }
+    int ans = 0;
+    for(int i = 1;i <= cnt;i++){
+        if(siz[scc[i]] > 1) ans++;
+    }
+    cout << ans << endl;
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

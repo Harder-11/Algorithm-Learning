@@ -1,0 +1,75 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+二分图最大匹配(匈牙利算法)
+二分图最大匹配:
+假设G是二分图,若在G的子图M中,任意两条边都没有公共节点,称M为二分图G的一组匹配,在二分图中
+包含边数最多的一组匹配称为二分图的最大匹配
+交替路:从一个未匹配点出发,一次经过非匹配边,匹配边,非匹配边....形成的路径叫做交替路
+增广路:从一个未匹配点出发,走交替路,若能到达另一个未匹配点,则称这条交替路为增广路
+观察增广路,发现:非匹配边比匹配边多一条,只要把增广路中的匹配边和非匹配边的身份交换(倒过来走)
+交换之后,图中的匹配边数目就比原来增加了一条,这里的增广路就是指的增增加匹配边的一条路
+(实际是走交替路时,起点和终点都是未匹配点,那么说明起点和终点相连的边是未匹配边,那么此时有2
+条未匹配边,总边数是奇数,那么此时就可以把这两条边匹配,这样就可以增加一条匹配边)
+
+匈牙利算法:通过不停地找增广路来增加匹配边,找不到增广路时达到最大匹配,可以用DFS或者BFS实现
+使用数组:
+e[i]:存第i条出边{v,ne}
+表头:h[u]:存u点的第一条出边
+标记:vis[v]:存v时候访问
+配对:match[v]:存v的相邻配对节点
+*/
+
+//给定的左部分的n个节点,右部分有m个节点
+int n,m,k,a,b,ans;
+struct edge {
+    int to,nxt;
+} e[N];
+int head[N],idx;
+int vis[N],match[N];
+
+void add(int u,int v){
+    e[++idx] = {v,head[u]};
+    head[u] = idx;
+}
+
+bool dfs(int u){
+    for(int i = head[u];i;i = e[i].nxt){
+        int v = e[i].to;
+        if(vis[v]) continue;
+        vis[v] = 1;
+        //如果v没有匹配,或者v匹配的对象可以匹配另外的,那么此时u就和v匹配
+        if(!match[v] || dfs(match[v])){
+            match[v] = u;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void solve(){
+    cin >> n >> m >> k;
+    for(int i = 0;i < k;i++){
+        cin >> a >> b;
+        add(a,b);
+    }
+    for(int i = 1;i <= n;i++){
+        memset(vis,0,sizeof vis);
+        if(dfs(i)) ans++;
+    }
+    cout << ans << '\n';
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,279 @@
+import java.io.*;
+import java.math.*;
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+
+
+public class learn {
+    /*
+    分层图最短路(扩点最短路)
+    不把实际位置看做图上的点,而是把实际位置及其状态组合看做是图上的点,然后搜索bfs或者Dijkstra
+     */
+
+    /*
+    例题:获取所有钥匙的最短路径
+    给定一个二维网格 grid ，其中：
+    '.' 代表一个空房间
+    '#' 代表一堵墙
+    '@' 是起点
+    小写字母代表钥匙
+    大写字母代表锁
+    我们从起点开始出发，一次移动是指向四个基本方向之一行走一个单位空间。
+    我们不能在网格外面行走，也无法穿过一堵墙。如果途经一个钥匙，我们就把它捡起来。
+    除非我们手里有对应的钥匙，否则无法通过锁。
+    假设 k 为 钥匙/锁 的个数，且满足 1 <= k <= 6，
+    字母表中的前 k 个字母在网格中都有自己对应的一个小写和一个大写字母。
+    换言之，每个锁有唯一对应的钥匙，每个钥匙也有唯一对应的锁。
+    另外，代表钥匙和锁的字母互为大小写并按字母顺序排列。
+    返回获取所有钥匙所需要的移动的最少次数。如果无法获取所有钥匙，返回 -1 。
+
+    思路:对于每个点,加上拥有钥匙的状态,比如10表示有b无a,01表示有a无b,00表示都没有,11表示都有
+    那么对于某个点ij,就可以用{i,j,00}表示,然后从@点开始bfs一层层展开,对于每个状态,不能重复到一个
+    点,但是如果拿了钥匙,状态就改变了,此时就可以回到经过的点
+     */
+    public static int MAXN = 31;
+    public static int MAXM = 31;
+    public static int MAXK = 6;
+    public static int[] move = new int[]{-1,0,1,0,-1};
+    public static char[][] grid = new char[MAXN][];
+    public static boolean[][][] visited = new boolean[MAXN][MAXM][1 << MAXK];
+    //0代表行,1代表列,2代表收集钥匙的状态
+    //比如0110,表示dcba,da没有,bc有
+    //用key(int)的后六位来表示拥有钥匙的状态
+    public static int[][] queue = new int[MAXN * MAXM * (1 << MAXK)][3];
+    public static int l,r,n,m,key;
+    public static void build(String[] g){
+        l = r = key = 0;
+        n = g.length;
+        m = g[0].length();
+        for(int i = 0;i < n;i++){
+            grid[i] = g[i].toCharArray();
+        }
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < m;j++){
+                if(grid[i][j] == '@'){
+                    queue[r][0] = i;
+                    queue[r][1] = j;
+                    queue[r++][2] = 0;
+                }
+                if(grid[i][j] >= 'a' && grid[i][j] <= 'f'){
+                    //abcd都有就表示为00001111(key)
+                    key |= 1 << (grid[i][j] - 'a');
+                }
+            }
+        }
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < m;j++){
+                for(int k = 0;k <= key;k++){
+                    visited[i][j][k] = false;
+                }
+            }
+        }
+    }
+    public int shortestPathAllKeys(String[] g) {
+        build(g);
+        int level = 1;
+        while(l < r){
+            //这里必须用size来接收r-l,因为循环体内部改变了r和l的值,下次循环时的r - l值就会改变
+            for(int k = 0,size = r - l,x,y,s;k < size;k++){
+                x = queue[l][0];
+                y = queue[l][1];
+                s = queue[l++][2];
+                for(int i = 0,nx,ny,ns;i < 4;i++){
+                    nx = x + move[i];
+                    ny = y + move[i + 1];
+                    ns = s;
+                    if(nx < 0 || nx == n || ny < 0 || ny == m || grid[nx][ny] == '#'){
+                        continue;
+                    }
+                    if(grid[nx][ny] >= 'A' && grid[nx][ny] <= 'F' && ((ns & (1 << (grid[nx][ny] - 'A'))) == 0)){
+                        continue;
+                    }
+                    if(grid[nx][ny] >= 'a' && grid[nx][ny] <= 'f'){
+                        ns |= (1 << (grid[nx][ny] - 'a'));
+                    }
+                    //ns == key,说明所有的钥匙都收集齐了
+                    if(ns == key){
+                        return level;
+                    }
+                    if(!visited[nx][ny][ns]){
+                        visited[nx][ny][ns] = true;
+                        queue[r][0] = nx;
+                        queue[r][1] = ny;
+                        queue[r++][2] = ns;
+                    }
+                }
+            }
+            level++;
+        }
+        return -1;
+    }
+    /*
+    Dijkstra算法分层图最短路
+    电动车游城市
+    小明的电动车电量充满时可行驶距离为 cnt，每行驶 1 单位距离消耗 1 单位电量，且花费 1 单位时间。
+    小明想选择电动车作为代步工具。地图上共有 N 个景点，景点编号为 0 ~ N-1。
+    他将地图信息以 [城市 A 编号,城市 B 编号,两城市间距离] 格式整理在在二维数组 paths
+    表示城市 A、B 间存在双向通路。初始状态，电动车电量为 0。每个城市都设有充电桩
+    charge[i] 表示第 i 个城市每充 1 单位电量需要花费的单位时间。
+    请返回小明最少需要花费多少单位时间从起点城市 start 抵达终点城市 end。
+
+    思路:扩点,城市的点是0 ~ n - 1,电动车电量的上限cnt,那么扩点为{城市,到达该城市时的电量}然后实现单源点
+    最短路径Dijkstra算法
+     */
+    public int electricCarPlan(int[][] paths, int cnt, int start, int end, int[] charge) {
+        int n = paths.length;
+        ArrayList<ArrayList<int[]>> graph = new ArrayList<>();
+        for(int i = 0;i < n;i++){
+            graph.add(new ArrayList<>());
+        }
+        for(int[] path : paths){
+            graph.get(path[0]).add(new int[]{path[1],path[2]});
+            graph.get(path[1]).add(new int[]{path[0],path[2]});
+        }
+        int[][] distance = new int[n][cnt + 1];
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j <= cnt;j++){
+                distance[i][j] = Integer.MAX_VALUE;
+            }
+        }
+        boolean[][] visited = new boolean[n][cnt + 1];
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a,b)->a[2] - b[2]);
+        //当前点,电量,花费时间
+        heap.offer(new int[]{start,0,0});
+        while(!heap.isEmpty()){
+            int[] record = heap.poll();
+            int cur = record[0];
+            int power = record[1];
+            int cost = record[2];
+            if(visited[cur][power]){
+                continue;
+            }
+            if(cur == end){
+                return cost;
+            }
+            visited[cur][power] = true;
+            //此时电量不满
+            if(power < cnt){
+                //充一格电
+                //每次power + 1说明不同的状态,虽然在同一个城市,但是电量不同,状态也不同,和去往下一个城市一样
+                if(!visited[cur][power + 1] && cost + charge[cur] < distance[cur][power + 1]){
+                    distance[cur][power] = cost + charge[cur];
+                    heap.offer(new int[]{cur,power + 1,distance[cur][power]});
+                }
+            }
+            for(int[] edge : graph.get(cur)){
+                int nextCity = edge[0];
+                int restPower = power - edge[1];
+                int nextCost = cost + edge[1];
+                if(restPower >= 0 && !visited[nextCity][restPower] && nextCost < distance[nextCity][restPower]){
+                    distance[nextCity][restPower] = nextCost;
+                    heap.offer(new int[]{nextCity,restPower,nextCost});
+                }
+            }
+        }
+        return -1;
+    }
+    /*
+    飞行路线（语言提供的堆）
+    Alice和Bob现在要乘飞机旅行，他们选择了一家相对便宜的航空公司
+    该航空公司一共在n个城市设有业务，设这些城市分别标记为0 ~ n−1
+    一共有m种航线，每种航线连接两个城市，并且航线有一定的价格
+    Alice 和 Bob 现在要从一个城市沿着航线到达另一个城市，途中可以进行转机
+    航空公司对他们这次旅行也推出优惠，他们可以免费在最多k种航线上搭乘飞机
+    那么 Alice 和 Bob 这次出行最少花费多少
+
+    输入格式:一行三个整数n,m,k,分别表示城市数,航线数和免费乘坐次数
+    接下来一行两个整数s,t,分别表示他们出行的起点城市编号和终点城市编号
+    接下来的m行,每行3个整数a,b,c,表示存在一种航线,能从城市a到达城市b,或者从城市b到达城市a,价格为c
+
+    思路:和上一题很类似,对于有免单的情况,就分类讨论,如果免单,总的花费就不变,否则就加上价格,每次免单后
+    免单次数--,所以状态扩展为{所在的点,使用的免单的次数}
+     */
+    public static int MAXN1 = 10001;
+    public static int MAXM1 = 100001;
+    public static int MAXK1 = 11;
+    public static int[] head1 = new int[MAXN1];
+    public static int[] next1 = new int[MAXM1];
+    public static int[] to1 = new int[MAXM1];
+    public static int[] weight1 = new int[MAXM1];
+    public static int cnt1;
+    public static int[][] distance1 = new int[MAXN1][MAXK1];
+    public static boolean[][] visited1 = new boolean[MAXN1][MAXK1];
+    public static PriorityQueue<int[]> heap1 = new PriorityQueue<>((a,b)->a[2] - b[2]);
+    public static int n1,m1,k1,s1,t1;
+    public static void build1(){
+        cnt1 = 1;
+        for(int i = 0;i < n1;i++){
+            head1[i] = 0;
+            for(int j = 0;j <= k1;j++){
+                distance1[i][j] = Integer.MAX_VALUE;
+                visited1[i][j] = false;
+            }
+        }
+        heap1.clear();
+    }
+    public static void addEdge(int u,int v,int w){
+        next1[cnt1] = head1[u];
+        to1[cnt1] = v;
+        weight1[cnt1] = w;
+        head1[u] = cnt1++;
+    }
+    public static int dijkstra(){
+        distance1[s1][0] = 0;
+        heap1.add(new int[]{s1,0,0});
+        while(!heap1.isEmpty()){
+            int[] record = heap1.poll();
+            int u = record[0];
+            int use = record[1];
+            int cost = record[2];
+            if(visited1[u][use]){
+                continue;
+            }
+            visited1[u][use] = true;
+            if(u == t1){
+                return cost;
+            }
+            for(int ei = head1[u],v,w;ei != 0;ei = next1[ei]){
+                v = to1[ei];
+                w = weight1[ei];
+                if(use < k1 && distance1[v][use + 1] > distance1[u][use]){
+                    //使用免费
+                    distance1[v][use + 1] = distance1[u][use];
+                    heap1.offer(new int[]{v,use + 1,distance1[v][use + 1]});
+                }
+                if(distance1[v][use] > distance1[u][use] + w){
+                    distance1[v][use] = distance1[u][use] + w;
+                    heap1.offer(new int[]{v,use,distance1[v][use]});
+                }
+            }
+        }
+        return -1;
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n1 = (int) in.nval;
+            in.nextToken(); m1 = (int) in.nval;
+            in.nextToken(); k1 = (int) in.nval;
+            in.nextToken(); s1 = (int) in.nval;
+            in.nextToken(); t1 = (int) in.nval;
+            build1();
+            for(int i = 0,a,b,c;i < m1;i++){
+                in.nextToken(); a = (int) in.nval;
+                in.nextToken(); b = (int) in.nval;
+                in.nextToken(); c = (int) in.nval;
+                addEdge(a,b,c);
+                addEdge(b,a,c);
+            }
+            out.println(dijkstra());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}

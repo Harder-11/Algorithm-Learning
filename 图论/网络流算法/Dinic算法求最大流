@@ -1,0 +1,103 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+网络流 最大流Dinic算法
+Dinic算法一次可以累加多条增广路的流量
+
+边e[i]:存第i条出边{v,c,ne}
+表头head[u]:存u点的第一条出边
+深度d[u]:存u点所在的图层(就是bfs第几次入的队列)
+当前弧cur[u]:存u点的当前出边
+
+过程:
+1.bfs()对点分层找增广路
+2.dfs()多路增广
+(1)搜索顺序优化(分层限制搜索深度)
+(2)当前弧优化(剪枝)
+(3)剩余流量优化(剪枝)
+(4)残枝优化(剪枝)
+3.Dinic()累加可行流
+*/
+
+
+struct edge {
+    ll to,c,nxt;
+} e[N];
+int head[N],idx = 1;
+int d[N],cur[N];
+int S,T;
+
+void add(int u,int v,int w){
+    e[++idx] = {v,w,head[u]};
+    head[u] = idx;
+}
+
+//对每个点进行分层,然后找增广路,如果有返回true,没有返回false
+bool bfs(){
+    memset(d,0,sizeof d);
+    std::queue<int> q;
+    q.push(S);
+    d[S] = 1;
+    while(q.size()){
+        int u = q.front();
+        q.pop();
+        for(int i = head[u];i;i = e[i].nxt){
+            int v = e[i].to;
+            if(d[v] == 0 && e[i].c){
+                d[v] = d[u] + 1;
+                q.push(v);
+                if(v == T) return true;
+            }
+        }
+    }
+    return false;
+}
+
+ll dfs(int u,ll mf){
+    if(u == T) return mf;
+    ll sum = 0;
+    //当前弧优化
+    for(int i = cur[u];i;i = e[i].nxt){
+        cur[u] = i;
+        int v = e[i].to;
+        if(d[v] == d[u] + 1 && e[i].c){
+            //最大流量肯定是取 min(之前最小流量,当前边流量)
+            //这样一直dfs最后就求到了最大流量f
+            ll f = dfs(v,min(mf,e[i].c));
+            e[i].c -= f;
+            e[i ^ 1].c += f;//更新残留网
+            sum += f;//累加u的流出流量
+            mf -= f;//减小u的剩余流量
+            if(mf == 0) break;//余量优化
+        }
+    }
+    if(sum == 0) d[u] = 0;//残枝优化,发现走某条路走不到汇点,那么就踢出图层
+    return sum;
+}
+
+ll dinic(){
+    ll flow = 0;
+    while(bfs()){
+        memcpy(cur,head,sizeof head);
+        flow += dfs(S,INF); 
+    }
+    return flow;
+}
+
+void solve(){
+
+}
+
+int main(){
+    int t;
+    cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

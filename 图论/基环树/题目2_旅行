@@ -1,0 +1,80 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+贪心:访问肯定是从1号点开始访问(字典序最小)
+由于是m = n - 1或者m = n
+那么如果是一棵树(m = n - 1),就每次走字典序小的点就可以了(对每个点的出边排个序)
+如果是一颗基环树,那么就暴力删边,将基环树变成一颗普通树,然后dfs
+*/
+
+//用邻接表对出边进行排序更方便
+vector<int> e[N];
+//记录加边的两个端点,方便断边
+pair<int,int> edge[N];
+//du,dv就是断边的两个端点
+int du,dv,vis[N];
+//记录走过的路径
+vector<int> path(N,INF);
+int cnt,better;
+
+bool dfs(int u){
+    if(!better){
+        //序号变大就回退,变小则走完
+        if(u > path[cnt]) return true;
+        if(u < path[cnt]) better = -1;
+    }
+    vis[u] = 1;
+    path[cnt++] = u;
+    for(int i = 0;i < e[u].size();i++){
+        int v = e[u][i];
+        if(vis[v]) continue;
+        if(v == du && u == dv) continue;
+        if(v == dv && u == du) continue;
+        if(dfs(v)) return true;
+    }
+    return false;
+}
+
+void solve(){
+    int n,m,a,b;
+    cin >> n >> m;
+    for(int i = 1;i <= m;i++){
+        cin >> a >> b;
+        e[a].push_back(b);
+        e[b].push_back(a);
+        edge[i] = {a,b};
+    }
+    for(int i = 1;i <= n;i++){
+        sort(e[i].begin(),e[i].end());
+    }
+    if(n == m + 1) dfs(1);
+    else {
+        for(int i = 1;i <= m;i++){
+            du = edge[i].first;
+            dv = edge[i].second;
+            memset(vis,0,sizeof vis);
+            cnt = better = 0;
+            dfs(1);
+        }
+    }
+    for(int i = 0;i < n;i++){
+        cout << path[i] << " ";
+    }
+    cout << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

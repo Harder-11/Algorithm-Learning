@@ -1,0 +1,343 @@
+import java.io.*;
+import java.math.*;
+import java.nio.Buffer;
+import java.util.*;
+
+
+public class learn {
+    /*
+    最小生成树
+    在无向带权图中选择一些边,在保证连通性的情况下,边的总权值最小
+    注意,最小生成树可能不止一棵,只要保证边的总权值最小,就都是正确的最小生成树
+    如果无向带权图有n个点,那么最小生成树一定有n - 1条边
+     */
+    /*
+    Kruskal算法(最常用)
+    1.把所有的边根据权值大小排序,从权值小的边开始考虑
+    2.如果连接当前的边不会形成环,那么就选择当前的边
+    3.如果连接当前的边会形成环,就不要当前的边
+    4.在考察完所有的边之后,最小生成树也就得到了
+    思路:使用并查集,如果两个点已经在集合里面了,那么这两个结点连起来就会成环
+    要某一条边,就把这条边的连个节点union
+    每次寻找权值最小的那条边,然后判断是否连接上会形成环,如果不会形成环,那么就把ans += 权值
+    复杂度:实际就是O(m * logm)(排序) + O(n) + O(m);
+
+    最小生成树一定是最小瓶颈树,最小瓶颈树是指最大权重的边最小
+     */
+    public static int MAXN = 5001;
+    public static int MAXM = 200001;
+    public static int[] father = new int[MAXN];
+    public static int[][] edges = new int[MAXM][3];
+    public static int n,m;
+    public static void build(){
+        for(int i = 1;i <= n;i++){
+            father[i] = i;
+        }
+    }
+    public static int find(int i){
+        if(i != father[i]){
+            father[i] = find(father[i]);
+        }
+        return father[i];
+    }
+    //x,y本身是一个集合,那么连起来必定成环,所以返回false
+    public static boolean union(int x,int y){
+        int fx = find(x);
+        int fy = find(y);
+        if(fx != fy){
+            father[fx] = fy;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            in.nextToken();
+            m = (int) in.nval;
+            build();
+            for(int i = 0;i < m;i++){
+                in.nextToken();
+                edges[i][0] = (int) in.nval;
+                in.nextToken();
+                edges[i][1] = (int) in.nval;
+                in.nextToken();
+                edges[i][2] = (int) in.nval;
+            }
+            Arrays.sort(edges,(a,b)->a[2] - b[2]);
+            int ans = 0;
+            int edgeCnt = 0;
+            for(int[] edge : edges){
+                if(union(edge[0],edge[1])){
+                    edgeCnt++;
+                    ans += edge[2];
+                }
+            }
+            out.println(edgeCnt == n - 1 ? ans : "orz");
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    Prim算法求最小生成树(不是很常用)
+    prim算法需要建图(链式前向星)
+    1.解锁的点的集合为set,解锁的边的集合为heap(小根堆),set和heap都为空
+    2.从任意点开始,开始点加入set,开始点的所有边都加入heap
+    3.从heap中弹出权值最小的边e,查看边e所去往的点x
+    A.如果x已经在set中,则e舍去,重复步骤3
+    B.如果x不在set中,边e属于最小生成树,把x加入set,把x发散的所有边都放进heap中,重复步骤3
+    4.当heap为空,最小生成树也就得到了
+
+    复杂度:O(n + m) + O(mlogm)
+     */
+    public static void main2(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            ArrayList<ArrayList<int[]>> graph = new ArrayList<>();
+            int n = (int) in.nval;
+            for(int i = 0;i <= n;i++){
+                graph.add(new ArrayList<>());
+            }
+            in.nextToken();
+            int m = (int) in.nval;
+            for(int i = 0,u,v,w;i < m;i++){
+                in.nextToken();
+                u = (int) in.nval;
+                in.nextToken();
+                v = (int) in.nval;
+                in.nextToken();
+                w = (int) in.nval;
+                graph.get(u).add(new int[]{v,w});
+                graph.get(v).add(new int[]{u,w});
+            }
+            PriorityQueue<int[]> heap = new PriorityQueue<>((a,b)->a[1] - b[1]);
+            //先把第一个结点连上的所有边先加入结点,因为任意一点出发都可以,所以默认从1结点出发
+            for(int[] edge : graph.get(1)){
+                heap.add(edge);
+            }
+            boolean[] set = new boolean[n + 1];
+            int nodeCnt = 1;
+            set[1] = true;
+            int ans = 0;
+            while(!heap.isEmpty()){
+                int[] edge = heap.poll();
+                int next = edge[0];
+                int cost = edge[1];
+                if(!set[next]){
+                    nodeCnt++;
+                    set[next] = true;
+                    ans += cost;
+                    for(int[] e : graph.get(next)){
+                        heap.add(e);
+                    }
+                }
+            }
+            out.println(nodeCnt == n ? ans : "orz");
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+        /*
+    例题:水资源分配优化
+    村里面一共有 n 栋房子。我们希望通过建造水井和铺设管道来为所有房子供水。
+    对于每个房子i,我们有两种可选的供水方案:一种是直接在房子内建造水井,成本为 wells[i - 1](注意 -1,因为索引从0开始)
+    另一种是从另一口井铺设管道引水,数组 pipes给出了在房子间铺设管道的成本,其中每个pipes[j]=[house1j,house2j, costj]
+    代表用管道将 house1j 和 house2j连接在一起的成本。连接是双向的。
+    请返回为所有房子都供水的最低总成本 。
+
+    思路:假设有一个虚拟水源点,往所有的房屋都连上路,然后再Kruskal算法求最小生成树
+     */
+    public static int MAXN = 10010;
+    public static int[][] edges = new int[50001][3];
+    public static int cnt;
+    public static int[] father = new int[MAXN];
+
+    public static void build(int n){
+        for(int i = 0;i <= n;i++){
+            cnt = 0;
+            father[i] = i;
+        }
+    }
+    public static int find(int i){
+        if(i != father[i]){
+            father[i] = find(father[i]);
+        }
+        return father[i];
+    }
+    public static boolean union(int x,int y){
+        int fx = find(x);
+        int fy = find(y);
+        if(fx != fy){
+            father[fx] = fy;
+            return true;
+        } else {
+            return false;
+        }
+    }
+    public int minCostToSupplyWater(int n, int[] wells, int[][] pipes) {
+        build(n);
+        for(int i = 0;i < n;i++,cnt++){
+            //i == 0代表1号房屋,所以要i+1
+            //假设有一个虚拟水源点0,到每个房屋都有一条路径,权重就是每个房屋单独修井的报价
+            edges[cnt][0] = 0;
+            edges[cnt][1] = i + 1;
+            edges[cnt][2] = wells[i];
+        }
+        for(int i = 0;i < pipes.length;i++,cnt++){
+            edges[cnt][0] = pipes[i][0];
+            edges[cnt][1] = pipes[i][1];
+            edges[cnt][2] = pipes[i][2];
+        }
+        //这里必须加上fromIndex和endIndex,要不然会将edges后面没有用到的0给换到前面来
+        Arrays.sort(edges,0,cnt,(a,b)->a[2] - b[2]);
+        int ans = 0;
+        for(int i = 0;i < cnt;i++){
+            if(union(edges[i][0],edges[i][1])){
+                ans += edges[i][2];
+            }
+        }
+        return ans;
+    }
+    /*
+    检查边长度限制的路径是否存在
+    给你一个 n 个点组成的无向图边集 edgeList ，
+    其中 edgeList[i] =[ui,vi,disi]表示点ui和点vi之间有一条长度为disi的边.请注意,两个点之间可能有超过一条边。
+    给你一个查询数组queries ，其中 queries[j] = [pj, qj, limitj] ，
+    你的任务是对于每个查询queries[j]判断是否存在从pj到qj的路径,且这条路径上的每一条边都严格小于limitj。
+    请你返回一个 布尔数组 answer ，其中 answer.length == queries.length ，
+    当 queries[j] 的查询结果为 true 时， answer 第 j 个值为 true ，否则为 false 。
+
+    思路:先将edgeList按照权值排序,然后进行并查集,从权值小的边开始,将小于该权值的所有边的端点都union,如果最后
+    两个点在同一个集合里面,那么就是true,否则就是false
+     */
+    public static int MAXN1 = 100001;
+    public static int[][] questions = new int[MAXN1][4];
+    public static int[] father1 = new int[MAXN1];
+    public static void build1(int n){
+        for(int i = 0;i <= n;i++){
+            father1[i] = i;
+        }
+    }
+    public static int find1(int i){
+        if(i != father1[i]){
+            father1[i] = find1(father1[i]);
+        }
+        return father1[i];
+    }
+    public static void union1(int x,int y){
+        int fx = find1(x);
+        int fy = find1(y);
+        if(fx != fy){
+            father1[fx] = fy;
+        }
+    }
+    public static boolean isSameSet(int x,int y){
+        return find1(x) == find1(y);
+    }
+    public boolean[] distanceLimitedPathsExist(int n, int[][] edgeList, int[][] queries) {
+        Arrays.sort(edgeList,(a,b)->a[2] - b[2]);
+        int m = edgeList.length;
+        int k = queries.length;
+        //让编号跟着sort,否则打乱顺序后无法获取原本下标
+        for(int i = 0;i < k;i++){
+            questions[i][0] = queries[i][0];
+            questions[i][1] = queries[i][1];
+            questions[i][2] = queries[i][2];
+            questions[i][3] = i;
+        }
+        Arrays.sort(questions,0,k,(a,b)->a[2] - b[2]);
+        build1(n);
+        boolean[] ans = new boolean[k];
+        for(int i = 0,j = 0;i < k;i++){
+            for(;j < m && edgeList[j][2] < questions[i][2];j++){
+                union1(edgeList[j][0],edgeList[j][1]);
+            }
+            ans[questions[i][3]] = isSameSet(questions[i][0],questions[i][1]);
+        }
+        return ans;
+    }
+    /*
+    繁忙的都市
+    城市C是一个非常繁忙的大都市,城市中的道路十分的拥挤,于是市长决定对其中的道路进行改造.城市C的道路是这样分布的:
+    城市中有n个交叉路口,有些交叉路口之间有道路相连,两个交叉路口之间最多有一条道路相连接.这些道路是双向的，
+    且把所有的交叉路口直接或间接的连接起来了。每条道路都有一个分值，分值越小表示这个道路越繁忙，越需要进行改造。
+    但是市政府的资金有限，市长希望进行改造的道路越少越好，于是他提出下面的要求：
+    1.改造的那些道路能够把所有的交叉路口直接或间接的连通起来。
+    2.在满足要求 1 的情况下，改造的道路尽量少。
+    3.在满足要求 1、2 的情况下，改造的那些道路中分值最大的道路分值尽量小。
+    任务：作为市规划局的你，应当作出最佳的决策，选择哪些道路应当被修建。
+    输出:两个整数 s,max，表示你选出了几条道路，分值最大的那条道路的分值是多少。
+
+    思路:最小生成树一定是最小瓶颈树!!!
+     */
+    public static int MAXN2 = 301;
+    public static int MAXM2 = 8001;
+    public static int[] father2 = new int[MAXN2];
+    public static int[][] edges2 = new int[MAXM2][3];
+    public static int n,m;
+    public static void build2(){
+        for(int i = 1;i <= n;i++){
+            father2[i] = i;
+        }
+    }
+    public static int find2(int i){
+        if(i != father2[i]){
+            father2[i] = find2(father2[i]);
+        }
+        return father2[i];
+    }
+    public static boolean union2(int x,int y){
+        int fx = find2(x);
+        int fy = find2(y);
+        if(fx != fy) {
+            father2[fx] = fy;
+            return true;
+        } else {
+            return false;
+        }
+    }
+    public static void main2(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            in.nextToken();
+            m = (int) in.nval;
+            build2();
+            for(int i = 0;i < m;i++){
+                in.nextToken();
+                edges2[i][0] = (int) in.nval;
+                in.nextToken();
+                edges2[i][1] = (int) in.nval;
+                in.nextToken();
+                edges2[i][2] = (int) in.nval;
+            }
+            Arrays.sort(edges,0,m,(a,b)->a[2] - b[2]);
+            int ans = 0;
+            int edgeCnt = 0;
+            for(int[] edge : edges2){
+                if(union2(edge[0],edge[1])){
+                    ans = Math.max(ans,edge[2]);
+                    edgeCnt++;
+                }
+                if(edgeCnt == n - 1){
+                    break;
+                }
+            }
+            out.println(edgeCnt + " " + ans);
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}

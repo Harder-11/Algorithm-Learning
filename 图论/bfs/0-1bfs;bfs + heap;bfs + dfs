@@ -1,0 +1,262 @@
+import java.io.*;
+import java.math.*;
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+
+
+public class learn {
+    /*
+    01bfs:适用于图中所有边的权重只有0和1两种值,求源点到目标点的最短距离
+    过程:1.distance[i]表示从源点到i点的最短距离,初始时所有点的distance设置为无穷大
+    2.源点进入双端队列(Deque),distance[源点] = 0
+    3.双端队列,从头部弹出x
+    A.如果x是目标点,返回distance[x]表示从源点到目标点的最短距离
+    B.考察从x出发的每一条边,假设某边去y点,边权为w
+    (1)如果distance[y] > distance[x] + w,处理该边,否则忽略该边
+    (2)处理时,更新distance[y] = distance[x] + w,如果w为0,y从头部进入双端队列,继续步骤3
+    如果w为1,y从尾部进入双端队列,继续步骤3
+    4.双端队列为空停止
+     */
+    /*
+    例题:到达角落需要移除障碍物的最小数目
+    给你一个下标从 0 开始的二维整数数组 grid ，数组大小为 m x n 。每个单元格都是两个值之一：
+    0 表示一个 空 单元格，
+    1 表示一个可以移除的 障碍物 。
+    你可以向上、下、左、右移动，从一个空单元格移动到另一个空单元格。
+    现在你需要从左上角 (0, 0) 移动到右下角 (m - 1, n - 1) ，返回需要移除的障碍物的 最小 数目。
+
+    思路:把墙当做1,实际就是01bfs模版了
+     */
+    public int minimumObstacles(int[][] grid) {
+        int[] move = new int[]{-1,0,1,0,-1};
+        int m = grid.length;
+        int n = grid[0].length;
+        int[][] distance = new int[m][n];
+        for(int i = 0;i < m;i++){
+            Arrays.fill(distance[i],Integer.MAX_VALUE);
+        }
+        //坐标,所以是int[]类型
+        Deque<int[]> deque = new ArrayDeque<>();
+        deque.addFirst(new int[]{0,0});
+        distance[0][0] = 0;
+        while(!deque.isEmpty()){
+            int[] record = deque.pollFirst();
+            int x = record[0];
+            int y = record[1];
+            if(x == m - 1 && y == n - 1){
+                return distance[x][y];
+            }
+            for(int i = 0;i < 4;i++){
+                int nx = x + move[i];
+                int ny = y + move[i + 1];
+                if(nx >= 0 && ny >= 0 && nx < m && ny < n && distance[x][y] + grid[nx][ny] < distance[nx][ny]){
+                    distance[nx][ny] = distance[x][y] + grid[nx][ny];
+                    if(grid[nx][ny] == 0){
+                        deque.addFirst(new int[]{nx,ny});
+                    } else {
+                        deque.addLast(new int[]{nx,ny});
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+    /*
+    例题2:使网络图至少有一条有效路径的最小代价
+    给你一个mxn的网格图 grid.grid中每个格子都有一个数字,对应着从该格子出发下一步走的方向。
+     grid[i][j] 中的数字可能为以下几种情况：
+    1,下一步往右走，也就是你会从 grid[i][j] 走到 grid[i][j + 1]
+    2,下一步往左走，也就是你会从 grid[i][j] 走到 grid[i][j - 1]
+    3,下一步往下走，也就是你会从 grid[i][j] 走到 grid[i + 1][j]
+    4,下一步往上走，也就是你会从 grid[i][j] 走到 grid[i - 1][j]
+    注意网格图中可能会有 无效数字 ，因为它们可能指向 grid 以外的区域。
+    一开始，你会从最左上角的格子 (0,0) 出发。我们定义一条 有效路径 为从格子 (0,0) 出发，
+    每一步都顺着数字对应方向走，最终在最右下角的格子 (m - 1, n - 1) 结束的路径。
+    有效路径不需要是最短路径 。
+    你可以花费 cost = 1 的代价修改一个格子中的数字，但每个格子中的数字 只能修改一次 。
+    请你返回让网格图至少有一条有效路径的最小代价。
+
+    思路:实际也是一个01dfs,对于一个格子,假设是1,那么这个格子向上,向左,向下的代价都是1,向右的
+    代价是0,所以本质也是01图
+     */
+    public int minCost(int[][] grid) {
+        //这里为了和题干相匹配,把0下标置为空,从1开始,向右,向左,向下,向上
+        int[][] move = {{},{0,1},{0,-1},{1,0},{-1,0}};
+        int m = grid.length;
+        int n = grid[0].length;
+        int[][] distance = new int[m][n];
+        for(int i = 0;i < m;i++){
+            Arrays.fill(distance[i],Integer.MAX_VALUE);
+        }
+        Deque<int[]> deque = new ArrayDeque<>();
+        deque.addFirst(new int[]{0,0});
+        distance[0][0] = 0;
+        while(!deque.isEmpty()){
+            int[] record = deque.pollFirst();
+            int x = record[0];
+            int y = record[1];
+            if(x == m - 1 && y == n - 1){
+                return distance[x][y];
+            }
+            for(int i = 1;i <= 4;i++){
+                int nx = x + move[i][0];
+                int ny = y + move[i][1];
+                int weight = grid[x][y] != i ? 1 : 0;
+                if(nx >= 0 && ny >= 0 && nx < m && ny < n && weight +
+                distance[x][y] < distance[nx][ny]){
+                    distance[nx][ny] = weight + distance[x][y];
+                    if(grid[x][y] == i){
+                        deque.addFirst(new int[]{nx,ny});
+                    } else {
+                        deque.addLast(new int[]{nx,ny});
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+    /*
+    二维接雨水,题干略
+
+    思路:创建一个小根堆,先把边缘处的格子入堆[行,列,水线],根据水线来排序
+    然后将最小水线的元素poll,此时水线高度是h,然后水高度是h,所以能装0单位水
+    然后将四周的元素判断visited,然后将!visited的格子入堆,如果自身的高度大于了水线高度,那么
+    水线高度更新为自身高度,每次计算水线高度 - 自身高度,加入答案中
+     */
+    public int trapRainWater(int[][] heightMap) {
+        int[] move = new int[]{-1,0,1,0,-1};
+        int n = heightMap.length;
+        int m = heightMap[0].length;
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a,b)->a[2] - b[2]);
+        boolean[][] visited = new boolean[n][m];
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < m;j++){
+                //处在边界处的格子进堆
+                if(i == 0 || i == n - 1 || j == 0 || j == m - 1){
+                    heap.add(new int[]{i,j,heightMap[i][j]});
+                    visited[i][j] = true;
+                } else {
+                    visited[i][j] = false;
+                }
+            }
+        }
+        int ans = 0;
+        while(!heap.isEmpty()){
+            int[] record = heap.poll();
+            int r = record[0];
+            int c = record[1];
+            int w = record[2];
+            ans += w - heightMap[r][c];
+            for(int i = 0;i < 4;i++){
+                int nr = r + move[i];
+                int nc = c + move[i + 1];
+                if(nr >= 0 && nr < n && nc >= 0 && nc < m && !visited[nr][nc]){
+                    heap.add(new int[]{nr,nc,Math.max(heightMap[nr][nc],w)});
+                    visited[nr][nc] = true;
+                }
+            }
+        }
+        return ans;
+    }
+    /*
+    单词接龙
+    按字典 wordList 完成从单词 beginWord 到单词 endWord 转化
+    一个表示此过程的 转换序列 是形式上像 beginWord -> s1 -> s2 -> ... -> sk 这样的单词序列，并满足：
+    1.每对相邻的单词之间仅有单个字母不同。
+    2.转换过程中的每个单词 si（1 <= i <= k）必须是字典 wordList 中的单词。
+    注意，beginWord 不必是字典 wordList 中的单词。
+    3.sk == endWord
+    给你两个单词 beginWord 和 endWord ，以及一个字典 wordList 。
+    请你找出并返回所有从 beginWord 到 endWord 的 最短转换序列 ，如果不存在这样的转换序列，
+    返回一个空列表。每个序列都应该以单词列表 [beginWord, s1, s2, ..., sk] 的形式返回。
+
+    由于是小写,比如begin是abc,那么s1可能是bbc,cbc,dbc...zbc,aac,acc,adc...azc,abd...abz
+     */
+
+    //单词表
+    public static Set<String> dict;
+    //curLevel :xyzp...
+    //nextLevel:由x可以变成的单词,y可以变成的单词,z可以变成的单词....
+    public static Set<String> curLevel = new HashSet<>();
+    public static Set<String> nextLevel = new HashSet<>();
+    //反向图
+    public static Map<String,ArrayList<String>> graph = new HashMap<>();
+    //记录路径,当生成一条有效路径时,拷贝进ans
+    public static LinkedList<String> path = new LinkedList<>();
+    public static List<List<String>> ans = new ArrayList<>();
+    public static void build(List<String> wordList){
+        dict = new HashSet<>(wordList);
+        graph.clear();
+        ans.clear();
+        curLevel.clear();
+        nextLevel.clear();
+    }
+    //从begin->end一层层bfs去,建图
+    //返回值:真的能找到end,返回true,找不到,返回false
+    public static boolean bfs(String begin,String end){
+        boolean find = false;
+        curLevel.add(begin);
+        while(!curLevel.isEmpty()){
+            //剪枝,每次出现了的单词就删掉,不希望后面的层又出现重复的元素
+            dict.removeAll(curLevel);
+            for(String word : curLevel){
+                char[] w = word.toCharArray();
+                for(int i = 0;i < w.length;i++){
+                    //word : 去括
+                    //每个位置从a到z换一遍,然后检查在此表中是否存在
+                    char old = w[i];
+                    for(char ch = 'a';ch <= 'z';ch++){
+                        w[i] = ch;
+                        String str = String.valueOf(w);
+                        if(dict.contains(str) && !str.equals(word)){
+                            if(str.equals(end)){
+                                //由于要把所有的路线都返回,所有不能直接return,要将图完全建好才行
+                                find = true;
+                            }
+                            graph.putIfAbsent(str,new ArrayList<>());
+                            //str是改变后的字符串,将word(改变前的字符串)加入到str的List中,所以是反向图
+                            graph.get(str).add(word);
+                            nextLevel.add(str);
+                        }
+                    }
+                    //回复原字符,然后处理其他字符
+                    w[i] = old;
+                }
+            }
+            if(find){
+                return true;
+            } else {
+                //不是基本数据类型必须引入中间参量
+                //将nextLevel置为CurLevel,然后置空,处理下一层
+                //此时的curLevel就变成了nextLevel
+                Set<String> tmp = curLevel;
+                curLevel = nextLevel;
+                nextLevel = tmp;
+                nextLevel.clear();
+            }
+        }
+        return false;
+    }
+    public static void dfs(String word,String aim){
+        path.addFirst(word);
+        if(word.equals(aim)){
+            ans.add(new ArrayList<>(path));
+        } else if(graph.containsKey(word)){
+            for(String next : graph.get(word)){
+                dfs(next,aim);
+            }
+        }
+        path.removeFirst();
+    }
+    public static List<List<String>> findLadders(String beginWord, String endWord, List<String> wordList) {
+        build(wordList);
+        if(!dict.contains(endWord)){
+            return ans;
+        }
+        if(bfs(beginWord,endWord)){
+            dfs(endWord,beginWord);
+        }
+        return ans;
+    }
+}

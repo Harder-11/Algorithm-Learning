@@ -1,0 +1,110 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+二分图最大匹配 Dinic算法
+将二分图转化为网络流模型
+创建虚拟的源点和汇点,将源点连上所有左侧的点,右侧所有的点连上汇点,容量均为1
+原来的每条边从左往右连边,容量也均为1,最大流即为最大匹配
+证明很显然,每条边的最大流量是1,那么只要有流过的,后续就不能再经过这条边
+也不能经过两个端点,所以最大流量就是最大匹配
+时间复杂度:O(√n * m)
+*/
+
+struct edge {
+    ll to,c,nxt;
+} e[N];
+//仍然是从2,3号边开始配对
+int head[N],idx = 1;
+int d[N],cur[N];
+int S,T,a,b,k,n,m;
+
+void add(int u,int v,int w){
+    e[++idx] = {v,w,head[u]};
+    head[u] = idx;
+}
+
+bool bfs(){
+    memset(d,0,sizeof d);
+    std::queue<int> q;
+    q.push(S);
+    d[S] = 1;
+    while(q.size()){
+        int u = q.front();
+        q.pop();
+        for(int i = head[u];i;i = e[i].nxt){
+            int v = e[i].to;
+            if(d[v] == 0 && e[i].c){
+                d[v] = d[u] + 1;
+                q.push(v);
+                if(v == T) return true;
+            } 
+        }
+    }
+    return false;
+}
+
+ll dfs(int u,ll mf){
+    if(u == T) return mf;
+    ll sum = 0;
+    for(int i = cur[u];i;i = e[i].nxt){
+        //弧优化
+        cur[u] = i;
+        int v = e[i].to;
+        if(d[v] == d[u] + 1 && e[i].c){
+            ll f = dfs(v,min(mf,e[i].c));
+            e[i].c -= f;
+            e[i ^ 1].c += f;
+            sum += f;
+            mf -= f;
+            if(mf == 0) break;
+        }
+    }
+    if(sum == 0) d[u] = 0;
+    return sum;
+}
+
+ll dinic(){
+    ll flow = 0;
+    while(bfs()){
+        memcpy(cur,head,sizeof head);
+        flow += dfs(S,INF);
+    }
+    return flow;
+}
+
+void solve(){
+    cin >> n >> m >> k;
+    while(k--){
+        cin >> a >> b;
+        add(a,b + n,1);
+        add(b + n,a,0);
+    }
+    S = 0;
+    T = n + m + 1;
+    for(int i = 1;i <= n;i++){
+        add(S,i,1);
+        add(i,S,0);
+    }
+    for(int i = 1;i <= m;i++){
+        add(i + n,T,1);
+        add(T,i + n,0);
+    }
+    cout << dinic() << '\n';
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    ll dinic(){
+        return 0;
+    }
+    return 0;
+}

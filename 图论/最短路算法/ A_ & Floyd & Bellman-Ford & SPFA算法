@@ -1,0 +1,229 @@
+import java.io.*;
+import java.math.*;
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+
+
+public class learn {
+    /*
+    A*算法:单源最短路径算法,用来解决从一个源点->目标点的最短路径
+    源点->当前点 + 当前点->目标点的估计距离(比如曼哈顿距离预估) 加入堆中
+    相比于Dijkstra算法,实际上就是多了一个往小根堆中加上了一个估计距离
+    有了这个预估函数,那么此时点的走向一定是越来越接近目标点
+    预估函数的要求:当前点到终点的预估距离 <= 当前点到终点的真实距离,那么A*一定正确
+    所以在二维网格中比较好表示,但是在普通图中很难估计,对于Dijkstra算法,实际上就是估计距离是0的A*
+
+    预估终点距离经常选择:
+    曼哈顿距离(abs(x - nx) + abs(y - ny))
+    欧式距离(勾股定理)
+    对角距离(如果能对角线移动,那么预计值=max(abs(y - ny),abs(x - nx));
+     */
+
+    /*
+    例题,给定一个grid二维01数组,1表示道路,0表示障碍,从源点到target的最短路径A*做法
+     */
+    public static int f(int x, int y, int tx, int ty) {
+        return Math.abs(x - tx) + Math.abs(y - ty);
+    }
+
+    public static int minDistance(int[][] grid, int startX, int startY, int targetX, int targetY) {
+        if (grid[startX][startY] == 0 || grid[targetX][targetY] == 0) {
+            return -1;
+        }
+        int[] move = new int[]{-1, 0, 1, 0, -1};
+        int n = grid.length;
+        int m = grid[0].length;
+        int[][] distance = new int[n][m];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                distance[i][j] = Integer.MAX_VALUE;
+            }
+        }
+        distance[startX][startY] = 1;
+        boolean[][] visited = new boolean[n][m];
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> a[2] - b[2]);
+        heap.offer(new int[]{startX, startY, 1 + f(startX, startY, targetX, targetY)});
+        while (!heap.isEmpty()) {
+            int[] record = heap.poll();
+            int x = record[0];
+            int y = record[1];
+            if (visited[x][y]) {
+                continue;
+            }
+            for (int i = 0; i < 4; i++) {
+                int nx = x + move[i];
+                int ny = y + move[i + 1];
+                if (nx >= 0 && ny >= 0 && nx < n && ny < m && !visited[nx][ny]
+                        && distance[x][y] + 1 < distance[nx][ny]) {
+                    distance[nx][ny] = distance[x][y] + 1;
+                    heap.offer(new int[]{nx, ny, distance[nx][ny] + f(nx, ny, targetX, targetY)});
+                }
+            }
+        }
+        return -1;
+    }
+
+    /*
+    Floyd算法,得到图中任意两点之间的最短距离
+    时间复杂度O(n^3),空间复杂度O(n^2)
+    使用于任何图,不管有向无向,不管边权正负,但是不能有负环(保证最短路存在,负环是指环的总权值<0)
+    过程:distance[i][j]表示i和j之间的最短距离
+    distance[i][j] = min(distance[i][j],distance[i][k] + distance[k][j]);
+     */
+    public static void floyd(int[][] distance, int n) {
+        //跳板必须最先枚举!!!!
+        for (int bridge = 0; bridge < n; bridge++) {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    if (distance[i][bridge] != Integer.MAX_VALUE
+                            && distance[bridge][j] != Integer.MAX_VALUE
+                            && distance[i][j] > distance[i][bridge] + distance[bridge][j]) {
+                        distance[i][j] = distance[i][bridge] + distance[bridge][j];
+                    }
+                }
+            }
+        }
+    }
+    /*
+    Bellman-Ford算法,解决可以有负边但是不能有负环的图,单源最短路径算法
+    松弛操作
+    假设源点是A,从A到任意点F的最短距离为distance[F],假设从点p出发某条边,去往点S,边权为W
+    如果发现,distance[p] + w < distance[s],也就是该边可以让distance[s]变小,那么就说
+    p出发的这条边对点s进行了松弛操作
+    Bellman-Ford过程
+    1.第一轮考察每条边,每条边都尝试进行松弛操作,那么若干点的distance会减小
+    2.某一轮发现不再有松弛操作出现时,算法停止,轮数最多是n - 1轮
+    根据刷新的次数,如果大于了n - 1轮,还可以判断是否从某个点出发是否存在负环
+     */
+
+    /*
+    例题:k站中转内的最便宜航班
+    有 n 个城市通过一些航班连接。给你一个数组 flights ，其中 flights[i] = [fromi, toi, pricei]
+    表示该航班都从城市 fromi 开始，以价格 pricei 抵达 toi。
+    现在给定所有的城市和航班，以及出发城市 start 和目的地 target，
+    你的任务是找到出一条最多经过 k 站中转的路线，使得从 src 到 dst 的 价格最便宜 ，并返回该价格。
+     如果不存在这样的路线，则输出 -1。
+
+     思路:Bellman-Ford算法,k实际就是松弛的轮数,有k个中转站,那么从start到target有k + 1步,所以
+     要松弛k + 1次(有k + 2个点,n == k + 2)
+     */
+    public int findCheapestPrice(int n, int[][] flights, int start, int target, int k) {
+        int[] cur = new int[n];
+        Arrays.fill(cur,Integer.MAX_VALUE);
+        cur[start] = 0;
+        for(int i = 0;i <= k;i++){
+            //相当于第一次只处理和start相连的结点,类似于bfs一层一层处理
+            //由于每次是看cur数组中的距离,所以要新建一个next数组,防止cur数组被修改
+            //如果cur在for循环里面被修改,那么会导致连锁反应,将cur[edge[1]]修改,然后cur[edge[1]]
+            //就不是Integer.MAX_VALUE,然后cur[edge[1]]相连的点也会被修改,但是实际上第一轮我们
+            //只需要修改与start相连的点
+            int[] next = Arrays.copyOf(cur,n);
+            for(int[] edge : flights){
+                if(cur[edge[0]] != Integer.MAX_VALUE){
+                    next[edge[1]] = Math.min(next[edge[1]],cur[edge[0]] + edge[2]);
+                }
+            }
+            cur = next;
+        }
+        return cur[target] == Integer.MAX_VALUE ? -1 : cur[target];
+    }
+    /*
+    Bellman-Ford + SPFA优化(Shortest Path Faster Algorithm)
+    很容易发现,每一轮考察所有边看看松弛程度的不必要的
+    因为只有上次被某条边松弛的节点,所连接的边,才有可能引起下一次的松弛操作
+    所以用队列来维护"这一轮有哪些节点的distance变小了"(用boolean类型的enter数组记录是否进入队列)
+    下一轮只需要对这些点的所有边,考察有没有松弛操作即可
+    时间复杂度依然是O(n * m),但是依然只适用于小图,在没有负权值的边时仍然优先使用Dijkstra
+     */
+    /*
+    模版:负环(P3385)
+    给定t组数据,点数为n边数为m,然后接下来的m行,每行3个整数u,v,w,若w >= 0,则uv之间存在一条权值为
+    w的无向边,若w < 0,则只有一条从u到v权值为w的边
+     */
+    public static int MAXN = 2001;
+    public static int MAXM = 6001;
+    public static int[] head = new int[MAXN];
+    public static int[] to = new int[MAXM];
+    public static int[] next = new int[MAXM];
+    public static int[] weight = new int[MAXM];
+    //SPFA需要
+    public static int MAXQ = 4000001;
+    public static int[] distance = new int[MAXN];
+    //每个点被松弛的次数
+    public static int[] updateCnt = new int[MAXN];
+    public static int[] queue = new int[MAXQ];
+    public static int l,r;
+    public static boolean[] enter = new boolean[MAXN];
+
+    public static int cnt;
+    public static int n,m,u,v,w;
+    public static void addEdge(int u,int v,int w){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        weight[cnt] = w;
+        head[u] = cnt++;
+    }
+    public static void build(int n){
+        cnt = 1;
+        l = r = 0;
+        Arrays.fill(head,1,n + 1,0);
+        Arrays.fill(enter,1,n + 1,false);
+        Arrays.fill(distance,1,n + 1,Integer.MAX_VALUE);
+        Arrays.fill(updateCnt,1,n + 1,0);
+    }
+    public static boolean SPFA(int n){
+        distance[1] = 0;
+        updateCnt[1]++;
+        queue[r++] = 1;
+        enter[1] = true;
+        while(l < r){
+            int u = queue[l++];
+            enter[u] = false;
+            for(int edge = head[u],v,w;edge != 0;edge = next[edge]){
+                v = to[edge];
+                w = weight[edge];
+                if(distance[u] + w < distance[v]){
+                    distance[v] = distance[u] + w;
+                    if(!enter[v]){
+                        if(updateCnt[v]++ == n){
+                            return true;
+                        }
+                        queue[r++] = v;
+                        enter[v] = true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            int t = (int) in.nval;
+            for(int i = 0;i < t;i++){
+                in.nextToken(); n = (int) in.nval;
+                in.nextToken(); m = (int) in.nval;
+                build(n);
+                for(int j = 0;j < m;j++){
+                    in.nextToken(); u = (int) in.nval;
+                    in.nextToken(); v = (int) in.nval;
+                    in.nextToken(); w = (int) in.nval;
+                    if(w >= 0){
+                        addEdge(u,v,w);
+                        addEdge(v,u,w);
+                    } else {
+                        addEdge(u,v,w);
+                    }
+                }
+                out.println(SPFA(n) ? "YES" : "NO");
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}

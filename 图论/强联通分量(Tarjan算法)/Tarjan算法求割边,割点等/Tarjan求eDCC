@@ -1,0 +1,99 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+/*
+Tarjan算法求点的双连通分量(vDCC)
+一张无向连通图不存在割点,那么就是点双连通图
+无向图的极大点双连通子图被称为点双连通分量(vDCC)
+
+Tarjan算法求vDCC:
+用一个栈存点,若遍历回到x时,发现割点判定法low[y] >= dfn[x]成立,那么从栈中弹出结点
+直到y被弹出,刚才弹出的结点和x一起构成一个vDCC
+vDCC缩点:将所有点双连通分量都缩成点,把缩点和对应的割点连边,构成一棵树,然后观察树,构造答案
+*/
+
+int n,m,a,b;
+std::vector<int> e[N],ne[N];
+int dfn[N],low[N],tot;
+std::stack<int> stk;
+//存点双连通分量的数组
+std::vector<int> dcc[N];
+//cut:判断是不是割点,root,记录是不是根节点(判断割点的分类讨论)
+//cnt:记录第几组点双连通分量,num:给每个割点进行编号,从cnt+1开始
+//id:给双连通分量编号时用到
+int cut[N],root,cnt,num,id[N];
+
+void tarjan(int x){
+    dfn[x] = low[x] = ++tot;
+    stk.push(x);
+    //孤立点,特判,单独是一个点双连通分量
+    if(!e[x].size()){
+        dcc[++cnt].push_back(x);
+        return;
+    }
+    int child = 0; 
+    //与eDCC不同,这里是更新low[x]之后直接判断x是不是割点,如果是,那么就把栈中的
+    //元素全部加到dcc数组中去组成一个双连通图
+    for(int y : e[x]){
+        if(!dfn[y]){
+            tarjan(y);
+            low[x] = min(low[x],low[y]);
+            if(low[y] >= dfn[x]){
+                child++;
+                if(x != root || child > 1){
+                    cut[x] = 1;
+                }
+                cnt++;
+                while(1){
+                    int z = stk.top();
+                    stk.pop();
+                    dcc[cnt].push_back(z);
+                    if(z == y) break;
+                }
+                dcc[cnt].push_back(x);
+            }
+            //y已经访问
+        } else {
+            low[x] = min(low[x],dfn[y]);
+        }
+    }
+}
+
+void solve(){
+    cin >> n >> m;
+    while(m--){
+        cin >> a >> b;
+        e[a].push_back(b);
+        e[b].push_back(a);
+    }
+    for(root = 1;root <= n;root++){
+        if(!dfn[root]){
+            tarjan(root);
+        }
+    }
+    num = cnt;
+    for(int i = 1;i <= n;i++){
+        if(cut[i]) id[i] = ++num;
+    }
+    for(int i = 1;i <= cnt;i++){
+        for(int j = 0;j < dcc[i].size();j++){
+            int x = dcc[i][j];
+            if(cut[x]){
+                ne[i].push_back(id[x]);
+                ne[id[x]].push_back(i);
+            }
+        }
+    }
+}
+
+int main(){
+    int t;
+    cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

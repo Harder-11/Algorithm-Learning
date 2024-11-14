@@ -1,0 +1,73 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+二分图判定 染色法
+二分图:如果一张无向图的N个结点可以分成A.B两个不相交的非空集合,并且同一集合内的点之间没有
+边相连,那么称该无向图为二分图
+
+定理:二分图不存在奇环(长度为奇数的环)
+因为每一条边都是一个集合走向另一个集合,只有走偶数次才可能回到同一个集合
+染色法:可以使用染色法来判断二分图,即尝试用两种颜色标记图中的结点,当一个点被标记之后
+所有与它相邻的结点一个标记与它相反的颜色,若标记过程产生冲突,说明图中有奇环,可以用BFS或者DFS实现
+
+*/
+
+struct edge {
+    int to,nxt;
+} e[N];
+int head[N],idx;
+//color初始值都是0,被访问点的颜色是1或者2
+int color[N];
+int n,m,a,b;
+
+void add(int u,int v){
+    e[++idx] = {v,head[u]};
+    head[u] = idx;
+}
+
+//dfs方法,返回1说明有奇环,返回0说明没有奇环,那么就是二分图
+bool dfs(int u,int c){
+    color[u] = c;
+    for(int i = head[u];i;i = e[i].nxt){
+        int v = e[i].to;
+        if(!color[v]){
+            if(dfs(v,3 - c)) return 1;
+        } else if(color[v] == c) return 1;
+    }
+    return 0;
+}
+
+
+void solve(){
+    cin >> n >> m;
+    for(int i = 0;i < m;i++){
+        cin >> a >> b;
+        add(a,b);
+        add(b,a);
+    }
+    bool flag = 0;
+    for(int i = 1;i <= n;i++){
+        if(!color[i]){
+            if(dfs(i,1)){
+                flag = 1;
+                break;
+            }
+        }
+    }
+    if(flag) cout << "NO" << '\n';
+    else cout << "YES" << '\n';
+}
+
+int main(){
+    int t;
+    cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

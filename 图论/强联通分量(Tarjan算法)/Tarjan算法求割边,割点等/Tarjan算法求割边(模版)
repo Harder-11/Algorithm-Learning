@@ -1,0 +1,60 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+Tarjan算法求割边(桥)
+割边:对于一个无向图,如果删除一条边后图中的联通块个数增加了,则称这条边为桥或者割边
+割边判定法则:当搜索树上存在x的一个子节点y,满足low[y] > dfn[x],那么(x,y)这条边就是割边
+low[y]>dfn[x],说明从y出发,在不经过(x,y)这条边的前提下,不管走哪条边,都无法到达x或者
+更早访问的结点,所以删除(x,y)这条边,以y为根的子树也就断开了
+*/
+
+//为了处理重边,使用链式前向星建图
+struct edge {
+    int to,nxt;
+} e[N];
+//从2,3开始配对
+int head[N],idx = 1;
+int dfn[N],low[N],tot,cnt;
+struct bridge {
+    int x,y;
+} bri[N];
+
+void add(int u,int v){
+    e[++idx] = {v,head[u]};
+    head[u] = idx;
+}
+
+void tarjan(int x,int in_edge){
+    dfn[x] = low[x] = ++tot;
+    for(int i = head[x];i;i = e[i].nxt){
+        int y = e[i].to;
+        if(!dfn[y]){
+            tarjan(y,i);
+            low[x] = min(low[x],low[y]);
+            if(low[y] > dfn[x]){
+                //存储割边
+                bri[cnt++] = {x,y};
+            }
+            //此时不是反边(是无向图,防止往回走)
+        } else if(i != (in_edge ^ 1)){
+            low[x] = min(low[x],dfn[y]);
+        }
+    }
+}
+
+
+void solve(){}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

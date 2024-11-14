@@ -1,0 +1,104 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 505;
+const int mod = 1e9 + 7;
+
+/*
+二分图最大权完美匹配 KM算法
+给定一张带边权的二分图,其左右部点数相等,均为N个点,如果最大匹配有N条边,则称二分图完美匹配
+二分图的边权和最大完美匹配,称为二分图的最大权完美匹配
+
+可行顶标:给每个结点分配一个权值la[x],lb[y],对于所有边(x,y),满足la[x]+lb[y]>=w(x,y)
+(只要满足la[x] + la[y] >= w(x,y)即可)
+相等子图:在一组可行顶标下原图的生成子图,包含所有点单只包含满足la[x]+lb[y]=w(x,y)的边
+定理:如果相等子图存在完美匹配,则该二分图就是二分图的最大权完美匹配
+
+KM算法是对匈牙利算法的改造
+1.初始化,做不顶标 = max(出边边最大值),右部顶标 = 0
+2.枚举左部点,沿交替路走,找增广路
+如果能走到右部的一个未匹配点,则找到一条增广路,记录匹配点对
+若不能走到右部一个未匹配点,则记录delta = la[x] + la[y] - w(x,y)
+根据最小的delta更新交替路上的顶标值(左减右加),总可以找到新的增广路
+这里是DFS求二分图最大权完美匹配,时间复杂度O(n^4)
+*/
+
+//有点匹配了哪个左点
+int match[N];
+//标记是否在交替路中
+int va[N],vb[N];
+//左右顶标
+ll la[N],lb[N];
+//w是用来记录边权,d维护更新delta值
+//对于w数组,如果x,y之间没有边,那么就是-INF,如果有边那么就是w
+ll w[N][N],d[N];
+int n,m;
+
+bool dfs(int x){
+    //x在交替路中
+    va[x] = 1;
+    //然后枚举右部点
+    for(int y = 1;y <= n;y++){
+        if(!vb[y]){
+            //此时是相等子图,那么将y加入交替路,然后使用匈牙利算法(类似)
+            if(la[x] + la[y] == w[x][y]){
+                vb[y] = 1;
+                if(!match[y] || dfs(match[y])){
+                    match[y] = x;
+                    return 1;
+                }
+                //此时不是相等子图
+            } else {
+                d[y] = min(d[y],la[x] + la[y] - w[x][y]);
+            }
+        }
+    }
+    return 0;
+}
+
+ll KM(){
+    //先初始化顶标,左边置为边最大值,右边是0
+    for(int i = 1;i <= n;i++) la[i] = -INF;
+    for(int i = 1;i <= n;i++){
+        for(int j = 1;j <= n;j++){
+            la[i] = max(la[i],w[i][j]);
+        }
+    }
+    for(int i = 1;i <= n;i++) lb[i] = 0;
+    for(int i = 1;i <= n;i++){
+        //一直找,直到左侧点i找到匹配
+        while(true){
+            fill(va + 1,va + n + 1,0);
+            fill(vb + 1,vb + n + 1,0);
+            fill(d + 1,d + n + 1,INF);
+            if(dfs(i)) break;
+            ll delta = INF;
+            for(int j = 1;j <= n;j++){
+                if(!vb[j]) delta = min(delta,d[j]);
+            }
+            for(int j = 1;j <= n;j++){
+                if(va[j]) la[j] -= delta;
+                if(vb[j]) lb[j] += delta;
+            }
+        }
+    }
+    ll res = 0;
+    for(int i = 1;i <= n;i++){
+        res += w[match[i]][i];
+    }
+    return res;
+}
+
+void solve(){
+
+}
+
+int main(){
+    int t;
+    cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

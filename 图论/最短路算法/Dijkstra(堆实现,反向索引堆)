@@ -1,0 +1,299 @@
+import java.io.*;
+import java.math.*;
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+
+
+public class learn {
+    /*
+    Dijkstra算法,分层图最短路(扩点最短路)
+
+    Dijkstra算法:给定一个源点,求解源点到每个店的最短路径长度,单源最短路径算法
+    适用范围:有向图,边的权值没有负数
+    实现:用普通堆实现的Dijktra算法,最普遍,最实用
+    核心:结点弹出过就忽略,结点没弹出过,让其他没弹出结点,距离变小的记录加入堆
+    步骤:1创建两个数组distance(int[]),用来表示源点到每个其他结点的距离,初始化为无穷大
+    然后再建立一个visited(boolean[])数组,表示点是否从堆里面弹出过,首先将源点弹出堆中,将
+    distance[源点]置为0,visited[源点] = true
+    2.建立一个小根堆,小根堆存放记录(u点,源点到u的距离)
+    3从小根堆弹出(u点,源点到u的距离)
+    a.如果visited[u] == true,不做任何处理,重复步骤3
+    b.如果visited[u] == false,令visited[u] = true,u就算弹出过了
+    然后考察u的每一条边,假设去往v,边权值为w
+    (1)如果visited[v] == false 并且 distance[u] + w < distance[v]
+    令distance[v] = w + distance[u],把(v,distance[u] + w)加入小根堆
+    (2)处理完u的每一条边之后,仇富步骤3
+    4,小根堆为空过程结束,distance表记录了原点到每个结点的最短距离
+    复杂度:O(mlogm)
+     */
+
+    /*
+    例题:网络延迟时间
+    有 n 个网络节点，标记为 1 到 n。
+    给你一个列表 times，表示信号经过 有向 边的传递时间。
+    times[i]=(ui,vi,wi)其中 ui 是源节点,vi是目标节点，wi是一个信号从源节点传递到目标节点的时间。
+    现在，从某个节点 K 发出一个信号。需要多久才能使所有节点都收到信号
+    如果不能使所有节点收到信号，返回 -1 。
+
+    思路:建图,实际就是求源点到其他点的最大距离,Dijkstra算法
+     */
+    public int networkDelayTime(int[][] times, int n, int k) {
+        ArrayList<ArrayList<int[]>> graph = new ArrayList<>();
+        for(int i = 0;i <= n;i++){
+            graph.add(new ArrayList<>());
+        }
+        for(int[] edge : times){
+            graph.get(edge[0]).add(new int[]{edge[1],edge[2]});
+        }
+        int[] distance = new int[n + 1];
+        Arrays.fill(distance,Integer.MAX_VALUE);
+        distance[k] = 0;
+        boolean[] visited = new boolean[n + 1];
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a,b)->a[1] - b[1]);
+        heap.offer(new int[]{k,0});
+        while(!heap.isEmpty()){
+            int u = heap.poll()[0];
+            if(visited[u]){
+                continue;
+            }
+            visited[u] = true;
+            for(int[] edge : graph.get(u)){
+                int v = edge[0];
+                int w = edge[1];
+                if(!visited[v] && distance[u] + w < distance[v]){
+                    distance[v] = w + distance[u];
+                    heap.offer(new int[]{v,distance[u] + w});
+                }
+            }
+        }
+        int ans = Integer.MIN_VALUE;
+        for(int i = 1;i <= n;i++){
+            if(distance[i] == Integer.MAX_VALUE){
+                return -1;
+            }
+            ans = Math.max(ans,distance[i]);
+        }
+        return ans;
+    }
+    /*
+    反向索引堆实现Dijkstra算法,时间复杂度为O(mlogn),n为结点数,m为边数
+    1.准备好反向索引堆,根据源点到当前点的距离组织小根堆,可以做到如下操作
+    a.新增记录(x,源点到x的距离) b.当源点到x的距离更新时,可以进行堆的调整
+    c.x点一点弹出,以后忽略x d.弹出堆顶的记录(u,源点到u的距离)
+    2.把(源点,0)加入反向索引堆,过程开始
+    3.反向索引堆弹出(u,源点到u的距离),考察u的每一条边,假设去往v,边权值为w
+    (1):如果v没有进入过反向索引堆中,新增记录(v,源点到u的距离 + w)
+    (2):如果v曾经在反向索引堆中弹出过,忽略
+    (3):如果v在反向索引堆中,看看源点到v的距离能不能变得更小,如果能,调整堆
+    (4):处理完u的每一条边,重复步骤3
+    4.反向索引堆为空,过程结束,反向索引堆里记录了源点到每个结点的最短距离
+
+    反向索引堆的实现:创建一个数组作为反向索引表用来记录每个元素在堆中所处的位置,对于已经弹出了的元素
+    用-2表示,还没进入的用-1表示,反向索引表中的元素的位置和堆中的位置同步变化
+     */
+
+    //链式前向星 + 反向索引堆的实现
+    public static int MAXN = 101;
+    public static int MAXM = 6001;
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXM];
+    public static int[] to = new int[MAXM];
+    public static int[] weight = new int[MAXM];
+    public static int cnt;
+    //反向索引堆
+    public static int[] heap = new int[MAXN];
+    //where[v] == -1,表示没进过堆, == -2表示已经弹出
+    public static int[] where = new int[MAXN];
+    public static int heapSize;
+    public static int[] distance = new int[MAXN];
+    public static void build(int n){
+        cnt = 1;
+        heapSize = 0;
+        Arrays.fill(head,1,n + 1,0);
+        Arrays.fill(where,1,n + 1,-1);
+        Arrays.fill(distance,1,n + 1,Integer.MAX_VALUE);
+    }
+    public static void addEdge(int u,int v,int w){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        weight[cnt] = w;
+        head[u] = cnt++;
+    }
+    public static void addOrUpdateOrIgnore(int v,int c){
+        if(where[v] == -1){
+            heap[heapSize] = v;
+            where[v] = heapSize++;
+            distance[v] = c;
+            heapInsert(where[v]);
+        } else if(where[v] >= 0){
+            distance[v] = Math.min(distance[v],c);
+            heapInsert(where[v]);
+        }
+    }
+    public static void heapInsert(int i){
+        while(distance[heap[i]] < distance[heap[(i - 1) / 2]]){
+            swap(i,(i - 1) / 2);
+            i = (i - 1) / 2;
+        }
+    }
+    public static int pop(){
+        int ans = heap[0];
+        //将最后一个元素放在首位,然后heapify,将堆顶元素往下交换
+        swap(0,--heapSize);
+        heapify(0);
+        where[ans] = -2;
+        return ans;
+    }
+    public static void heapify(int i){
+        int l = 1;
+        while(l < heapSize){
+            int best = l + 1 < heapSize && distance[heap[l + 1]] < distance[heap[l]] ? l + 1 : l;
+            best = distance[heap[best]] < distance[heap[i]] ? best : i;
+            if(best == i){
+                break;
+            }
+            swap(best,i);
+            i = best;
+            l = i * 2 + 1;
+        }
+    }
+    public static boolean isEmpty(){
+        return heapSize == 0;
+    }
+    public static void swap(int i,int j){
+        int tmp = heap[i];
+        heap[i] = heap[j];
+        heap[j] = tmp;
+        where[heap[i]] = i;
+        where[heap[j]] = j;
+    }
+    public int networkDelayTime2(int[][] times, int n, int s) {
+        build(n);
+        for(int[] edge : times){
+            addEdge(edge[0],edge[1],edge[2]);
+        }
+        addOrUpdateOrIgnore(s,0);
+        while(!isEmpty()){
+            int u = pop();
+            for(int ei = head[u];ei != 0;ei = next[ei]){
+                addOrUpdateOrIgnore(to[ei],distance[u] + weight[ei]);
+            }
+        }
+        int ans = Integer.MIN_VALUE;
+        for(int i = 1;i <= n;i++){
+            if(distance[i] == Integer.MAX_VALUE){
+                return -1;
+            }
+            ans = Math.max(ans,distance[i]);
+        }
+        return ans;
+    }
+    /*
+    最小体力消耗路径
+    你准备参加一场远足活动。给你一个二维 rows x columns 的地图 heights ，
+    其中 heights[row][col] 表示格子 (row, col) 的高度。一开始你在最左上角的格子 (0, 0) ，
+    且你希望去最右下角的格子 (rows-1, columns-1) （注意下标从 0 开始编号）。
+    你每次可以往 上，下，左，右 四个方向之一移动，你想要找到耗费 体力 最小的一条路径。
+    一条路径耗费的体力值是路径上相邻格子之间高度差绝对值的最大值决定的。
+    请你返回从左上角走到右下角的最小 体力消耗值 。
+
+    思路:把二维数组当做一幅图,用Dijkstra算法,每次更新distance的值,由于消耗的体力就是最大的高度差
+    绝对值,所以说nc = Math.max(c,高度差绝对值),然后nc和distance比较,如果找到一条更小的路径,
+    那么就将distance置为nc,然后加入到堆中;
+     */
+    public int minimumEffortPath(int[][] heights) {
+        int[] move = new int[]{-1,0,1,0,-1};
+        int n = heights.length;
+        int m = heights[0].length;
+        int[][] distance = new int[n][m];
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < m;j++){
+                distance[i][j] = Integer.MAX_VALUE;
+            }
+        }
+        distance[0][0] = 0;
+        boolean[][] visited = new boolean[n][m];
+        //数组0表示行号,1表示列号,2表示源点到当前格子的距离
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a,b)->a[2] - b[2]);
+        heap.add(new int[]{0,0,0});
+        while(!heap.isEmpty()){
+            int[] record = heap.poll();
+            int x = record[0];
+            int y = record[1];
+            int c = record[2];
+            if(visited[x][y]){
+                continue;
+            }
+            if(x == n - 1 && y == m - 1){
+                return c;
+            }
+            visited[x][y] = true;
+            for(int i = 0;i < 4;i++){
+                int nx = x + move[i];
+                int ny = y + move[i + 1];
+                if(nx >= 0 && ny >= 0 && nx < n && ny < m && !visited[nx][ny]){
+                    int nc = Math.max(c,Math.abs(heights[x][y] - heights[nx][ny]));
+                    if(nc < distance[nx][ny]){
+                        distance[nx][ny] = nc;
+                        heap.add(new int[]{nx,ny,nc});
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+    /*
+    水位上升的泳池中游泳
+    在一个 n x n 的整数矩阵 grid 中，每一个方格的值 grid[i][j] 表示位置 (i, j) 的平台高度。
+    当开始下雨时，在时间为 t 时，水池中的水位为 t 。
+    你可以从一个平台游向四周相邻的任意一个平台，但是前提是此时水位必须同时淹没这两个平台。
+    假定你可以瞬间移动无限距离，也就是默认在方格内部游动是不耗时的。
+    当然，在你游泳的时候你必须待在坐标方格里面。
+    你从坐标方格的左上平台 (0，0) 出发。
+    返回 你到达坐标方格的右下平台 (n-1, n-1) 所需的最少时间 。
+
+    思路:题干的意思就是(0,0)和(n - 1,n - 1)联通需要的最短时间,而联通需要中间的路径都有水,而对于每个
+    平台,水位淹没该平台的时间就是grid[i][j]
+     */
+    public int swimInWater(int[][] grid) {
+        int[] move = new int[]{-1,0,1,0,-1};
+        int n = grid.length;
+        int[][] distance = new int[n][n];
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < n;j++){
+                distance[i][j] = Integer.MAX_VALUE;
+            }
+        }
+        distance[0][0] = grid[0][0];
+        boolean[][] visited = new boolean[n][n];
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a,b)->a[2] - b[2]);
+        heap.offer(new int[]{0,0,grid[0][0]});
+        while(!heap.isEmpty()){
+            int[] record = heap.poll();
+            int x = record[0];
+            int y = record[1];
+            int c = record[2];
+            if(visited[x][y]){
+                continue;
+            }
+            visited[x][y] = true;
+            if(x == n - 1 && y == n - 1){
+                return c;
+            }
+
+            for(int i = 0;i < 4;i++){
+                int nx = x + move[i];
+                int ny = y + move[i + 1];
+                if(nx >= 0 && ny >= 0 && nx < n && ny < n && !visited[nx][ny]){
+                    int nc = Math.max(c,grid[nx][ny]);
+                    if(nc < distance[nx][ny]){
+                        distance[nx][ny] = nc;
+                        heap.offer(new int[]{nx,ny,nc});
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+}
