@@ -1,0 +1,128 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 510;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+半平面交(和高中的线性规划类似)
+直线的表示:两点(0,b)和(1,k+b)确定一条有向直线
+半平面:直线一侧的平面就叫半平面
+半平面的表示:左半平面y >= kx + b,右半平面:y < kx + b
+半平面的表示:直线一侧的平面就叫半平面
+半平面交:就是多个半平面的相交部分,常取左半平面交
+半平面交的应用:求凸多边形的面积交,求线性规划的可行域
+求半平面交的算法(O(nlogn))
+1.按极角排序
+2.逆时针构建,双端队列维护边界线
+
+*/
+struct Point {
+    double x,y;
+} p[N];
+
+//直线,通过两点(0,b)和(1,k+b)确定的一条直线
+struct Line {
+    Point s,e;
+} a[N],q[N];
+int n,m,cnt;
+
+Point operator + (Point a,Point b){
+    return {a.x + b.x,a.y + b.y};
+}
+
+Point operator - (Point a,Point b){
+    return {a.x - b.x,a.y - b.y};
+}
+
+Point operator * (Point a,double t){
+    return {a.x * t,a.y * t};
+}
+
+double operator * (Point a,Point b){
+    return a.x * b.y - a.y * b.x;
+}
+
+//极角(与x轴正方向的夹角,arctan(y/x)即可)(-PI,PI]
+double angle(Line a){
+    return atan2(a.e.y - a.s.y,a.e.x - a.s.x);
+}
+
+bool cmp(Line a,Line b){
+    double A = angle(a),B = angle(b);
+    //极角相等,那么谁在左侧谁排在前面
+    return fabs(A - B) > eps ? A < B : (a.e - a.s) * (b.e - a.s) < 0;
+}
+
+//两条直线求交点
+Point cross(Line a,Line b){
+    Point u = a.s - b.s;
+    Point v = a.e - a.s;
+    Point w = b.e - b.s;
+    double t = u * w / (w * v);
+    return a.s + v * t;
+}
+
+//判断交点在直线的右侧
+bool right(Line a,Line b,Line c){
+    Point p = cross(b,c);
+    //这里的判断和上面的cmp一模一样,因为判断交点在右侧说明直线就在左侧
+    return (a.e - a.s) * (p - a.s) < 0;
+}
+
+double calc(){
+    sort(a + 1,a + cnt + 1,cmp);
+    //h是双端队列的头,t是尾(此时是数组代替的,那么入队只能从队尾,出队是两端都可)
+    int h = 1,t = 1;
+    //先让第一条线加入队列
+    q[1] = a[1];
+    for(int i = 2;i <= cnt;i++){
+        //如果是平行直线,那么此时排序后的a[i]一定是在a[i - 1]右边,那么对左半平面交
+        //没有任何的贡献,那么直接continue
+        if(angle(a[i]) - angle(a[i - 1]) < eps) continue;
+        //两个while循环判断是从队尾弹出还是队头,把队尾和队头不合适的直线全部弹出
+        //这里的顺序也不能变,必须先弹队尾,再弹队头,并且要h < t保证最少有一条线在队中
+        while(h < t && right(a[i],q[t],q[t - 1])) t--;
+        while(h < t && right(a[i],q[h],q[h + 1])) h++;
+        q[++t] = a[i];
+    }
+    //因为加入了最后一个元素进入队列之后循环就结束了,那么最后还要判断队尾和队头的关系是否成立
+    while(h < t && right(q[h],q[t],q[t - 1])) t--; 
+    q[++t] = q[h];//封口
+    int k = 0;
+    double ans = 0;
+    //把所有的交点求出来,然后用三角剖分求面积(实际求的四边形面积,然后/2)
+    for(int i = h;i < t;i++){
+        p[++k] = cross(q[i],q[i + 1]);
+    }
+    for(int i = 2;i < k;i++){
+        ans += (p[i] - p[1]) * (p[i + 1] - p[1]);
+    }
+    return ans / 2;
+}
+
+void solve(){
+    cin >> n;
+    while(n--){
+        cin >> m;
+        //把顶点转化成直线储存
+        for(int i = 1;i <= m;i++) cin >> p[i].x >> p[i].y;
+        for(int i = 1;i <= m;i++) a[++cnt] = {p[i],p[i % m + 1]};
+    }
+    cout << fixed << setprecision(3) << calc() << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

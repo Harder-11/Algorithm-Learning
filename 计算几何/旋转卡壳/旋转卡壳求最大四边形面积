@@ -1,0 +1,102 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+旋转卡壳
+切线:给定一个凸多边形p,切线是一条与p相交并且在p的一侧的线
+多踵点对:
+如果凸多边形上的两个点p和q在两条平行线上,那么他们就构成了一对对踵点对
+根据切线与凸多边形的相交方式,分以下三种情况:
+1.点-点对踵点对
+2.点-边对踵点对
+3.边-边对踵点对
+可以证明:一个凸n边形的对踵点对最多有3n/2对
+
+旋转卡壳:
+绕着凸多边形旋转一对平行切线,就叫做旋转卡壳,可以解决以下问题
+-计算距离:1.凸多边形直径 2.凸多边形宽度 3.凸多边形间最大距离 4.凸多边形间最小距离
+-外接矩形:1.最小面积外接矩形 2.最小周长外接矩形
+-三角剖分 1.洋葱三角剖分 2.螺旋三角剖分 3.四边形剖分
+-凸多边形属性 1.合并凸包 2.找公切线 3.凸多边形交 4.临界切线
+
+本题是求凸壳最大四边形面积,思路:
+1.最大四边形的顶点一定在凸包上
+2.四边形的对角线一定是凸包的对角线
+3.枚举凸包的对角线ij,找出两个对踵点a和b,更新答案
+4.a,b都是单调变化的,时间为O(n^2)
+*/
+#define x first
+#define y second
+typedef pair<double,double> Point;
+Point p[N],s[N];
+int n,cnt;
+
+//叉乘,用来判断点和直线的位置关系(是不是在右边或者共线)
+double cross(Point a,Point b,Point c){
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+void andrew(){
+    sort(p + 1,p + n + 1);
+    int t = 0;
+    for(int i = 1;i <= n;i++){
+        while(t > 1 && cross(s[t - 1],s[t],p[i]) <= 0){
+            t--;
+        }
+        s[++t] = p[i];
+    }
+    int k = t;
+    for(int i = n - 1;i >= 1;i--){
+        while(t > k && cross(s[t - 1],s[t],p[i]) <= 0){
+            t--;
+        }
+        s[++t] = p[i];
+    }
+    n = t - 1;
+}
+
+double calc(){
+    double ans = 0;
+    for(int i = 1;i <= n;i++){
+        //a是i到j之间的点,b是j到i之间的点
+        int a = i,b = i + 1;
+        for(int j = i + 1;j <= n;j++){
+            while(cross(s[i],s[j],s[a + 1]) < cross(s[i],s[j],s[a])){
+                a = a % n + 1;
+            }
+            while(cross(s[i],s[j],s[b + 1]) > cross(s[i],s[j],s[b])){
+                b = b % n + 1;
+            }
+            ans = max(ans,-cross(s[i],s[j],s[a]) + cross(s[i],s[j],s[b]));
+        }
+    }
+    //因为之前求到都是平行四边形的面积,所以这里要除以2
+    return ans / 2;
+}
+
+void solve(){
+    cin >> n;
+    for(int i = 1;i <= n;i++){
+        cin >> p[i].x >> p[i].y;
+    }
+    andrew();
+    cout << fixed << setprecision(3) << calc() << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

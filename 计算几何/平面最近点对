@@ -1,0 +1,92 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+平面最近点对 分治算法
+给定平面上n个点,求最近点对之间的距离
+分治算法:O(nlogn)
+1.devide:将原问题划分成子问题
+2.conquer:在边界处得到子问题的解
+3.combine:将子问题的解逐层合并成原问题的解
+
+子问题:以中间点为划分线,最近点对分三种情况(在切分线上的点属于左半区)
+1.都在左边点集
+2.都在右边点集
+3.一个点在左边,一个点在右边
+
+算法流程:
+1.对所有点按关键字x进行排序,y为第二关键字进行排序
+2.分治求出中线两边的最小距离d1和d2,则d = min(d1,d2)(递归处理左右两边)
+3.划分出中线左右距离为d的平行区域,搜索区域内的点,按纵坐标排序
+检查纵坐标之差小于d的情况,更新d的值
+
+
+*/
+
+struct Point {
+    double x,y;
+} a[N],b[N];
+
+bool cmp(Point a,Point b){
+    return a.x != b.x ? a.x < b.x : a.y < b.y;
+}
+
+bool cmpy(Point a,Point b){
+    return a.y < b.y;
+}
+
+double dis(Point a,Point b){
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)); 
+}
+
+double calc(int l,int r){
+    //单点返回无穷大
+    if(l == r) return 2e9;
+    //如果r - l = 1,那么直接返回两个点直接的距离,不用再递归
+    if(l + 1 == r) return dis(a[l],a[r]);
+    int m = (l + r) >> 1;
+    double d = min(calc(l,m),calc(m + 1,r));
+    //以下是跨中线处理
+    int k = 0;
+    for(int i = l;i <= r;i++){
+        if(fabs(a[i].x - a[m].x) < d){
+            b[++k] = a[i];
+        }
+    }
+    sort(b + 1,b + k + 1,cmpy);
+    for(int i = 1;i < k;i++){
+        //纵坐标之差必须小于d,否则对答案不可能有贡献
+        for(int j = i + 1;j <= k && b[j].y - b[i].y < d;j++){
+            d = min(d,dis(b[i],b[j]));
+        }
+    }
+    return d;
+}
+
+void solve(){
+    int n;
+    cin >> n;
+    for(int i = 1;i <= n;i++){
+        cin >> a[i].x >> a[i].y;
+    }
+    sort(a + 1,a + n + 1,cmp);
+    cout << fixed << setprecision(4) << calc(1,n) << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

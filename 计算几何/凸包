@@ -1,0 +1,103 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+凸包:
+给定平面上的点集,凸包就是将最外层的点连接起来构成的凸多边形
+它能包含点集中的所有的点
+把点集中各点看做钉子,拿一个橡皮筋套住所有的钉子,最终橡皮筋就是一个凸包
+凸包的两种求法:Graham算法和Andrew算法,两种算法都需要对点进行排序
+时间复杂度O(nlogn)
+
+对于Andrew算法:
+1.对所有的点按坐标x为第一关键字,y为第二关键字进行排序
+第1,n两个点一定是在凸包上的
+2.按顺序枚举所有点,求下凸包,用栈维护当前在凸包上的点:
+新点入栈之前,总要判断该弹出哪些旧店,只要新点处在由栈顶两点构成的有向直线的右侧
+或者共线,就弹出旧店.不能弹出的时候,新点入栈
+3.再逆序枚举所有点,求上凸包,用栈维护同上
+注意:每个点入栈两次,出栈不超过两次,所以总次数不超过4n
+
+对于本题的思路:把所有的圆角矩形的圆角的圆的圆心连起来找凸包
+然后直线段的和就是圆心构成的凸多边形的周长,圆弧部分的和总和是360度
+*/
+#define x first
+#define y second
+typedef pair<double,double> Point;
+Point p[N],s[N];
+int n,top,cnt;
+
+//叉乘,用来判断点和直线的位置关系(是不是在右边或者共线)
+double cross(Point a,Point b,Point c){
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+double dis(Point a,Point b){
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+}
+
+Point rotate(Point a,double b){
+    return {a.x * cos(b) - a.y * sin(b),a.x * sin(b) + a.y * cos(b)};
+}
+
+bool cmp(Point a,Point b){
+    return a.x != b.x ? a.x < b.x : a.y < b.y;
+}
+
+double andrew(){
+    sort(p + 1,p + n + 1);
+    for(int i = 1;i <= n;i++){
+        while(top > 1 && cross(s[top - 1],s[top],p[i]) <= 0){
+            top--;
+        }
+        s[++top] = p[i];
+    }
+    int t = top;
+    for(int i = n - 1;i >= 1;i--){
+        while(top > t && cross(s[top - 1],s[top],p[i]) <= 0){
+            top--;
+        }
+        s[++top] = p[i];
+    }
+    double res = 0;
+    for(int i = 1;i < top;i++) res += dis(s[i],s[i + 1]);
+    return res;
+}
+
+void solve(){
+    cin >> n;
+    double a,b,r;
+    cin >> a >> b >> r;
+    a = a / 2 - r,b = b / 2 - r;
+    //四角偏移量
+    int dx[] = {1,1,-1,-1};
+    int dy[] = {1,-1,-1,1};
+    while(n--){
+        double x,y,z;
+        cin >> x >> y >> z;
+        for(int i = 0;i < 4;i++){
+            Point t = rotate({dx[i] * b,dy[i] * a},z);
+            p[++cnt] = {x + t.x,y + t.y};
+        }
+    }
+    n = cnt;
+    cout << fixed << setprecision(2) << andrew() + 2 * PI * r << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

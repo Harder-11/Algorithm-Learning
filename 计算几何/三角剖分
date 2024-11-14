@@ -1,0 +1,147 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-8;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+三角剖分(计算多边形和圆的相交面积)
+三角剖分的步骤:
+1.多边形上的每条边都与圆心构成三角形
+2.计算出每个三角形与圆的相交面积
+3.根据有向面积的正负累加进答案中
+计算每个三角形和圆的相交面积,分为五种情况
+1.线段与圆心共线,那么返回0
+2.线段完全在圆内:一个三角形的有向面积(计算出圆心到两个端点的距离都 < r)
+3.线段完全在圆外:一个扇形的有向面积(圆心到线段所在直线的距离 > r)
+4.线段一端在圆内:一个三角形 + 一个扇形的有向面积
+判定是圆心到直线的距离 < r,并且到一个端点的距离 < r,另一个 > r
+(画图是显而易见的,分成两个相邻的三角形和扇形)
+5.线段是圆的割线:一个三角形 + 2个扇形的有向面积
+判定是两个端点与圆心的距离 > r,并且圆心到线段所在直线 < r
+
+注意:圆心是放到坐标原点的(代码实现方便)
+*/
+#define x first
+#define y second
+
+typedef pair<double,double> Point;
+Point p[4],o;
+double R;
+
+Point operator + (Point a,Point b){
+    return Point(a.x + b.x,a.y + b.y);
+}
+
+Point operator - (Point a,Point b){
+    return Point(a.x - b.x,a.y - b.y);
+}
+
+Point operator / (Point a,double t){
+    return Point(a.x / t,a.y / t);
+}
+
+double operator * (Point a,Point b){
+    return  a.x * b.y - a.y * b.x;
+}
+
+Point operator * (Point a,double t){
+    return Point(a.x * t,a.y * t);
+}
+
+double operator & (Point a,Point b){ 
+  return a.x * b.x + a.y * b.y;
+}
+
+double len(Point a){
+    return sqrt(a & a);
+}
+
+double dis(Point a,Point b){
+    return len(b - a);
+}
+
+Point getNode(Point a,Point u,Point b,Point v){
+    double t = (a - b) * v / (v * u);
+    return a + u * t;
+}
+
+//求逆转角
+//a = (x,y) = (lcosα,lsinα)
+//a' = (lcos(α + β),lsin(α + β)),拆开即为下面的式子
+Point rotate(Point a,double b){
+    return Point(a.x * cos(b) - a.y * sin(b),a.x * sin(b) + a.y * cos(b));
+}
+
+//P在线段ab上
+bool on(Point p,Point a,Point b){
+    //如果只判断前面一部分的话有可能是在延长线上面,如果后面的点积是负,那么说明在ab之间
+    return fabs((a - p) * (b - p)) < eps  && ((a - p) & (b - p)) <= 0;
+}
+
+//求单位向量
+Point norm(Point a){
+    return a / len(a);
+}
+
+//求圆心到线段的最近距离
+double getDP(Point a,Point b,Point &pa,Point &pb){
+    Point e = getNode(a,b - a,o,rotate(b - a,PI / 2));
+    double d = dis(o,e);
+    if(!on(e,a,b)) d = min(dis(o,a),dis(o,b));
+    //线段在圆外
+    if(R <= d) return d;
+    double len = sqrt(R * R - dis(o,e) * dis(o,e));
+    pa = e + norm(a - b) * len;
+    pb = e + norm(b - a) * len;
+    return d;
+}
+
+//求扇形面积
+double sector(Point a,Point b){
+    double angle = acos((a & b) / len(a) / len(b));
+    if(a * b < 0) angle = -angle;
+    return R * R * angle / 2; 
+}
+
+double getArea(Point a,Point b){
+    //共线
+    if(fabs(a * b) < eps) return 0;
+    //o到a和b的距离
+    double da = dis(o,a),db = dis(o,b);
+    //ab在圆内,直接用叉乘计算面积/2即可
+    if(R >= da && R >= db) return a * b / 2;
+    //pa,pb是线段和圆相交的两个交点坐标
+    Point pa,pb;
+    double d = getDP(a,b,pa,pb);
+    if(R <= d) return sector(a,b);
+    if(R >= da) return a * pb / 2 + sector(pb,b);
+    if(R >= db) return sector(a,pa) + pa * b / 2;
+    return sector(a,pa) + pa * pb / 2 + sector(pb,b);
+
+}
+
+void solve(){
+    while(scanf("%lf%lf%lf%lf%lf%lf%lf%lf%lf",&p[0].x,&p[0].y,&p[1].x,&p[1].y,&p[2].x,&p[2].y,&o.x,&o.y,&R) != -1){
+        for(int i = 0;i < 3;i++) p[i].x -= o.x,p[i].y -= o.y; 
+        o = Point(0,0); 
+        double res = 0;
+        for(int i = 0;i < 3;i++) res += getArea(p[i],p[(i + 1) % 3]);
+        printf("%.2lf\n",fabs(res)); 
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

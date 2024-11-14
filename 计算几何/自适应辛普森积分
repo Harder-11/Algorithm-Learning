@@ -1,0 +1,60 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+辛普森公式
+对于二次函数f(x) = ax^2 + bx + c在区间[l,r]上求定积分(即图形与x轴围成的面积)
+原函数F(x)=a/3 * x^3 + b/2 * x^2 + cx + d
+积分后的答案就是(r-l)(f(l)+f(r)+4f((l+r)/2))/6
+自适应辛普森法:
+把可积函数分割成很多段,每段就可以用二次函数进行拟合,套用辛普森公式进行近似计算
+对积分区间不断二分,每次判断当前段和二次函数的相似度,如果足够相似,那么直接带入辛普森公式
+否则将当前段分割成左右两段递归求解
+
+那么如何判断当前段和二次函数相似?把当前段直接带入公式求积分,再将当前段从中间分隔成两段
+把两段再直接带入公式求积分,如果二者值相差很小,就可以认为和二次函数很接近了,不用递归分割
+时间复杂度O(log(n / eps))
+*/
+
+//辛普森公式,求给定区间[l,r]的二次函数 
+
+double a,b,c,d,l,r;
+
+double f(double x){
+    return (c * x + d) / (a * x + b);
+}
+
+double simpson(double l,double r){
+    return (r - l) * (f(l) + f(r) + 4 * f((l + r) / 2)) / 6;
+}
+
+double ok(double l,double r,double ans){
+    double m = (l + r) / 2;
+    double a = simpson(l,m);
+    double b = simpson(m,r);
+    if(fabs(a + b - ans) < eps) return ans;
+    return ok(l,m,a) + ok(m,r,b);
+}
+
+void solve(){
+    cin >> a >> b >> c >> d >> l >> r;
+    cout << fixed << setprecision(6) << ok(l,r,simpson(l,r)) << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

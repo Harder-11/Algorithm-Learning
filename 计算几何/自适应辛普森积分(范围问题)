@@ -1,0 +1,55 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-10;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+本题要求该积分
+估算积分上限,a = 50,eps = 1e-10
+当x = 10,f(x) = 1e-5 > eps
+当x = 20,f(x) = 20^(-17.5) < eps
+所以[0,+∞)转化为[eps,20],因为当x >= 20之后基本忽略不计了
+本题必须确定一个下限,否则会一直匹配不上二次函数,导致一直递归爆栈(MLE)
+*/
+
+double a,l,r;
+
+double f(double x){
+    return pow(x,(a / x) - x);
+}
+
+double simpson(double l,double r){
+    return (r - l) * (f(l) + f(r) + 4 * f((l + r) / 2)) / 6;
+}
+
+double ok(double l,double r,double ans){
+    double m = (l + r) / 2,a = simpson(l,m),b = simpson(m,r);
+    if(fabs(a + b - ans) < eps) return ans;
+    return ok(l,m,a) + ok(m,r,b);
+}
+
+void solve(){   
+    cin >> a;
+    if(a < 0){
+        cout << "orz";
+        return;
+    }
+    cout << fixed << setprecision(5) << ok(1e-20,20,simpson(l,r)) << '\n';
+
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,130 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+最小圆覆盖
+增量法:
+本质就是将一个问题化为规模刚好小一层的子问题
+解决子问题后加入当前的对象,写成递归式就是T(n)=T(n-1)+g(n)
+增量法往往结合随机化,可以避免最坏的情况的出现
+
+本题:给出n个点,找出一个覆盖所有点的最小圆
+算法流程:
+1.假设圆o是前n-1个点的最小覆盖圆,加入第i个点,如果在圆内或者边上则什么都不做
+否则,新得到的最小覆盖圆肯定经过第i个点
+2.然后以第i个点为基础(半径为0),加入第j个点(j<i),若第i个点在圆外,则最小覆盖圆必定经过
+i,j两个点
+3.然后以i,j两点为基础,加入第三个点k(k<j<i),若第k个点在圆外,咋最小覆盖圆必定经过i,j,k三个点
+(这里是只要此时的最小覆盖圆不能将之间的点全部覆盖掉,那么就以前面的点(最多三个)来确定最小圆)
+4.遍历完之后,得到的圆就是覆盖所有点得到的最小圆
+*/
+
+struct Point {
+    double x,y;
+} p[N];
+
+struct Circle {
+    Point p;
+    double r;
+} C;
+int n;
+
+Point operator + (Point a,Point b){
+    return {a.x + b.x,a.y + b.y};
+}
+
+Point operator - (Point a,Point b){
+    return {a.x - b.x,a.y - b.y};
+}
+
+Point operator * (Point a,double t){
+    return {a.x * t,a.y * t};
+}
+
+double operator * (Point a,Point b){
+    return a.x * b.y - a.y * b.x;
+}
+
+Point operator / (Point a,double t){
+    return {a.x / t,a.y / t};
+}
+
+Point rotate(Point a,double b){
+    return {a.x * cos(b) - a.y * sin(b),a.x * sin(b) + a.y * cos(b)};
+}
+
+double dis(Point a,Point b){
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+}
+
+Point cross(Point a,Point u,Point b,Point v){
+    double t = (a - b) * v / (v * u);
+    return a + u * t;
+}
+
+pair<Point,Point> mid(Point a,Point b){
+    //中垂线
+    return {(a + b) / 2,rotate(b - a,PI / 2)};
+}
+
+//处理两点圆
+Circle cover(Point a,Point b){
+    return {(a + b) / 2,dis(a,b) / 2};
+}
+
+//处理三点圆
+Circle cover(Point a,Point b,Point c){
+    auto u = mid(a,b),v = mid(a,c);
+    //两条中垂线的交点就是这三个点的圆心
+    auto p = cross(u.first,u.second,v.first,v.second);
+    return {p,dis(p,a)};//过三点的圆
+}
+
+void calc(){
+    C = {p[1],0};
+    for(int i = 2;i <= n;i++){
+        if(C.r < dis(C.p,p[i])){
+            C = {p[i],0};//单点圆
+            for(int j = 1;j < i;j++){
+                if(C.r < dis(C.p,p[j])){
+                    C = cover(p[i],p[j]);//两点圆
+                    for(int k = 1;k < j;k++){
+                        if(C.r < dis(C.p,p[k])){
+                            C = cover(p[i],p[j],p[k]);//三点圆
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void solve(){
+    scanf("%d",&n);
+    for(int i = 1;i <= n;i++){
+        scanf("%lf%lf",&p[i].x,&p[i].y);
+    }
+    //随机化,打乱点的顺序,可以有效降低复杂度(防毒瘤hack)
+    random_shuffle(p + 1,p + n + 1);
+    //增量法
+    calc();
+    printf("%.10lf\n%.10lf\n%.10lf\n",C.r,C.p.x,C.p.y);
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,73 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+叉积 a×b = |a||b|sinθ
+1.判断点线的位置关系:
+c点在ab的左侧:cross(a,b,c) > 0
+c点在ab的右侧:cross(a,b,c) < 0
+三点共线:cross(a,b,c) = 0
+2.判断线线的位置关系:
+(1)直线ab与线段cd无交点:cross(a,b,c) * cross(a,b,d) > 0
+(2)直线ab和线段cd有交点:cross(a,b,c) * cross(a,b,d) <= 0
+(根据右手定理可以轻松证明,此时cd线段把从ab中间穿过,c和d分别在两侧,那么进行右手定理就会发现叉乘方向相反)
+(3)线段ab和cd无交点:cross(a,b,c) * cross(a,b,d) > 0 或者 cross(c,d,a) * cross(c,d,b) > 0
+(证明其实和(2)同理)
+(4)求两直线的交点:两点式(a,c)(给出两个点确定一条直线) ->点向式(a,c - a)(给出直线上的点a,然后给出沿
+这条直线方向上的一段,这一段就是c-a)
+*/
+
+struct Point {
+    double x,y;
+    Point(double x,double y){};
+};
+
+Point operator + (Point a,Point b){
+    return Point(a.x + b.x,a.y + b.y);
+}
+
+Point operator - (Point a,Point b){
+    return Point(a.x - b.x,a.y - b.y);
+}
+
+double operator * (Point a,Point b){
+    return  a.x * b.y - a.y * b.x;
+}
+
+Point operator * (Point a,double t){
+    return Point(a.x * t,a.y * t);
+}
+
+
+//这里是2.(4)求交点的代码(求的是线段au和bv的交点)
+//!!!!非常重要的板子,很简短的代码求到两条线段的交点
+Point getNode(Point a,Point u,Point b,Point v){
+    //做一个向量从b指向a,就是a-b,与v做叉积然后得到四边形面积(可以做图显然)
+    //然后从u点向av做垂线就是高,显然看出面积的比值就是两个平行四边形高的比值就是交点到a的距离与au距离的比值
+    //这里求的t就是系数,是交点到a的距离与au距离的比值系数,然后a+u*t即得到交点的坐标
+    double t = (a - b) * v / (v * u);
+    return a + u * t;
+}
+
+
+void solve(){
+
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

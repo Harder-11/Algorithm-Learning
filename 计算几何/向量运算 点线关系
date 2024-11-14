@@ -1,0 +1,81 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const ll INF = 1e18;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+
+//向量用有向线段表示,线段的长度称为模长,线段与x轴正方向
+//的夹角为极角,向量也可以用实数对表示 a = (x,y)
+struct Point {
+    double x,y;
+    Point(double x,double y){}
+};
+Point a,b,c[100];
+//加法:
+//a + b = (x1 + x2,y1 + y2)
+//减法,乘法同理
+Point operator + (Point a,Point b){
+    return Point(a.x + b.x,a.y + b.y);
+}
+
+Point operator - (Point a,Point b){
+    return Point(a.x - b.x,a.y - b.y);
+}
+
+double operator * (Point a,Point b){
+    return  a.x * b.y - a.y * b.x;
+}
+
+Point operator * (Point a,double t){
+    return Point(a.x * t,a.y * t);
+}
+
+//求点积
+double dot(Point a,Point b){
+    return a.x * b.x + a.y * b.y;
+}
+//求模长
+double len(Point a){
+    return sqrt(a.x * a.x + a.y * a.y);
+}
+//求夹角(用arccos)
+double angle(Point a,Point b){
+    return acos(dot(a,b) / len(a) / len(b));
+}
+//叉积(对应数值是a和b张成的平行四边形的有向面积的大小)
+double cross(Point a,Point b){
+    return a.x * b.y - a.y * b.x;
+}
+
+//应用:判断点线位置关系
+//(b - a) × (c - a) > 0 : c点在直线ab的左侧(本质是ab边逆时针可以转到ac边,所以c在左侧)
+//(b - a) × (c - a) < 0 : c点在直线ab的右侧
+//(b - a) × (c - a) = 0 : 三点共线
+double operator * (Point a,Point b){
+    return a.x * b.y - a.y * b.x;
+}
+
+double cross(Point a,Point b,Point c){
+    return (b - a) * (c - a);
+}
+//直接算,不进行重载
+double cross(Point a,Point b,Point c){
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+void solve(){
+
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}
