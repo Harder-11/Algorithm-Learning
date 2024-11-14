@@ -1,0 +1,282 @@
+import java.math.BigDecimal;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //博弈类问题(下)
+    //SG函数与SG定理
+
+    /*
+    图游戏的概念:
+    任何局面都认为是图中的点,每一个局面都可以通过一种行动,走向图中的下一个点
+    如果当前行动有若干个,那么后继结点就有若干个,最终必败的点认为不再有后继结点
+    那么公平组合游戏(ICG)就可以对应成一张图
+
+    SG函数(Sprague-Grundy函数),如下是SG返回值的求解方式,速成mex过程
+    最终必败点是A,规定SG(A)=0
+    假设状态点是B,那么SG(B)=查看B所有后继结点的sg值,找到其中没有出现过最小的自然数
+    SG(B)!=0,那么状态B为必胜态;SG(B)==0,那么状态是必败态
+    比如Bash Game,m=3,那么此时SG(0)==0,求SG(1)时,找后继结点没有出现过的最小自然数
+    1的后继结点只有0,而0的SG是0,所以1的SG(1)只能是1,同理SG(2)==2,SG(3)==3
+    而4结点后继结点只有1,2,3,那么SG(4)==0
+
+    SG定理(Bouton定理)
+    如果一个ICG游戏,是由若干个ICG子游戏构成,那么SG(总)=SG(分1)^SG(分2)^SG(分3)....
+    任何ICG游戏都是如此(可以参考Nim Game的证明方式)
+     */
+
+    /*
+    SG函数求解过程展示
+    巴什博奕使用SG定理
+     */
+    public static String bash2(int n,int m){
+        int[] sg = new int[n + 1];
+        //appear用来记录自然数出现没有
+        boolean[] appear = new boolean[m + 1];
+        for(int i = 1;i <= n;i++){
+            Arrays.fill(appear,false);
+            //sg[i]:还剩下i颗石子,sg值是多少?
+            for(int j = 1;j <= m && i - j >= 0;j++){
+                appear[sg[i - j]] = true;
+            }
+            for(int s = 0;s <= m;s++){
+                if(!appear[s]){
+                    sg[i] = s;
+                    break;
+                }
+            }
+        }
+        return sg[n] != n ? "先手" : "后手";
+    }
+    /*
+    SG定理展示
+    尼姆博弈
+     */
+    public static String Nim(int[] arr){
+        int max = 0;
+        for(int num : arr){
+            max = Math.max(max,num);
+        }
+        int[] sg = new int[max + 1];
+        boolean[] appear = new boolean[max + 1];
+        for(int i = 1;i <= max;i++){
+            Arrays.fill(appear,false);
+            for(int j = 0;j < i;j++){
+                appear[j] = true;
+            }
+            for(int s = 0;s <= max;s++){
+                if(!appear[s]){
+                    sg[i] = s;
+                    break;
+                }
+            }
+        }
+        int eor = 0;
+        for(int num : arr){
+            eor ^= sg[num];
+        }
+        return eor != 0 ? "先手" : "后手";
+    }
+    /*
+    题目3:两堆石头的巴什博奕
+    有两堆石头,数量分别为a.b,两个人轮流拿,每次可以选择其中一堆石头拿1~m颗
+    拿到最后一颗石头的人获胜,根据a,b,m返回谁赢
+
+    此时就是sg[a]^sg[b]==0先手输,那么此时就是a%(m+1) ^ b%(m+1)是不是为0,如果不等于0,a胜
+     */
+    public static String win(int a,int b,int m){
+        return a % (m + 1) != b % (m + 1) ? "先手" : "后手";
+    }
+    /*
+    题目4:
+    有三堆石头分别数量为a,b,c
+    两人轮流拿,每次可以选择其中一堆石头,拿取斐波那契数的石头
+    拿到最后一颗石头的人获胜,根据a,b,c返回谁赢,最大石头数不超过200
+
+    思路:通过填写sg表,最后计算sg[a]^sg[b]^sg[c]
+     */
+    public static int[] f = {1,2,3,5,8,13,21,34,55,89,144};
+    public static String Fibo(int a,int b,int c){
+        int max = Math.max(Math.max(a,b),c);
+        int[] sg = new int[max + 1];
+        boolean[] appear = new boolean[max + 1];
+        for(int i = 1;i <= max;i++){
+            Arrays.fill(appear,false);
+            for(int j = 0;j < f.length && i - f[j] >= 0;j++){
+                appear[sg[i - f[j]]] = true;
+            }
+            for(int s = 0;s <= max;s++){
+                if(!appear[s]){
+                    sg[i] = s;
+                    break;
+                }
+            }
+        }
+        return (sg[a] ^ sg[b] ^ sg[c]) != 0 ? "先手" : "后手";
+    }
+    /*
+    题目5:E&D游戏(p2148)
+    桌上有2n堆石子,编号为1,2,3...2n
+    其中1,2为一组,3,4为一组...2n-1,2n为一组
+    每组可以进行分割操作:
+    任取一堆石子,将其移走,然后分割同一组的另一堆石子
+    从中取出若干个石子放在被移走的位置,组成新的一堆
+    操作完成后,组内每堆石子数必须保证大于0
+    显然,被分割的一堆石子数至少要为2
+    两个人轮番进行分割操作,如果轮到某人操作时,所有堆的石子数均为1,判此人输掉比赛
+    返回先手能不能获胜
+
+    思路:ICG游戏,仍然是每一组的sg值异或起来判断是不是0
+    由于每个组有两个元素那么sg开成二维数组,但是石子是数量在2e9以内,不可能直接开这么大的数组
+    那么就要打表找到sg[a][b]的值并找到规律
+    可以发现(实际压根发现不了)此时在二维表a-1和b-1(单独将横纵坐标减一)之后
+    对应的每个数都是(a-1)|(b-1)最低位0的从右往左数所在位
+     */
+    public static int lowZero(int status){
+        int cnt = 0;
+        while(status > 0){
+            if((status & 1) == 0){
+                break;
+            }
+            status >>= 1;
+            cnt++;
+        }
+        return cnt;
+    }
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        int t = (int) in.nval;
+        for(int i = 0;i < t;i++){
+            in.nextToken();
+            int n = (int) in.nval;
+            int sg = 0;
+            for(int j = 1,a,b;j <= n;j += 2){
+                in.nextToken();
+                a = (int) in.nval;
+                in.nextToken();
+                b = (int) in.nval;
+                sg ^= lowZero((a - 1) | (b - 1));
+            }
+            if(sg != 0){
+                System.out.println("YES");
+            } else {
+                System.out.println("NO");
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目6:分裂游戏(p3185)
+    聪聪和睿睿最近迷上了一款叫做分裂的游戏。
+    该游戏的规则是:共有n个瓶子,编号为0,1...n-1,第i个瓶子中装有pi颗巧克力豆
+    两个人轮流取豆子，每一轮每人选择3个瓶子,标号为i,j,k,并且保证i<j,j<=k,且第i个瓶子中至少
+    有1颗巧克力豆,随后这个人从第i个瓶子中拿走一颗豆子并在j,k中各放入一颗豆子(j可能等于k)
+    如果轮到某人而他无法按规则取豆子，那么他将输掉比赛。胜利者可以拿走所有的巧克力豆！
+    两人最后决定由聪聪先取豆子，为了能够得到最终的巧克力豆，聪聪自然希望赢得比赛。
+    他思考了一下，发现在有的情况下，先拿的人一定有办法取胜，
+    但是他不知道对于其他情况是否有必胜策略，更不知道第一步该如何取。
+    他决定偷偷请教聪明的你，希望你能告诉他，
+    在给定每个瓶子中的最初豆子数后是否能让自己得到所有巧克力豆，
+    他还希望你告诉他第一步该如何取，并且为了必胜，第一步有多少种取法？
+    输入:文件第一行是整数t,表示测试组数
+    每组第一行是瓶子个数n,接下来一行有n个由空格分开的非负整数,表示每个瓶子中的豆子数
+    输出:
+    对于每组测试数据，输出包括两行，第一行为用一个空格两两隔开的三个整数
+    表示要想赢得游戏，第一步应该选取的3的瓶子编号i,j,k,如果有多组符合要求的解,那么输出字典序最小
+    的一组,如果无论如何都无法赢,输出"-1 -1 -1"
+    第二行表示有多少种取法
+    1<=t<=10,2<=n<=21,0<=pi<=1e4
+
+    思路:只要所有的巧克力豆都在n-1号瓶,那么此时轮到哪个人,哪个人就无法移动,就输了
+    首先,我们把瓶子顺序翻一下,最终无法移动的瓶子就是0号瓶
+    然后对于糖豆加入是[A,B][C,D,E][F,G],当取出A,往1号和0号瓶加入糖豆这个操作可以看作
+    由A这个糖豆分裂出来的两个子游戏
+    对于每一个糖豆都是一个独立的游戏,那么sg(0)=0
+    对于1号瓶的糖豆,只有一种操作,就是取出1豆子,然后往0号瓶中加入两颗豆子,相当于两个子游戏
+    而这两个子游戏都是sg==0,那么sg(0)^sg(0)=0,那么此时没有出现过的最小自然数就是sg(1)=1
+    对于2号瓶的糖豆,可以是211,给1号瓶两个,那么此时就是sg(1)^sg(1)=0,也可以是sg(1)^sg(0)=1
+    也可以是sg(0)^sg(0)=0,所以sg(2)=2
+    对于3号瓶的糖豆,那么此时有以下可能:322(sg==0),321(sg==3),320(sg==2),311(sg==0)
+    310(sg==1),300(sg==0),所以sg(3)=4,那么最终结果就是所有的糖豆sg值来异或
+     */
+    public static int MAXN = 21;
+    public static int[] nums = new int[MAXN];
+    public static int[] sg = new int[MAXN];
+    public static int MAXV = 101;
+    public static boolean[] appear = new boolean[MAXV];
+    public static int t,n;
+    public static void build(){
+        for(int i = 1;i < MAXN;i++){
+            Arrays.fill(appear,false);
+            for(int j = i - 1;j >= 0;j--){
+                for(int k = j;k >= 0;k--){
+                    appear[sg[j] ^ sg[k]] = true;
+                }
+            }
+            for(int s = 0;s < MAXV;s++){
+                if(!appear[s]){
+                    sg[i] = s;
+                    break;
+                }
+            }
+        }
+    }
+    public static String compute(){
+        int eor = 0;
+        for(int i = n - 1;i >= 0;i--){
+            if(nums[i] % 2 == 1){
+                eor ^= sg[i];
+            }
+        }
+        if(eor == 0){
+            return "-1 -1 -1\n" + "0";
+        }
+        int cnt = 0,a = -1,b = -1,c = -1,pos;
+        for(int i = n - 1;i >= 1;i--){
+            if(nums[i] > 0){
+                for(int j = i - 1;j >= 0;j--){
+                    for(int k = j;k >= 0;k--){
+                        //这里相当于是还原现场的感觉,如果i,j,k的sg值满足题意,那么还原之后就是异或就是0
+                        pos = eor ^ sg[i] ^ sg[j] ^ sg[k];
+                        if(pos == 0){
+                            cnt++;
+                            if(a == -1){
+                                a = i;
+                                b = j;
+                                c = k;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return String.valueOf((n - 1 - a) + " " + (n - 1 - b) + " " + (n - 1 - c) + "\n" + cnt);
+    }
+    public static void main1(String[] args) throws IOException{
+        build();
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        t = (int) in.nval;
+        for(int i = 0;i < t;i++){
+            in.nextToken();
+            n = (int) in.nval;
+            for(int j = n - 1;j >= 0;j--){
+                in.nextToken();
+                nums[j] = (int) in.nval;
+            }
+            System.out.println(compute());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}

@@ -1,0 +1,92 @@
+import java.io.*;
+import java.util.*;
+
+
+public class Main {
+    /*
+    题目3:洗牌
+    一共有n张牌，n一定是偶数，每张牌的牌面从1到n，洗牌规则如下
+    比如n = 6，牌面最初排列为1 2 3 4 5 6
+    先分成左堆1 2 3，右堆4 5 6，然后按照右堆第i张在前，左堆第i张在后的方式依次放置
+    所以洗一次后，得到 4 1 5 2 6 3
+    如果再洗一次，得到 2 4 6 1 3 5
+    如果再洗一次，得到 1 2 3 4 5 6
+    想知道n张牌洗m次的之后，第l张牌，是什么牌面
+    1 <= n <= 10^10，n为偶数
+    0 <= m <= 10^10
+
+    对于每一位上的数字,新增后面突然减小,很可能是对某个数字进行了取模
+    通过观察,一共有n张牌时,对于牌x,每次洗牌后*2,那么洗m次就是x*(1<<m)%(n+1)
+    所以此时x*(1<<m)+p(n+1)=l,将(1<<m)看做a,(n+1)看做b,那么就是xa+yb=l
+    并且此时a和b必定是互质的
+     */
+    public static long d, x, y, px, py;
+
+    public static void exgcd(long a, long b) {
+        if (b == 0) {
+            d = a;
+            x = 1;
+            y = 0;
+        } else {
+            exgcd(b, a % b);
+            px = x;
+            py = y;
+            x = py;
+            y = px - py * (a / b);
+        }
+    }
+    public static long multiply(long a, long b, long mod) {
+        // 既然是在%mod的意义下，那么a和b可以都转化成非负的
+        // 本题不转化无所谓，但是其他题目可能需要转化
+        // 尤其是b需要转化，否则while循环会跑不完
+        a = (a % mod + mod) % mod;
+        b = (b % mod + mod) % mod;
+        long ans = 0;
+        while (b != 0) {
+            if ((b & 1) != 0) {
+                ans = (ans + a) % mod;
+            }
+            a = (a + a) % mod;
+            b >>= 1;
+        }
+        return ans;
+    }
+
+    // 原理来自，讲解098，乘法快速幂
+    // 计算a的b次方，最终 % mod 的结果
+    public static long power(long a, long b, long mod) {
+        long ans = 1;
+        while (b > 0) {
+            if ((b & 1) == 1) {
+                ans = multiply(ans, a, mod);
+            }
+            a = multiply(a, a, mod);
+            b >>= 1;
+        }
+        return ans;
+    }
+
+    public static long compute(long n, long m, long l) {
+        long mod = n + 1;
+        exgcd(power(2, m, mod), mod);
+        long x0 = (x % mod + mod) % mod;
+        return multiply(x0, l, mod);
+    }
+    
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        long n = (long) in.nval;
+        in.nextToken();
+        long m = (long) in.nval;
+        in.nextToken();
+        long l = (long) in.nval;
+        out.println(compute(n, m, l));
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+

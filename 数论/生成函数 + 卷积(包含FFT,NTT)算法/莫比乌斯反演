@@ -1,0 +1,97 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 10000005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+莫比乌斯反演
+内容:f(n) = Σ(d|n)g(d) <-> g(n) = Σ(d|n)μ(d)f(n/d)
+f(n),g(n)均为积性函数
+f(n)称为g(n)的莫比乌斯变换
+g(n)称为f(n)的莫比乌斯逆变换
+
+[gcd(i,j)=1] = Σ(d|gcd(i,j))μ(d) (黄金代换)
+也可以写成Σ[d|i][d|j]μ(d)
+
+比如本题给出n,m,求:
+Σ(i=1,n)Σ(j=1,m)lcm(i,j)(mod20101009)
+思路:Σ(i=1,n)Σ(j=1,m)lcm(i,j)
+=Σ(i=1,n)Σ(j=1,m)(i*j)/gcd(i,j)
+=Σ(i=1,n)Σ(j=1,m)i*j*Σ(d=1,n)[gcd(i,j)=d]/d
+=Σ(d=1,n)Σ(i=1,n)Σ(j=1,m)*i*j*[gcd(i,j) = d]/d
+=Σ(d=1,n)Σ(id=1,n)Σ(jd=1,m)ijd^2[gcd(id,jd)=d]/d
+=Σ(d=1,n)Σ(i=1,n/d)Σ(j=1,m/d)ijd[gcd(i,j)=1]
+=Σ(d=1,n)Σ(i=1,n/d)Σ(j=1,m/d)ijd*Σ(k=1,n/d)μ(k)[k|i][k|j]
+=Σ(d=1,n)d*Σ(k=1,n/d)μ(k)*Σ(i=1,n/d)i[k|i]Σ(j=1,m/d)j[k|j]
+=Σ(d=1,n)d*Σ(k=1,n/d)μ(k)*k^2*Σ(i=1,n/(dk))i*Σ(j=1,m/(dk))j
+
+那么对于这个式子,就是分块套分块,先对d分块,内套对k分块
+
+*/
+int p[N],vis[N],cnt,mu[N],S[N];
+const int P = 20101009;
+
+void init(){
+    mu[1] = 1;
+    for(int i = 2;i < N;i++){
+        if(!vis[i]){
+            p[++cnt] = i;
+            mu[i] = -1;
+        }
+        for(int j = 1;i * p[j] < N;j++){
+            vis[i * p[j]] = 1;
+            if(i % p[j] == 0) break;
+            mu[i * p[j]] = -mu[i];
+        }
+    }
+    for(int i = 1;i < N;i++){
+        S[i] = (S[i - 1] + 1ll * mu[i] * i * i % P + P) % P;
+    }
+}
+int G(int n,int m){
+    return (1ll * n * (n + 1) / 2 % P) * (1ll * m * (m + 1) / 2 % P) % P;
+}
+
+int F(int n,int m){
+    int res = 0;
+    for(int l = 1,r;l <= n;l = r + 1){
+        r = min(n / (n / l),m / (m / l));
+        res = (res + 1ll * (S[r] - S[l - 1]) * G(n / l,m / l) % P + P) % P;
+    }
+    return res;
+}
+
+int calc(int n,int m){
+    if(n > m) swap(n,m);
+    int res = 0;
+    for(int l = 1,r;l <= n;l = r + 1){
+        r = min(n / (n / l),m / (m / l));
+        res = (res + 1ll * (r - l + 1) * (l + r) / 2 % P * F(n / l,m / l) % P) % P;
+    }
+    return res;
+}
+
+
+
+void solve(){
+    int n,m;
+    cin >> n >> m;
+    cout << calc(n,m) << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    init();
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

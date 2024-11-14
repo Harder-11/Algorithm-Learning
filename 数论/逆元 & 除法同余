@@ -1,0 +1,98 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //逆元 & 除法同余 & 容斥原理
+
+    /*
+    除法同余:除数先转化为逆元,然后让被除数乘上逆元,逆元就是倒数的意思
+    比如求C100,60,由组合数公式可以得到答案是100!/(60!*40!),此时就可以先取余,但是如何取余?
+    要想计算a/b然后%mod的结果必须满足以下条件
+    (1)保证a/b可以整除
+    (2)必须保证mod是质数,求逆元的原理是费马小定理,要求mod是质数
+    (3)必须保证gcd(b,mod)==1,也就是b和mod互质
+
+    比如求10/5的结果%3,等同于求10 * 1/5 % 3
+    然后5的逆元是5^(mod-2)%mod = 2,然后10%3=1,乘上逆元再%mod,就是(1*2)%mod=2;
+     */
+    public static long power(long b,int n,int mod){
+        long ans = 1;
+        while(n > 0){
+            if((n & 1) == 1){
+                ans = (ans * b) % mod;
+            }
+            b = (b * b) % mod;
+            n >>= 1;
+        }
+        return ans;
+    }
+    public static int compute(long a,long b,int mod){
+        long inv = power(b,mod - 2,mod);
+        return (int)(((a % mod) * inv) % mod);
+    }
+
+    /*
+    连续数字逆元的线性递推
+    直接能求出1~n的逆元,不用每次去使用快速幂
+    在%p的意义下
+    此时inv[1]=1,inv[i]=(int)(p-(long)inv[p%i]*(p/i)%p)
+    从左往右线性递推
+     */
+    public static int MAXN = 3000001;
+    public static int[] inv = new int[MAXN];
+    public static int n,p;
+    public static void build(int n){
+        inv[1] = 1;
+        for(int i = 2;i <= n;i++){
+            inv[i] = (int) (p - (long)inv[p % i] * (p / i) % p);
+        }
+    }
+    /*
+    连续阶乘逆元的线性递推(实现组合数的计算C(n,m) % mod)
+    在%p的意义下,1!,2!,3!...n!,求每个数的逆元
+    用inv[i]表示i!的逆元,先求n!乘法同余的结果假设为a,然后求a的逆元,假设为b
+    inv[n]=b
+    inv[i]=((long)(i+1)*inv[i+1])%mod(从右往左递推)
+     */
+    public static int MOD = (int)1e9 + 7;
+    public static int LIMIT = 1000;
+    //阶乘表
+    //fac[i]代表i!在%MOD意义下的余数
+    public static long[] fac = new long[LIMIT + 1];
+    //阶乘结果的逆元表
+    public static long[] inv1 = new long[LIMIT + 1];
+    public static long power(long x,int n){
+        long ans = 1;
+        while(n > 0){
+            if((n & 1) == 1){
+                ans = (ans * x) % MOD;
+            }
+            x = (x * x) % MOD;
+            n >>= 1;
+        }
+        return ans;
+    }
+    public static void build(){
+        fac[0] = 1;
+        fac[1] = 1;
+        for(int i = 2;i <= LIMIT;i++){
+            fac[i] = ((long) i * fac[i - 1]) % MOD;
+        }
+        inv1[0] = 1;
+        inv1[LIMIT] = power(fac[LIMIT],MOD - 2);
+        for(int i = LIMIT - 1;i >= 0;i--){
+            inv1[i] = ((long)(i + 1) * inv1[i + 1]) % MOD;
+        }
+    }
+    //此时求组合数
+    public static int c(int n,int m){
+        long ans = fac[n];
+        ans = (ans * inv1[m]) % MOD;
+        ans = (ans * inv1[n - m]) % MOD;
+        return (int) ans;
+    }
+}

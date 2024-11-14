@@ -1,0 +1,60 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+中国剩余定理:
+求解线性同余方程组
+x 同余于 r1(mod m1)
+x 同余于 r2(mod m2)
+x 同余于 r3(mod m3)
+其中m1,m2....mn是两两互质的整数,求x的最小非负数解
+
+中国剩余定理(CRT)
+1.计算所有模数的积M
+2.计算第i个方程的ci = M / mi
+3.计算ci在模mi意义下的乘法逆元ci(-1)
+4.x = Σ(i=1,n)ricici(-1)(mod M)
+*/
+
+//求扩展欧几里得
+int n;
+ll exgcd(ll a,ll b,ll &x,ll &y){
+    if(b == 0){
+        x = 1,y = 0;   
+        return a;
+    }
+    ll d,x1,y1;
+    d = exgcd(b,a % b,x1,y1);
+    x = y1,y = x1 - a / b * y1;
+    return d;
+}
+ll CRT(ll m[],ll r[]){
+    ll M = 1,ans = 0;
+    for(int i = 1;i <= n;i++){
+        M *= m[i];
+    }
+    for(int i = 1;i <= n;i++){
+        //由扩展欧几里得定理得到的裴蜀定理的一组解,此时这组解就是(a,p),所以ax + py = 1,x就是逆元
+        ll c = M / m[i],x,y;
+        exgcd(c,m[i],x,y);
+        ans = (ans + r[i] * c * x % M) % M;
+    }
+    return (ans % M + M) % M;
+}
+
+void solve(){
+
+}
+
+int main(){
+    int t;
+    cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

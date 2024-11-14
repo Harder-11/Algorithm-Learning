@@ -1,0 +1,52 @@
+import java.io.*;
+import java.util.*;
+
+
+public class Main {
+    /*
+    裴蜀定理和扩展欧几里得算法
+    裴蜀定理:如果a和b是不全为0的整数,则有整数x,y,使得ax+by=gcd(a,b)
+    推论:1.如果a和b是不全为0的整数,如果ab互质,那么当且仅当存在整数x,y,使得ax+by=1
+    2.如果a和b是不全为0的整数,并且ax+by=c有解,那么c一定是a和b的最大公约数的整数倍
+    3.a.b两项的裴蜀定理可以推广到多项
+
+    扩展欧几里得算法:
+    对于方程ax+by=gcd(a,b),当a和b确定,那么gcd(a,b)也确定,要保证入参a和b没有负数
+    扩展欧几里得算法可以给出a和b的最大公约数d,以及其中一个特解x,y
+    当从下往上推x和y的值时,gcd(a',b'),此时网上推gcd(a,b),那么a'=b,b'=a%b=a'-(a/b)*b'
+    那么此时d=x'a'+y'b'推ax+by,那么此时就是y'a+(x'-y'*(a/b))*b(展开之后)
+    所以此时x=py,y=px-py*(a/b)
+     */
+    //d是最大公约数,x,y是一组特解,px和py是一组临时变量
+    public static long d,x,y,px,py;
+    //使用递归,当求到d后,x=1,y=0一直往上返回值,最终得到一组特解
+    public static void exgcd(long a,long b){
+        if(b == 0){
+            d = a;
+            x = 1;
+            y = 0;
+        } else {
+            exgcd(b,a % b);
+            px = x;
+            py = y;
+            x = py;
+            y = px - py * (a / b);
+        }
+    }
+    //求逆元
+    public static long inv(long num,long mod){
+        exgcd(num,mod);
+        return (x % mod + mod) % mod;
+    }
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+

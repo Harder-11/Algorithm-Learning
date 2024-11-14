@@ -1,0 +1,96 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+public class Learn {
+    /*
+    线性基
+    线性基常指的是异或空间线性基,一堆数字能得到的非0异或和的结果,能被元素个数尽可能少的集合
+    不多不少地全部得到,那么就说这个元素个数尽可能少的集合是这一堆数字的异或空间线性基
+
+    结论:1.一堆数字中,任意的a和b,用a^b的结果代替a,b中的一个数字,不会影响异或和的组成
+    2.一堆数字中,任意的a和b,如果有a^b=0,那么舍弃掉a,b其中一个数字,不会影响疑异或和的组成
+    3.一堆数字能否异或出0,在求出异或空间线性基之后需要被单独标记(bool类型标记)
+
+    如何得到线性基?
+    二进制表的高位到低位每一位只添一个数字,从这一堆数字里面可以从上往下依次选择
+    如果此时数字的最高位在表中是0,那么直接添,如果表中元素不是0,那么就和表中元素异或
+    然后看异或后的最高位,如果此时表中这一位还不是0就一直这样持续下去直到数字异或后最高位
+    在表中是0
+
+    怎么求最大值:在求到了basis数组之后,用最大的数依次异或后面不是0的数,如果可以变大,
+    那么更新最大值,否则就不更新
+     */
+    public static int MAXN = 101;
+    public static int BIT = 60;
+    public static long[] arr = new long[MAXN];
+    public static int n;
+    //普通消元
+    public static long[] basis1 = new long[BIT + 1];
+    public static boolean zero1;
+    public static void compute1(){
+        zero1 = false;
+        for(int i = 1;i <= n;i++){
+            //只要有插不进的那么全部异或就是0
+            if(!insert(arr[i])){
+                zero1 = true;
+            }
+        }
+    }
+    public static boolean insert(long num){
+        for(int i = BIT;i >= 0;i--){
+            if(num >> i == 1){
+                if(basis1[i] == 0){
+                    basis1[i] = num;
+                    return true;
+                }
+                num ^= basis1[i];
+            }
+        }
+        return false;
+    }
+    //高斯消元,此时不需要主元和自由元的依赖关系,所以高斯消元可以简化
+    //高斯消元可以得到第k小的异或和
+    public static long[] basis2 = new long[MAXN];
+    public static int len;
+    public static boolean zero2;
+    public static void compute2(){
+        len = 1;
+        //i来到的位数,j是枚举行数,如果发现了当前行的BIT位是1,那么立马把这一行换上来,然后break
+        //这里的每一行实际是一个数字的二进制位组成的
+        for(long i = BIT;i >= 0;i--){
+            for(int j = len;j <= n;j++){
+                if((basis2[j] & (1L << i)) != 0){
+                    swap(j,len);
+                    break;
+                }
+            }
+            //这里的代码就是换上来之后才进行的
+            //换上来之后,让每一行都和该行进行XOR操作
+            if((basis2[len] & (1L << i)) != 0){
+                for(int j = 1;j <= n;j++){
+                    if(j != len && (basis2[j] & (1L << i)) != 0){
+                        basis2[j] ^= basis2[len];
+                    }
+                }
+                len++;
+            }
+        }
+        len--;
+        //当len != n,说明有自由元,那么此时zero就是true,
+        zero2 = len != n;
+    }
+    public static void swap(int a,int b){
+        long tmp = basis2[a];
+        basis2[a] = basis2[b];
+        basis2[b] = tmp;
+    }
+
+    public static void main(String[] args) throws IOException {
+
+    }
+
+}
+
+
+

@@ -1,0 +1,61 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+public class Learn {
+    /*
+    题目1:线性基(模版)(p3812)
+    给定n个整数(数字可能重复),求在这些数中选取任意个,使得他们的异或和最大
+    1<=n<=50,0<=si<=2e50
+
+    使用普通消元得到basis数组即可
+     */
+    public static int MAXN = 51;
+    public static int BIT = 50;
+    public static long[] arr = new long[MAXN];
+    public static long[] basis = new long[BIT + 1];
+    public static int n;
+    public static long compute(){
+        for(int i = 1;i <= n;i++){
+            insert(arr[i]);
+        }
+        long ans = 0;
+        //这里求最大异或和一定是从高位开始尝试
+        for(int i = BIT;i >= 0;i--){
+            ans = Math.max(ans,ans ^ basis[i]);
+        }
+        return ans;
+    }
+    public static boolean insert(long num){
+        for(int i = BIT;i >= 0;i--){
+            if((num >> i) == 1){
+                if(basis[i] == 0){
+                    basis[i] = num;
+                    return true;
+                }
+                num ^= basis[i];
+            }
+        }
+        return false;
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        for (int i = 1; i <= n; i++) {
+            in.nextToken();
+            arr[i] = (long) in.nval;
+        }
+        compute();
+        out.println(compute());
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

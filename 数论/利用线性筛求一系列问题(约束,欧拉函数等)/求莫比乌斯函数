@@ -1,0 +1,66 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+利用筛法求莫比乌斯函数
+对于莫比乌斯函数的定义:
+μ(n) = 1(n = 1)
+     = 0(n 含有相同的质因子)(由唯一分解定理的质数 >= 2,那么莫比乌斯函数就是0)
+     = (-1)^s,s为n的不同质因子的个数
+比如μ{1,6,10,15} = 1(这里是指1,6,10,15这些数的莫比乌斯函数值为1)
+μ{4,8,9,12} = 0,μ{2,3,5,7,30} = -1
+
+如果i是质数,那么μ[i] = -1
+在线性筛中,每个合数m都是被最小的质因数筛掉的,设pj是m的最小质因数
+那么m被i * p[j]筛掉
+(1)如果i能被pj整除,则i包含质因子pj,μ[m] = 0
+(2)如果i不能被pj整除,则m比i多一个不同的质因子pj
+如果μ[i]=-1,μ[m]=1,反之同理
+如果μ[i]=0,μ[m]=0
+所以μ[m]=-μ[i];
+
+*/
+int p[N],vis[N],cnt;
+int mu[N];
+
+void get_mu(int n){
+    mu[1] = 1;
+    for(int i = 2;i <= n;i++){
+        if(!vis[i]){
+            p[++cnt] = i;
+            mu[i] = -1;
+        }
+        for(int j = 1;i * p[j] <= n;j++){
+            int m = i * p[j];
+            vis[m] = 1;
+            if(i % p[j] == 0){
+                mu[m] = 0;
+                break;
+            } else {
+                mu[m] = -mu[i];
+            }
+        }
+    }
+}
+
+void solve(){
+
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

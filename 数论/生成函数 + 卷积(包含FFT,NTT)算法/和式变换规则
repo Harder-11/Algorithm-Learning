@@ -1,0 +1,97 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 50005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+和式的变换规则:
+1.分配律:Σ(k∈K)c*ak = c*Σ(k∈K)ak
+2.结合律:Σ(k∈K)(ak + bk) = Σ(k∈K)ak + Σ(k∈K)bk
+3.交换律:Σ(k∈K)ak = Σ(p(k)∈K)a(p(k)) (p(k)是指标集的任意一个排序)
+
+和式的变化技术:(都默认n<m)
+1.替换条件式:
+Σ(i=1,n)Σ(j=1,m)Σ(d|gcd(i,j)) = Σ(i=1,n)Σ(j=1,m)Σ(d=1,n)[d|i][d|j]d
+2.替换指标变量:
+Σ(i=1,n)Σ(j=1,m)[gcd(i,j)=k] = Σ(ik=1,n)Σ(jk=1,m)[gcd(ik,jk) = k]
+3.交换求和次序
+Σ(i=1,n)Σ(j=1,m)A(i)B(j) = Σ(j=1,m)Σ(i=1,n)A(i)B(j)
+4.分离变量:
+Σ(i=1,n)Σ(j=1,m)A(i)B(j) = Σ(i=1,n)A(i)Σ(j=1,m)B(j)
+
+那么对于本题:给出n,m,k,求
+Σ(i=1,n)Σ(j=1,m)[gcd(i,j)=k]
+
+思路:利用莫比乌斯函数的性质:
+Σ(d|n)μ(d) = [n=1]
+转换一下就是[gcd(i,j)=1] = Σ(d|gcd(i,j))μ(d)
+假设gcd(i,j)=1,那么
+Σ(i=1,n)Σ(j=1,m)[gcd(i,j)=1]
+=Σ(i=1,n)Σ(j=1,m)Σ(d=1,n)[d|i][d|j]μ(d)
+=Σ(d=1,n)μ(d)Σ(i=1,n)[d|i]Σ(j=1,m)[d|j]
+=Σ(d=1,n)μ(d)*(n/d)*(m/d)
+对于这个式子就想到了用整除分块(Σ(i=1,n)f(i)(n/i))
+而对于莫比乌斯函数可以用线性筛进行计算
+如果gcd(i,j)=k,那么先做指标的替换(和式变换2)
+转化为了:Σ(i=1,n/k)Σ(j=1,m/k)[gcd(i,j)=1]
+=Σ(d=1,n/k)μ(d)*(n/(kd)) * (m/(kd))
+*/
+
+int vis[N],p[N],mu[N],cnt;
+int a,b,d;
+
+//先用线性筛处理莫比乌斯函数
+//然后求莫比乌斯函数的前缀和(直接用)
+void init(){
+    mu[1] = 1;
+    for(int i = 2;i < N;i++){
+        if(!vis[i]){
+            p[++cnt] = i;
+            mu[i] = -1;
+        }
+        for(int j = 1;i * p[j] < N;j++){
+            vis[i * p[j]] = 1;
+            if(i % p[j] == 0){
+                break;
+            }
+            mu[i * p[j]] = -mu[i];
+        }
+    }
+    for(int i = 1;i < N;i++){
+        mu[i] += mu[i - 1];
+    }
+}
+ll calc(int n,int m,int k){
+    if(n > m) swap(n,m);
+    n = n / k,m = m / k;
+    ll ans = 0;
+    for(int l = 1,r;l <= n;l = r + 1){
+        //n/l和m/l的每个分块可能不同,但是只要取更小值,就可以把公共区域一同计算
+        //有点类似于扫描线
+        r = min(n / (n / l),m / (m / l));
+        ans += 1ll * (mu[r] - mu[l - 1]) * (n / l) * (m / l);
+    }
+    return ans;
+}
+
+void solve(){
+    cin >> a >> b >> d;
+    cout << calc(a,b,d) << '\n';
+}   
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    init();
+    int t = 1;
+    cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

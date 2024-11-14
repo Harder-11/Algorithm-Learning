@@ -1,0 +1,48 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+威尔逊定理:
+内容:(p-1)! 同余于 -1 (mod p) 是p为质数的充分必要条件
+(这里实际上是为了美观,可以写成(p-1)! 同余于 (p-1) (mod p),当且仅当p为质数成立)
+
+证明必要性:若p是质数,那么{1,2,3,...p-1}是模p的简化剩余系
+当a∈[1,p-1],那么a和p互质
+所以集合{1a,2a....(p-1)a}也是模p的简化剩余系
+对于x∈[1,p-1],集合中只有一个ax % p = 1(剩余系对于mod p,每个余数都只有对应的一个数)
+比如p=7,{1,2,3,4,5,6},当a=3,{3,6,9,12,15,18},那么mod 7之后的结果
+就是{3,6,2,5,1,4},所以只有一个mod p结果是1
+(1)a = x的时候,即x^2 % p = 1
+即(x - 1)(x + 1) % p = 0,那么此时x = 1或者x = p - 1;
+(2)a != x的时候,满足ax % p = 1,此时2 <= a,x <= p - 2(因为对于1和p-1,只可能x和a相同才有%p=1)
+那么必然有(p-3)/2对数的乘积 mod p = 1,即(p-2)! % p = 1,两边同时乘上p - 1
+得到(p-1)! % p = p - 1,那么同余式就可以写成 (p-1)! 同余于 -1 (mod p)
+比如说p = 7,{1,2,3,4,5,6};
+那么此时1 * 1,6 * 6,2 * 4,3 * 5都是 % 7 = 1,当a!=x的时候一共有(p-3)/2=2对
+
+推论:
+1.若p是质数,那么(p-1)! + 1 % p = 0;
+2.若p是大于4的合数,则(p-1)! % p = 0
+*/
+
+void solve(){
+    
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,66 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+扩展中国剩余定理(EXCRT)
+前两个方程:x 同余于 r1 (mod m1) x 同余于 r2 (mod m2)
+转化为不定方程:x = m1p + r1 = m2q + r2
+那么m1p - m2q = r2 - r1
+由裴蜀定理
+当 gcd(m1,m2) !| (r2 - r1)无解,gcd(m1,m2) | (r2 - r1)有解
+那么由扩展欧几里得算法,得到通解p = p * (r2 - r1) / gcd,q = q * (r2 - r1) / gcd
+所以通解就是P = p + m2 / gcd * k,Q = q - m1 / gcd * k
+所以x = m1P + r1 = m1m2 / gcd * k + m1p + r1
+所以前两个方程等价合并为一个方程 x 同余于 r (mod m)
+其中r = m1p + r1,m = lcm(m1,m2)(就是m1m2/gcd)
+n个同余方程合并n - 1次即可求解x
+*/
+ll exgcd(ll a,ll b,ll &x,ll &y){
+    if(b == 0){
+        a = 1,b = 0;
+        return a;
+    }
+    ll d,x1,y1;
+    d = exgcd(b,a % b,x1,y1);
+    x = y1,y = x1 - a / b * y1;
+    return d;
+}
+int n;
+ll EXCRT(ll m[],ll r[]){
+    ll m1,m2,r1,r2,p,q;
+    m1 = m[1],r1 = r[1];
+    for(int i = 2;i <= n;i++){
+        m2 = m[i],r2 = r[i];
+        //p,q是特解
+        ll d = exgcd(m1,m2,p,q);
+        //(r2 - r1) % d == 0,说明无解(裴蜀定理)
+        if((r2 - r1) % d) return -1;
+        //这里得到特解p
+        p = p * (r2 - r1) / d;
+        //这一行就是单纯为了防止p是负数,所以做了同余处理,确保p是正数(这里%(m2/d)之后才能保证加起来是非负的)
+        p = (p % (m2 / d) + m2 / d) % (m2 / d);
+        //这里求合并后的同余方程的r和m
+        r1 = m1 * p + r1;
+        m1 = m1 * m2 / d;
+    }
+    //转化为了x 同余于 r (mod m),此时求最小的x值
+    return (r1 % m1 + m1) % m1;
+}
+
+
+void solve(){
+
+}
+
+int main(){
+    int t;
+    cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

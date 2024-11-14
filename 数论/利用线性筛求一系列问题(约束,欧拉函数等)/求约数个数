@@ -1,0 +1,61 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+筛法求约数个数,给一个数n,求出1~n每个数的约数个数
+有约数个数定理,n = π(i=1,s)pi^ai,那么d(n) = π(i=1,s)(ai+1)
+证明:pi^ai的约数有pi^0,pi^1...pi^ai一共(ai+1)个,那么根据乘法定理,d(n) = π(i=1,s)(ai+1)
+
+a[i]:记录i的最小质因子的次数
+d[i]:记录i的约数的个数
+若i是质数,a[i] = 1,d[i] = 2
+在线性筛中,每个合数m都是被最小的质因子筛掉的,设pj是m的最小质因子,则m通过m=pj*i筛掉
+(1)若i能被pj整除,则pj一定是i的最小质因子,a[m] = a[i] + 1
+d[i] = (a[i] + 1) * .....,d[m] = (a[m] + 1) * ....
+(2)如果i不能被pj整除,则i不包含质因子pj,a[m] = 1,d[m] = d[i] * 2;
+*/
+int p[N],vis[N],cnt,a[N],d[N];
+void get_d(int n){
+    d[1] = 1;
+    for(int i = 2;i <= n;i++){
+        if(!vis[i]){
+            p[++cnt] = i;
+            a[i] = 1;
+            d[i] = 2;
+        }
+        for(int j = 1;i * p[j] <= n;j++){
+            int m = p[j] * i;
+            vis[m] = 1;
+            if(i % p[j] == 0){
+                a[m] = a[i] + 1;
+                d[m] = d[i] / a[m] * (a[m] + 1);
+                break;
+            } else {
+                a[m] = 1;
+                d[m] = d[i] * 2;
+            }
+        }
+    }
+}
+
+void solve(){
+
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

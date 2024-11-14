@@ -1,0 +1,148 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 4000005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hash = 1331;
+const double PI = acos(-1);
+
+
+/*
+多项式乘法:
+1.系数乘法:比如A(x)=a0+a1x+a2x^2+....+a(n-1)x^(n-1)
+2.点值乘法:给定n个点,可以确定n-1次函数曲线(类似待定系数法求函数表达式)的系数点值和系数存在映射关系,可以相互转化
+(1)取x0,x1,x2...x(2n-2)分别带入
+求点值A(x):y0,y1,y2...y(2n-2),B(x):y0',y1'...
+(2)相乘C(x):y0y0',y1y1',....y(2n-2)y(2n-2)'(相当于把每个点的值变成yi*yi')
+(3)插值C(x):c0,c1,c2....c(2n-2)(由上述的点值得到系数)
+这个过程是O(n^2)的
+
+快速傅里叶变换(FFT)
+可以把求点值和求系数均优化为O(nlogn),但是快速傅里叶变换需要借助复数运算,才能实现分治递归
+
+对于复数:
+z = x + iy,i^2 = -1
+单位圆(复平面上圆心在原点并且半径为1的圆)
+圆上的点:z = cosθ + isinθ,把圆分成n等分,可得方程z^n = 1的n个复数根
+单位根wn^k = cos(2πk/n) + isin(2πk/n)
+wn^k * wn^m = wn^(m+k),(wn^k)^m = wn^(km)
+FFT要求 n = 2^b(b∈N),这样才有周期性和折半性,并且才能二分递归
+1.周期性wn^(k+n) = wn^k
+2.对称性wn^(k+n/2) = -wn^k
+3.折半性wn^(2k) = w(n/2)^k
+
+那么开始进行快速傅里叶变换
+1.由系数求点值(正变换)
+设A(x)的系数为(a0,a1,a2,...a(n-1))
+则A(x)=a0 + a1x + a2x^2 + .... + a(n-1)x^(n-1)
+=(a0 + a2x^2 + ... + a(n-2)x^(n-2)) ---偶项
++(a1 + a3x^3 + ... + a(n-1)x^(n-1)) ---奇项
+设A1(x) = a0 + a2x + a4x^2 + ... + a(n-2)x^(n/2-1)
+A2(x) = a1 + a3x + a5x^2 + ... + a(n-1)x^(n/2-1)
+那么A(x) = A1(x^2) + A2(x^2)*x
+
+将wn^k(k < n/2)带入得:
+A(wn^k) = A1(wn^(2k)) + A2(wn^(2k)) * wn^k
+= A1(w(n/2)^k) + A2(w(n/2)^k)wn^k(折半性)
+带入wn^(k+n/2)得到:
+A(wn^(n/2+k)) = A1(w(n/2)^k) - A2(w(n/2)^k)wn^k
+
+2.由点值求系数(逆变换)
+设A(x)=a0 + a1x + a2x^2 + ... + a(n-1)x^(n-1)
+带入wn^0,wn^1,wn^2....wn^(n-1)得到的点值为(y0,y1,y2...y(n-1))
+其中yi = Σ(j=0,n-1)aj(wn^i)^j(就是把x换成的wn^i)
+先利用点值构造一个多项式:B(x) = y0 + y1x + y2x^2 + ... + y(n-1)^(n-1)
+把n个单位根的倒数wn^0,wn^-1....wn^(-n+1)代入B(x)得到n个新点值
+设为(z0,z1.....z(n-1))
+zk = Σ(i=0,n-1)yi(wn^(-k))^i = Σ(i=0,n-1)Σ(j=0,n-1)aj(wn^i)^j(wn^(-k))^i
+=Σ(j=0,n-1)ajΣ(i=0,n-1)(wn^(j-k))^i
+当j = k,内层的和式等于n
+当j != k,就是等比数列求和,结果是(wn^(j-k)^n - 1) / (wn^(j-k)-1),分母交换次幂有一个wn^n=1
+所以总体为0,所以j!=k的时候内层和为0,左移zk = n*ak(只有j=k的时候有值)
+ak = zk/n
+
+而对于逆变换,由于wn^k = cosθ + isinθ
+1/wn^k = 1/(cosθ + isinθ) = cosθ - isinθ = cos(-θ) + isin(-θ) = wn^-k
+逆变换带入单位根的倒数等价于虚部变成负号
+*/
+
+
+/*
+对于A数组初值:实部存系数,虚部存0,最终返回多项式的点值每个节点向下劈叉
+都开两个数组A1,A2(偶数项存在A1,奇数项存在A2),自底向上合并
+*/
+
+//建议不要用STL的complex,自己手写的更快
+struct cx {
+    double x,y;
+    cx operator + (const cx &t) const {
+        return {x + t.x,y + t.y};
+    }
+    cx operator - (const cx & t) const {
+        return {x - t.x,y - t.y};
+    }
+    cx operator * (const cx & t) const {
+        return {x * t.x - y * t.y,x * t.y + y * t.x};
+    }
+}A[N],B[N];
+
+//这里op是选择参数,如果op = 1,就是正变换,如果是-1就是逆变换
+void FFT(cx A[],int n,int op){
+    if(n == 1) return;
+    cx A1[n / 2],A2[n / 2];
+    for(int i = 0;i < n / 2;i++){
+        A1[i] = A[i * 2];
+        A2[i] = A[i * 2 + 1];
+    }
+    FFT(A1,n / 2,op);
+    FFT(A2,n / 2,op);
+    //计算的是wn^1 = cos(2π/n) + isin(2π/n)
+    cx w1({cos(2 * PI / n),sin(2 * PI / n) * op});
+    cx wk({1,0});
+    for(int i = 0;i < n / 2;i++){
+        A[i] = A1[i] + A2[i] * wk;
+        A[i + n / 2] = A1[i] - A2[i] * wk;
+        //每次都旋转2π/n,然后计算A
+        wk = wk * w1;
+    }
+}
+
+
+void solve(){
+    int n,m;
+    cin >> n >> m;
+    for(int i = 0;i <= n;i++){
+        cin >> A[i].x;
+    }
+    for(int i = 0;i <= m;i++){
+        cin >> B[i].x;
+    }
+    //这里让n必须是2^b,并且比m更大
+    for(m = n + m,n = 1;n <= m;n <<= 1);
+    //求到A,B的点值
+    FFT(A,n,1);
+    FFT(B,n,1);
+    //求点值的乘法,Z[i] = A[i] * B[i](卷积),只是用A去存储了Z[i]
+    for(int i = 0;i < n;i++){
+        A[i] = A[i] * B[i];
+    }
+    //逆变换求到系数
+    FFT(A,n,-1);
+    for(int i = 0;i <= m;i++){
+        //由推导的式子,最后的ai = zi / n,所以这里要除n
+        cout << (int)(A[i].x / n + 0.5) << " ";
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

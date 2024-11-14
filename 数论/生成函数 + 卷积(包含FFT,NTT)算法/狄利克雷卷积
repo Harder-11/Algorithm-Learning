@@ -1,0 +1,61 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+狄利克雷卷积
+数列<a1,a2,a3>的狄利克雷生成函数:
+F(x) = a1 / 1^x + a2 / 2^x + .... = Σ(n=1,∞)an/n^x
+乘法运算:
+Σ(i=1,∞,ai/i^x) * Σ(j=1,∞,bj/j^x)
+=(a1/1^x + a2/2^x+a3/3^x+...)(b1/1^x+b2/2^x+.....)
+=a1b1/1^x + (a1b2+a2b1)/2^x + (a1b3+a3b1)/3^x + a1b4+a2b2+a4b1/4^x+...
+=Σ(n=1,∞)1/n^x * Σ(d|n)a(d) * b(n/d)(实际就是n的约数)
+1/4^x的系数是a1b4+a2b2+a4b1(枚举4的倍数)
+1/6^x的系数a1b6+a2b3+a3b2+a6b1
+
+对于积性函数:
+f(1)=1,当gcd(a,b)=1,那么就有f(ab)=f(a)*f(b),则称f(n)为积性函数
+欧拉函数和莫比乌斯函数都是积性函数
+此时Σ(d|n)φ(d)=n(欧拉函数) Σ(d|n)μ(d)=[n=1](莫比乌斯函数)
+Σ(d|n)μ(d)*(n/d)(二者结合在一起)
+
+狄利克雷卷积:
+定理f(n),g(n)是两个积性函数,(f*g)(n)=Σ(d|n)f(d)g(n/d)=Σ(d|n)f(n/d)g(d)
+比如(f*g)(4) = f(1)g(4) + f(2)g(2) + f(4)g(1)
+规律:
+1.交换律f*g=g*f
+2.结合律:(f*g)*h=f*(g*h)
+3.分配律:(f+g)*h=f*h+g*h
+
+三个常用函数:
+1.元函数:e(n) = [n=1]
+2.常数函数1(n)=1
+3.恒等函数id(n)=n
+由此推论:
+1.Σ(d|n)μ(d)=[n=1] <=> μ * 1 = e
+2.Σ(d|n)φ(d) = n <=> φ * 1 = id
+3.Σ(d|n)μ(d)*(n/d) <=> μ * id = φ(这里的id指的是id(n/d)而不是id(n))
+
+*/
+
+void solve(){
+
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

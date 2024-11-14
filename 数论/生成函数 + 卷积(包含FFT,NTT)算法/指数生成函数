@@ -1,0 +1,92 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+指数生成函数:F(x) = Σ(n>=0)an * x^n / n!(类似于泰勒展开)
+序列<1,1,1...>的指数生成函数是1 + x / 1! + x^2 / 2! = e^x
+序列<1,p,p^2>的指数生成函数是1 + p * x / 1! + p^2 * x^2 / 2! = e^(px)
+加减运算F(x) +/- G(x) = Σ(n>=0)(an+/-bn)x^n/n!
+所以F(x)+/-G(x)是序列<an+/-bn>的指数生成函数
+
+乘法运算(卷积)
+F(x)G(x) = Σ(n>=0)x^n/n! * Σ(i=0,n)C(n,i)ai * b(n-i),其中i+j是n
+因此F(x)G(x)是序列<Σ(i=0,n)C(n,i)ai*b(n-i)>的质数生成函数
+
+对于多重集排列数:
+题意:有n种物品,每种物品有ai个,问取m个的物品的排列数?
+设从每种物品中取bi个,0<=bi<=ai,此时m=Σ(i=1,n)bi,对于一组选定的bi进行排列的方案数为
+对于一组选定的bi进行排序的方案数为m!/(b1!*b2!...bn!)
+如果m个物品互不相同,那么总的排列数就是m!,分母就是对每种相同的物品进行去重
+例如,取3个A,1个B的排列数为4!/(3!*1!) = 4,即{AAAB,AABA,ABAA,BAAA}
+那么满足b1+b2+b3....+bn = m的排列数之和就是答案
+
+构造指数生成函数:
+第一种物品的生成函数为(1+x^1/1! + x^2/2! + .... + x^a1/a1!)同理第n种就是an
+那么就是(1+x1/1+x^2/2!+...+x^a1/a1!)(....)....(1+x1/1+x^2/2!+....+x^an/an!);
+此时求x^m/m!的系数
+做乘法:x^b1/b1! * x^b2/b2! * .... * x^bn/bn! = x^m/(b1!b2!....bn!) = m!/(b1!b2!...bn!) * x^m / m!
+做卷积,所有满足b1+b2+b3....+bn = m的项的系数之和,再乘以m!就是答案
+*/
+
+int n,m;
+//a数组:存储每种物品的个数
+int a[11];
+//fac:辅助数组,存阶乘,为什么的double?因为最后算的是m!/(b1!b2!...bn!)作为系数
+double fac[11];
+//c,d都是存系数的数组
+double c[11],d[11];
+
+void init(){
+    fac[0] = fac[1] = 1;
+    for(int i = 2;i <= 100;i++){
+        fac[i] = fac[i - 1] * i;
+    }
+}
+
+double calc(){
+    for(int i = 0;i <= m;i++) c[i] = d[i] = 0;
+    //这里c的系数就是指数生成函数里面1/i!
+    for(int i = 0;i <= a[1];i++) c[i] = 1.0 / fac[i];
+    for(int i = 2;i <= n;i++){
+        for(int j = 0;j <= m;j++){
+            for(int k = 0;k <= a[i];k++){
+                //这里是为了除以bi的阶乘(求的x^m/m!系数)
+                //这里为什么是+号?因为是由不同的每一项的bi乘起来得到的指数是m
+                //每次乘起来的情况不一样(用的每一项的bi不一样)所以是加起来
+                d[j + k] += c[j] / fac[k];
+            }
+        }
+        for(int j = 0;j <= m;j++){
+            c[j] = d[j];
+            d[j] = 0; 
+        }
+    }
+    return c[m] * fac[m];
+}
+
+void solve(){
+    cin >> n >> m;
+    for(int i = 1;i <= n;i++){
+        cin >> a[i];
+    }
+    cout << calc() << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    init();
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

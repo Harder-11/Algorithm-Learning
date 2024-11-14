@@ -1,0 +1,206 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*容斥原理
+    比如要求A ∪ B ∪ C ∪ D ∪ E
+    (1)加上A+B+C+D+E
+    (2)减去C(5,2),A∩B,A∩C,A∩D,A∩E,B∩C,B∩D,B∩E,C∩D,C∩E,D∩E
+    (3)加上C(5,3),任意三个集团的交集
+    (4)减去C(5,4),任意四个集团的交集
+    (5)加上C(5,5),五大集团的交集
+
+    所以题目的核心是如何设计出快速查询若干集合交集的数量的问答系统,常见的题型有两类
+    (1) 打表查询 (2) 不用查询直接公式化简
+     */
+
+    /*
+    题目1:最大公约数为1的子序列数量(CF803F)
+    给你一个数组,返回有多少个子序列的最大公约数是1
+    结果很大,对1e9+7取余
+    1<=n<=10^5,1<=nums[i]<=10^5
+
+    思路:统计每个数字出现的次数
+    当来到i时,i出现的次数是a,2i出现的次数是b,3i出现的次数是c,4i出现的次数是d...直到小于等于最大值
+    那么此时a+b+c+d+....==k,那么最大公约数或者为i,或者为2i,或者为3i...的个数一共
+    有2^k-1个,那么此时dp[i](最大公约数只为i的个数)=2^k-1-dp[2i]-dp[3i]-.....
+     */
+    //这里每一次求dp[i],都是算limit/i次,那么总和就是limit*(1/1+1/2+1/3+...)
+    //就是O(nlogn)的时间复杂度
+    //这里的dp[i]都是已经求过的2^p-1-dp[1,2,3...i]之后的结果,所以是容斥原理
+    //后面的dp值已经把交集全部求过了,所以直接减就行
+    public static int MOD = (int) 1e9 + 7;
+    public static int LIMIT = 100000;
+    public static long[] dp = new long[LIMIT + 1];
+    public static long[] cnt = new long[LIMIT + 1];
+    public static long[] pow = new long[LIMIT + 1];
+    public static void build(){
+        pow[0] = 1;
+        for(int i = 1;i <= LIMIT;i++){
+            pow[i] = (pow[i - 1] * 2) % MOD;
+        }
+    }
+    //这里每一次求dp[i],都是算limit/i次,那么总和就是limit*(1/1+1/2+1/3+...)
+    //就是O(nlogn)的时间复杂度
+    public static long compute(){
+        for(int i = LIMIT;i >= 1;i--){
+            long counts = 0;
+            for(int j = i;j <= LIMIT;j += i){
+                counts += cnt[j];
+            }
+            dp[i] = (pow[(int)counts] - 1 + MOD) % MOD;
+            for(int j = 2 * i;j <= LIMIT;j += i){
+                dp[i] = (dp[i] - dp[j] + MOD) % MOD;
+            }
+        }
+        return dp[1];
+    }
+
+    public static void main(String[] args) throws IOException {
+        build();
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        for(int i = 0;i < n;i++){
+            cnt[sc.nextInt()]++;
+        }
+        System.out.println(compute());
+    }
+    /*
+    题目2:多次查询购买方法(p1450)
+    一共有4种硬币,面值分别为v0,v1,v2,v3,这个永远是确定的
+    每次去购物的细节由一个数组arr来表示,每次购物都是一次查询
+    arr[0]=携带v0面值硬币的数量,arr[1]=携带面值v1的硬币数量.....
+    返回每次有多少种花钱的方法
+    输入格式,输入的第一行是五个整数,分别代表c1,c2,c3,c4,n
+    接下来n行,每行有五个整数,描述一次购买,分别代表d1,d2,d3,d4,s
+    对于每次购买,输入一行一个整数代表答案
+
+    思路:dp[i][j]:0号到i号的面值随便用,组成j元,然后只需要最后一行表示所有面值随便用
+    组成i元的总钱数
+    假设现在有1元,2元,5元,7元的面值,1元有5个,2元有4个,5元有3个,现在想花100元,问使用1元违规的方法数有多少?
+    (使用的1元个数超过5个),实际就是dp[94]的值,因为当选了94元时,后面选六个1元时,不管前面怎么选的
+    都超出了硬币的最大值;使用2元并且违规的情况就是dp[90];使用5元并且违规的情况就是dp[80]
+    然后考虑多种硬币的情况,2元和5元都超了的方法数,就是dp[70];1元和2元都违规的方法数有dp[84],
+    1元和5元都违规的方法数有dp[74]种,然后1,2,5都违规的方法数有dp[64]种
+    那么答案就是dp[100]-(dp[94]+dp[90]+dp[80])+(dp[70]+dp[84]+dp[74])-dp[64]
+    那么此时的dp表就是能够快速查询若干集合交集数量的问答系统
+     */
+    public static int LIMIT1 = 100001;
+    public static long[] dp1 = new long[LIMIT1 + 1];
+    public static int[] value1 = new int[4];
+    public static int[] cnt1 = new int[4];
+    public static int n,s;
+    public static void build1(){
+        dp1[0] = 1;
+        for(int i = 0;i < 3;i++){
+            for(int j = value1[i];j <= LIMIT1;j++){
+                dp1[j] += dp1[j - value1[i]];
+            }
+        }
+    }
+    public static long query(){
+        long illegal = 0;
+        //状态从0001-->1111就是1~15
+        //这里是统计的所有违规的,最后在返回时用dp1[s]-illegal
+        //只要status有1个1说明此时统计的是有1种不合法的情况,此时是illegal+=
+        //用sign来统计status里面有多少个1,每遇到一个1就变号
+        for(int status = 1;status <= 15;status++){
+            long t = s;
+            int sign = -1;
+            for(int j = 0;j <= 3;j++){
+                if(((status >> j) & 1) == 1){
+                    t -= value1[j] * (cnt1[j] + 1);
+                    sign = -sign;
+                }
+            }
+            if(t >= 0){
+                illegal += dp1[(int)t] * sign;
+            }
+        }
+        return dp1[s] - illegal;
+    }
+
+    public static void main1(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            value1[0] = (int) in.nval;
+            in.nextToken(); value1[1] = (int) in.nval;
+            in.nextToken(); value1[2] = (int) in.nval;
+            in.nextToken(); value1[3] = (int) in.nval;
+            in.nextToken(); n = (int) in.nval;
+            build1();
+            for(int i = 0;i < n;i++){
+                in.nextToken(); cnt1[0] = (int) in.nval;
+                in.nextToken(); cnt1[1] = (int) in.nval;
+                in.nextToken(); cnt1[2] = (int) in.nval;
+                in.nextToken(); cnt1[3] = (int) in.nval;
+                in.nextToken(); s = (int) in.nval;
+                System.out.println(query());
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目3.播放列表的数量
+    你的音乐播放器里有 n 首不同的歌，在旅途中，你计划听 goal 首歌
+    （不一定不同，即，允许歌曲重复）
+    你将会按如下规则创建播放列表：
+    (1)每首歌 至少播放一次 。
+    (2)一首歌只有在其他 k 首歌播放完之后才能再次播放。
+    给你 n、goal 和 k ，返回可以满足要求的播放列表的数量。
+    由于答案可能非常大，请返回对 10^9 + 7 取余 的结果。
+
+    首先,定义f(n,l,k)表示n首歌可以选,不一定每首歌都用,选出l首
+    相同的歌至少间隔k的距离,方法数为多少?(少了1限制)
+    此时先选出k+1首歌,然后再k+2位置才可以选第一首歌(1~k+1一共k首歌不能选)
+    然后剩下的歌有n-k首,所以总的可能数是A(n,k+1)*(n-k)^(l-k-1)
+    那么此时答案就是总可能数-没有1可能数-没有2的可能数-没有3的可能数-....
+    +没有1和2的可能数+没有1和3的可能数.....-没有1,2,3的可能数.....(容斥原理)
+    此时没有第一首,第二首....的方法数都是f(n-1,l,k),所以是C(n,1)*f(n-1,l,k)
+    没有1和2的可能数是f(n-2,l,k),所以是f(n-2,l,k)*C(n,2),以此类推就是答案
+    总结起来就是(-1)^i*C(n,i)*f(n-i,l,k),此时将i从0到n求和
+     */
+    public static int LIMIT2 = 100;
+    public static long[] fac = new long[LIMIT2 + 1];
+    public static long[] inv = new long[LIMIT2 + 1];
+    static {
+        fac[0] = 1;
+        for(int i = 1;i <= LIMIT2;i++){
+            fac[i] = ((long)i * fac[i - 1]) % MOD;
+        }
+        inv[LIMIT2] = power(fac[LIMIT2],MOD - 2);
+        for(int i = LIMIT2 - 1;i >= 0;i--){
+            inv[i] = ((long) (i + 1) * inv[i + 1]) % MOD;
+        }
+    }
+    public static long power(long x,int n){
+        long ans = 1;
+        while(n > 0){
+            if((n & 1) == 1){
+                ans = (ans * x) % MOD;
+            }
+            x = (x * x) % MOD;
+            n >>= 1;
+        }
+        return ans;
+    }
+    public int numMusicPlaylists(int n, int goal, int k) {
+        long cur,ans = 0,sign = 1;
+        for(int i = 0;i <= n - k - 1;i++,sign = sign == 1 ? (MOD - 1) : 1){
+            cur = (sign * power(n - i - k,goal - k)) % MOD;
+            cur = (cur * fac[n]) % MOD;
+            cur = (cur * inv[i]) % MOD;
+            cur = (cur * inv[n - i - k]) % MOD;
+            ans = (ans +cur) % MOD;
+        }
+        return (int) ans;
+    }
+}

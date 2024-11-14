@@ -1,0 +1,54 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+同余式:
+如果两整数a,b模m的余数相同,那么称a,b模m同余
+乘法逆元:若a和b互质,且满足同余方程式ax 同余 1(mod b)
+则称x为a模b的乘法逆元
+比如8x 同余 1 (mod5),解得x = 2,7,12....(得到特解2,那么通解就是5 * n - 3)
+
+费马小定理:
+若p为质数,且a和p互质,那么a^(p-1) 同余 1 (mod p)
+*/
+
+//使用快速幂求乘法逆元
+//给定两个数a,p,p是质数,求a模p的乘法逆元
+//由费马小定理,a^(p-1) % p = 1,那么a * a^(p-2) % p = 1
+//那么a^(p-2)就是a模p的乘法逆元,用快速幂求即可
+
+int power(int a,int b){
+    int res = 1;
+    while(b){
+        if(b & 1) res = (a * res) % mod;
+        a = (a * a) % mod;
+        b >>= 1;
+    }
+    return res;
+}
+
+void solve(){
+    int a,p;
+    cin >> a >> p;
+    if(a % p){
+        cout << power(a,p - 2) << '\n';
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

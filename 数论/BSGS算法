@@ -1,0 +1,75 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+const int hash = 1331;
+const double PI = acos(-1);
+
+/*
+BSGS算法:
+给定整数a,b,p;a和p互质
+求满足a^x 同余于 b (mod p)的最小非负整数x
+
+有扩展欧拉定理a^x 同余于 a^(x mod φ(p)) (mod p)
+可知a^x 模 p的意义下的最小循环节为φ(p),因为φ(p) < p
+所以考虑x∈[0,p],必能找到最小整数x
+如果暴力枚举,时间是O(p),令x = im - j,其中m = √p(向上取整),i∈[1,m],j∈[0,m-1]
+则a^(im-j) 同余于 b(mod p),即(a^m)^i 同余于 b*a^j(mod p)
+1.先枚举j,把(b*a^j,j)丢入哈希桶,如果key重复,那么用更大的j替换旧的(因为要找最小的x)
+2.再枚举i,计算(a^m)^i,到哈希表中查找是否有相等的key,找到第一个即结束(最小的i),则最小的x=im-j
+枚举i,j的时间都是√p,所以时间复杂度是O(√p)
+
+算法的本质:分块思想,把x∈[1,p]分为√p块每块长√p
+*/
+
+
+ll bsgs(ll a,ll b,ll p){
+    a %= p,b %= p;
+    if(b == 1) return 0;
+    ll m = ceil(sqrt(p));
+    ll t = b;
+    unordered_map<int,int> hash;
+    hash[b] = 0;
+    for(int j = 1;j < m;j++){
+        t = t * a % p;//求b*a^j
+        hash[t] = j;
+    }
+    ll mi = 1;
+    for(int i = 1;i <= m;i++){
+        mi = mi * a % p;
+    }
+    t = 1;
+    for(int i = 1;i <= m;i++){
+        t = t * mi % p;
+        if(hash.count(t)){
+            return i * m - hash[t];
+        }
+    }
+    return -1;
+}
+
+void solve(){
+    ll a,p,b;
+    cin >> p >> a >> b;
+
+    ll res = bsgs(a,b,p);
+    if(res == -1){
+        puts("no solution");
+    } else {
+        cout << res << '\n';
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

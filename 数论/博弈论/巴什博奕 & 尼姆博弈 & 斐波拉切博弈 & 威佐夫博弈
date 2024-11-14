@@ -1,0 +1,285 @@
+import java.math.BigDecimal;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //博弈类问题(上)
+    //上期为Bash博弈(巴什博奕),Nim博弈(尼姆博弈)
+    //Fibonacci博弈(斐波那契博弈),Wythoff博弈(威佐夫博弈)
+
+    /*
+    博弈类问题,分为公平组合游戏,非公平组合问题,反常博弈
+    只需要关注公平组合游戏(ICG)(反常游戏和经济类博弈不讨论)
+    1.两个玩家轮流行动且游戏方式一致
+    2.两个玩家对状况完全了解
+    3.游戏一定会在有限步数内分出胜负
+    4.游戏以玩家无法行动结束
+    博弈的双方被认为是神之个体,对所有玩家对状况完全了解,且充分为自己打算,绝对理性
+    注意:这类博弈问题的结果没有任何的意外,一方通过努力来改变结果是不可能的,这一点反直觉
+     */
+
+    /*
+    题目1:巴什博奕(Bash game)
+    一共有n颗石子,两个人轮流拿,每次可以拿1~m颗石子,拿到最后一颗石子的人获胜,根据n,m返回谁赢
+
+    结论:如果一开始的石子的数量n % (m + 1) == 0,那么后手赢,否则先手赢
+    理由:如果此时不满足n%(m+1)==0,那么先手每次取石子都让石子剩余总数是m+1的倍数,此后从对手开始
+    的每一轮,对手和本人取的总和永远是m+1,最后一定就是先手获胜
+     */
+    public static String BashGame(int n,int m){
+        return n % (m + 1) != 0 ? "先手" : "后手";
+    }
+    /*
+    题目2:质数次方版取石子(巴什博奕拓展)(p4018)
+    一共有n颗石子,两个人轮流拿,每一轮当前选手可以拿p的k次方颗石子(p^k小于等于总石子数)
+    当前选手可以任意选择p和k但是保证p是质数,k是自然数,拿到最后一颗石子的人获胜
+    如果先手赢,返回"October wins!",如果后手赢,返回"Roy wins"
+    输入第一行一个正整数T表示测试组数,第2~T+1行一行一个n表示石子总数
+    1<=n<=5*1e7,1<=T<=1e5;
+
+    发现:任何6的整数倍不能有p^k得到,那么如果n % 6 != 0,那么先手赢,否则,后手赢
+    因为1~5都可以由p^k得到,比如1可以是2^0,2是2^1,3是3^1,4是2^2,5是5^1,,那么此时
+    首轮让石子的个数变成6的倍数,然后从对手开始的每一回合取的总数都是6的倍数,那么此时就可以
+    胜利,所以判断n%6==0即可
+     */
+    public static int t,n;
+    public static String compute(int n){
+        return n % 6 != 0 ? "October wins!" : "Roy wins!";
+    }
+    public static void main(String[] args)throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        t = (int) in.nval;
+        for(int i = 0;i < t;i++){
+            in.nextToken();
+            n = (int) in.nval;
+            System.out.println(compute(n));
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目3:尼姆博弈(Nim Game)(p2197)
+    一共有n堆石头,两人轮流游戏
+    在每个玩家的回合中,玩家需要选择任何一个非空的石头堆,并从这堆石头中移除任意正数的石头数量
+    谁先拿走最后的石头就获胜,返回最终谁会获胜?
+
+    结论:所有的堆个数异或起来如果不等于0,然么先手一定赢,否则后手赢
+    为什么?如果先手此时所有堆个数异或起来不为0,那么先手可以拿走某些石头让所有的石头异或起来为0
+    那么此时后手面对的就是所有堆的石头个数异或的个数为0,然后此时不论后手怎么拿石头,拿完之后
+    所有堆石头个数异或起来此时一定不为0,以此类推,到最后的状态就是所有堆为0,那么此时异或起来就是0
+    所以此时后手必输
+
+    如何证明当异或为0时,对手随便取一个都只能使异或不是0呢?
+    根据异或的定义,那么可以知道,对于二进制位,此时从高到低位的每一位的1的总数都是偶数
+    当从某一堆拿走了任意个石子,就是将某一堆数减去某一个数的石子,那么此时一定会改变二进制下至少
+    某一位的数量的奇偶性,那么此时异或起来必定不是0
+
+    如何证明当异或不为0时,从某一堆拿若干个之后可以使异或为0呢?
+    分类讨论,此时将所有的石头数量异或起来,然后找到答案最高位的1,那么此时一定能通过减小来消去这个1
+
+     */
+    public static void main1(String[] args)throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        int t = (int) in.nval;
+        for(int i = 0;i < t;i++){
+            in.nextToken();
+            int n = (int) in.nval;
+            int XOR = 0;
+            for(int j = 0;j < n;j++){
+                XOR ^= (int) in.nval;
+            }
+            if(XOR != 0){
+                System.out.println("Yes");
+            } else {
+                System.out.println("No");
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目4:反尼姆博弈(反常游戏)(P4279)
+    一共n堆石头,两人轮流进行游戏
+    在每个玩家的回合中,玩家需要选择任何一个非空的石头堆,并从这堆石头中移除任意正数数量的石头数量
+    谁先拿走最后的石头就失败,返回最终谁会获胜
+    先手获胜,打印"John",后手打印,打印"Brother"
+
+    首先:有特殊情况
+    (1)如果所有的石头堆都只有1个,那么如果堆数是奇数,那么后手赢,否则先手赢
+    (2)只有一堆大于1,剩下的堆都是<=1,那么先手赢,因为先手可以根据局面将唯一大于1的堆取为剩下1块
+    或者是1块不留,就是先手可以控制石头堆全是1的奇偶性,所以此时先手必胜
+    (3)普遍情况,由于情况2的初识情况异或起来一定不是0,那么只要初始情况异或起来不是0,那么最后先手一定
+    会撞上情况2
+     */
+    public static int MAXN = 51;
+    public static int[] stones = new int[MAXN];
+    public static int t1,n1;
+    public static String compute1(){
+        int eor = 0,sum = 0;
+        for(int i = 0;i < n1;i++){
+            eor ^= stones[i];
+            sum += stones[i] == 1 ? 1 : 0;
+        }
+        if(sum == n1){
+            return (n1 & 1) == 1 ? "Brother" : "John";
+        } else {
+            return eor != 0 ? "John" : "Brother";
+        }
+    }
+    public static void main2(String[] args)throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        t1 = (int) in.nval;
+        for(int i = 0;i < t1;i++){
+            in.nextToken();
+            n1 = (int) in.nval;
+            for(int j = 0;j < n1;j++){
+                in.nextToken();
+                stones[j] = (int) in.nval;
+            }
+            System.out.println(compute1());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目5:斐波那契博弈(Fibonacci Game + Zeckendorf定理)
+    一共有n枚石子,两位玩家定了如下规则进行游戏
+    先手后手轮流取石子,先手在第一轮可以取走任意的石子
+    接下来的每一轮当前的玩家最少要取走一枚石子,最多取走上一次取(对手取的那次)的数量的两倍
+    当然,玩家取走的数量必须不大于当前场上剩余石子数量(可以直接把石头拿完,所以先手必胜),双方都以最优策略取石子
+    你也看出来了,根据规律先手一定会获胜,但是先手想知道,第一轮自己最少取走多少颗石子就可以保证获胜了
+    2<=n<=1e15
+
+    结论:只要石头个数是斐波那契数,那么先手必须把石头直接全部拿走,否则就会输
+
+    首先看特例情况
+    n==2,如果不选斐波那契数,那么只能选1,那么肯定对手胜利
+    n==3,此时只能选1或者2,那么对手胜利
+    n==5,如果次数选择取2<=k<=4枚,那么此时对手胜利,如果取1枚,那么5可以拆成2和3,变成了n==2和n==3
+    这两种情况相加了,所以还是对手获胜
+    当n==34,此时拆成13和21,对于13这个分支如果此时先手拿>=5,那么后手拿<=8,此时只需要把13拿完
+    然后进入到剩下的21个的博弈,此时21拆成13和8,又进入了子问题中,最后一定会到n==2和n==3这种最小
+    子问题中,然后对手胜利
+
+    如果不是斐波那契数列该怎么拿???
+    Zeckendorf定理,任意的正整数,都可以拆成若干个,绝对不相邻的斐波那契数之和
+    怎么拆?比如28,先二分找最近的且不大于本身的斐波那契数,是21,然后剩下7,找离7最近的找到5
+    最终找到2,所以28=21+5+2,所以此时只需要把最小的分解出来的斐波那契数拿走就可以
+    因为此时分解出来的数一定是从小到大,大的数都大于小的数的两倍,那么当先手拿走最小的斐波那契数
+    后,后手拿不走任何其他分解出来的斐波那契数,那么就会掉入上述的分解游戏中,并且此时后手反倒
+    先选,而先选必输,所以此时先手必胜
+     */
+    public static long MAXL = 1000000000000000L;
+    public static int MAXM = 101;
+    public static long[] f = new long[MAXM];
+    public static int size;
+    public static void build(){
+        f[0] = 1;
+        f[1] = 2;
+        size = 1;
+        while(f[size] <= MAXL){
+            f[size + 1] = f[size] + f[size - 1];
+            size++;
+        }
+    }
+    public static long compute2(long n){
+        long ans = -1,find;
+        while(n != 1 && n != 2){
+            find = bs(n);
+            if(n == find){
+                ans = find;
+                break;
+            } else {
+                n -= find;
+            }
+        }
+        //如果ans == -1,说明上述while循环一直到n==1或者n==2才结束
+        //那么最小的Fibonacci数就是n,否则是ans
+        if(ans != -1){
+            return ans;
+        } else {
+            return n;
+        }
+    }
+    public static long bs(long n){
+        int l = 0;
+        int r = size;
+        int m;
+        long ans = -1;
+        while(l <= r){
+            m = (l + r) >> 1;
+            if(f[m] <= n){
+                ans = f[m];
+                l = m + 1;
+            } else {
+                r = m - 1;
+            }
+        }
+        return ans;
+    }
+
+    public static void main3(String[] args)throws IOException {
+        build();
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            System.out.println(compute2((long) in.nval));
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目6:威佐夫博弈(Wythoff Game)
+    有两堆石子,数量任意,可以不同,游戏开始由两个人轮流取石子
+    游戏规定,每次有两种不同的取法
+    (1)在任意一堆中取走任意多的石子
+    (2)可以在两堆中同时取走数量相等的石子
+    最后把石子取完者为胜者,现在给出初识的两堆石子的数目,返回先手能不能赢?
+
+    结论: 如果小的一堆个数 != (大 - 小) * 黄金分割比例,先手赢
+         如果小的一堆个数 == (大 - 小) * 黄金分割比例,后手赢
+     */
+
+    //根号5 + 1 / 2用BigDecimal来存
+    public static BigDecimal split = new BigDecimal("1.61803398874989484");
+    public static int a,b;
+    public static int compute(){
+        int min = Math.min(a,b);
+        int max = Math.max(a,b);
+        if(min != split.multiply(new BigDecimal(max - min)).intValue()){
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+    public static void main4(String[] args)throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            a = (int) in.nval;
+            in.nextToken();
+            b = (int) in.nval;
+            System.out.println(compute());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
