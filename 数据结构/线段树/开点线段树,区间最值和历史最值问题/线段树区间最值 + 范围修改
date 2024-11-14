@@ -1,0 +1,162 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    线段树范围增加操作 + 区间最值操作
+    给定操作 0 l r x : arr[l..r]范围都增加x
+    给定操作 1 l r x : 把arr[l...r]范围的每个数v,都更新成min(v,x)
+    操作 2 l r : 查询arr[l...r]范围内的最大值
+    操作 3 l r : 查询arr[l...r]范围内的累加和
+
+    此时要有两种懒更新setMinLazy和addLazy,此时可以合并成一个lazy(最大值的增加值
+    和其他值的增加值)
+     */
+    public static int MAXN = 500001;
+    public static long LOWEST = Long.MIN_VALUE;
+    public static int[] arr = new int[MAXN];
+    public static long[] sum = new long[MAXN << 2];
+    public static long[] max = new long[MAXN << 2];
+    public static int[] cnt = new int[MAXN << 2];
+    public static long[] sem = new long[MAXN << 2];
+    //最大值的增加幅度(懒更新信息)
+    //其他值的增加幅度(懒更新信息)
+    public static long[] maxAdd = new long[MAXN << 2];
+    public static long[] otherAdd = new long[MAXN << 2];
+    public static void up(int i){
+        int l = i << 1;
+        int r = i << 1 | 1;
+        sum[i] = sum[l] + sum[r];
+        max[i] = Math.max(max[l],max[r]);
+        if(max[l] > max[r]){
+            cnt[i] = cnt[l];
+            sem[i] = Math.max(sem[l],max[r]);
+        } else if(max[r] > max[l]){
+            cnt[i] = cnt[r];
+            sem[i] = Math.max(sem[r],max[l]);
+        } else {
+            cnt[i] = cnt[l] + cnt[r];
+            sem[i] = Math.max(sem[l],sem[r]);
+        }
+    }
+    public static void lazy(int i,int n,long maxAddv,long otherAddv){
+        sum[i] += maxAddv * cnt[i] + otherAddv * (n - cnt[i]);
+        max[i] += maxAddv;
+        //如果没有次大值就不要赋值,继续保持LOWEST
+        sem[i] += sem[i] == LOWEST ? 0 : otherAddv;
+        maxAdd[i] += maxAddv;
+        otherAdd[i] += otherAddv;
+    }
+    public static void down(int i,int ln,int rn){
+        int l = i << 1;
+        int r = i << 1 | 1;
+        long tmp = Math.max(max[l],max[r]);
+        //如果max[l]或者max[r] != tmp(最大值),那么lazy的maxAddv和otherAddv都是
+        //otherAdd[i],因为此时范围内所有的数都是<最大值的,那么都属于other范畴
+        if(max[l] == tmp){
+            lazy(l,ln,maxAdd[i],otherAdd[i]);
+        } else {
+            lazy(l,ln,otherAdd[i],otherAdd[i]);
+        }
+        if(max[r] == tmp){
+            lazy(r,rn,maxAdd[i],otherAdd[i]);
+        } else {
+            lazy(r,rn,otherAdd[i],otherAdd[i]);
+        }
+        maxAdd[i] = otherAdd[i] = 0;
+    }
+    public static void build(int l,int r,int i){
+        if(l == r){
+            sum[i] = max[i] = arr[l];
+            sem[i] = LOWEST;
+            cnt[i] = 1;
+        } else {
+            int mid = (l + r) >> 1;
+            build(l,mid,i << 1);
+            build(mid + 1,r,i << 1 | 1);
+            up(i);
+        }
+        maxAdd[i] = otherAdd[i] = 0;
+    }
+    public static void add(int jobl,int jobr,long jobv,int l,int r,int i){
+        if(jobl <= l && jobr >= r){
+            lazy(i,r - l + 1,jobv,jobv);
+        } else {
+            int mid = (l + r) >> 1;
+            down(i,mid - l + 1,r - mid);
+            if(jobl >= mid){
+                add(jobl,jobr,jobv,l,mid,i << 1);
+            }
+            if(jobr >= mid + 1){
+                add(jobl,jobr,jobv,mid + 1,r,i << 1 | 1);
+            }
+            up(i);
+        }
+    }
+    public static void setMin(int jobl,int jobr,long jobv,int l,int r,int i){
+        if(jobv >= max[i]){
+            return;
+        }
+        if(jobl <= r && jobr >= r && sem[i] < jobv){
+            lazy(i,r - l + 1,jobv - max[i],0);
+        } else {
+            int mid = (l + r) >> 1;
+            down(i,mid - l + 1,r - mid);
+            if(jobl <= mid){
+                setMin(jobl,jobr,jobv,l,mid,i << 1);
+            }
+            if(jobr >= mid + 1){
+                setMin(jobl,jobr,jobv,mid + 1,r,i << 1 | 1);
+            }
+            up(i);
+        }
+    }
+    public static long querySum(int jobl,int jobr,int l,int r,int i){
+        if(jobl <= l && jobr >= r){
+            return sum[i];
+        } else {
+            int mid = (l + r) >> 1;
+            down(i,mid - l + 1,r - mid);
+            long ans = 0;
+            if(jobl <= mid){
+                ans += querySum(jobl,jobr,l,mid,i << 1);
+            }
+            if(jobr >= mid + 1){
+                ans += querySum(jobl,jobr,mid + 1,r,i << 1 | 1);
+            }
+            return ans;
+        }
+    }
+    public static long queryMax(int jobl,int jobr,int l,int r,int i){
+        if(jobl <= l && jobr >= r){
+            return max[i];
+        } else {
+            int mid = (l + r) >> 1;
+            down(i,mid - l + 1,r - mid);
+            Long ans = Long.MIN_VALUE;
+            if(jobl <= mid){
+                ans = Math.max(ans,queryMax(jobl,jobr,l,mid,i << 1));
+            }
+            if(jobr >= mid + 1){
+                ans = Math.max(ans,queryMax(jobl,jobr,mid + 1,r,i << 1 | 1));
+            }
+            return ans;
+        }
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+
+        out.flush();
+        out.close();
+        br.close();
+    }
+
+}
+
+

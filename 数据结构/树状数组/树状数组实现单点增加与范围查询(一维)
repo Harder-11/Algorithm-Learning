@@ -1,0 +1,112 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    树状数组
+    一维.二维数组上的实现:单点增加,范围查询的树状数组
+    一维.二维数组上实现:范围增加,单点查询的树状数组
+
+    树状数组是用来维护一个可差分的信息,比如累加和,累成绩
+    不可差分信息,比如最大值,最小值等
+    不可差分的信息一般不用树状数组维护而是用线段树维护,因为线段树维护的思考难度更低
+
+    大多数情况下,线段树可以代替树状数组,两者的时间复杂度差不多,单词调用都是O(logn)
+    线段树的优势:用法全面,思维难度低,维护信息类型多
+    线段树的劣势:代码多,使用空间大,常数时间更差
+    树状数组的优势:代码量少,使用空间少,常数时间优异
+    树状数组的劣势:维护信息的类型少,维护某些不可差分的信息时思考难度大
+     */
+    /*
+    题目1:树状数组单点增加,范围查询模版(p3374)
+    当i位置增加v时,如下位置都获得该值:i += i & -i
+    当计算[1...i]范围的累加和时,把如下位置的值都加上:i -= i & -i
+
+    调用add时,i位置的值+v
+    调用query时,查询[l,r]范围的累加和
+    树状数组下标一定是从1开始!
+    在树状数组中每个位置都管某一些下标的累加和
+    以下是1~16位置,每个位置维护某些下标
+    1:1
+    2:1,2
+    3:3
+    4:1,2,3,4
+    5:5
+    6:5,6
+    7:7
+    8:1,2,3,4,5,6,7,8
+    9:9
+    10:9,10
+    11:11
+    12:9,10,11,12
+    13:13
+    14:13,14
+    15:15
+    16:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+    怎么看某个下标管的范围:对于一个数i,规律就是i-(i&-i)+1~i的范围
+    (本质就是把i最右侧的1去掉+1的值到i的范围)
+    对于add方法,从i位置开始,每次i+(i&-i)位置都+v,直到最大范围
+    对于query方法,就每次sum从i开始,每次加上i-(i&-1)位置的值
+    low-bit的妙用!!!
+     */
+    public static int MAXN = 500001;
+    public static int[] tree = new int[MAXN];
+    public static int n,m;
+    public static int lowbit(int i){
+        return i & -i;
+    }
+    public static void add(int i,int v){
+        while(i <= n){
+            tree[i] += v;
+            i += lowbit(i);
+        }
+    }
+    public static int sum(int i){
+        int ans = 0;
+        while(i > 0){
+            ans += tree[i];
+            i -= lowbit(i);
+        }
+        return ans;
+    }
+    public static int range(int l,int r){
+        return sum(r) - sum(l - 1);
+    }
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            in.nextToken();
+            m = (int) in.nval;
+            for(int i = 1,v;i <= n;i++){
+                in.nextToken();
+                v = (int) in.nval;
+                add(i,v);
+            }
+            for(int i = 1,a,b,c;i <= m;i++){
+                in.nextToken();
+                a = (int) in.nval;
+                in.nextToken();
+                b = (int) in.nval;
+                in.nextToken();
+                c = (int) in.nval;
+                if(a == 1){
+                    add(b,c);
+                } else {
+                    System.out.println(range(b,c));
+                }
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+
+    }
+}

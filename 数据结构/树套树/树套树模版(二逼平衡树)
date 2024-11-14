@@ -1,0 +1,256 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 2147483647;
+const int N = 50005;
+const int mod = 1e9 + 7;
+#define ls(x) tr[x].s[0]
+#define rs(x) tr[x].s[1]
+#define lc u << 1
+#define rc u << 1 | 1
+/*
+二逼平衡树(树套树)(线段树套平衡树)
+写一种数据结构,来维护一个序列,需要提供以下操作:
+查询k在区间内的排名
+查询区间内排名为k的数值
+查询k在区间内的前驱
+查询k在区间内的后继
+
+线段树套平衡树:线段树的每个节点对应一个区间,在每个节点上构建一棵平衡树,维护该区间内的序列
+平衡树可以使用splay和FHQ Treap等
+*/
+struct node {
+    int s[2],p;
+    int v,siz;
+    void init(int p1,int v1){
+        p = p1,v = v1,siz = 1;
+    }
+} tr[N * 40];
+int n,m,w[N],idx;
+int root[N * 4];//记录每个splay的根
+
+inline void pushup(int x){
+    tr[x].siz = tr[ls(x)].siz + tr[rs(x)].siz + 1;
+}
+
+inline void rotate(int x){
+    int y = tr[x].p,z = tr[y].p;
+    int k = tr[y].s[1] == x;
+    tr[z].s[tr[z].s[1] == y] = x;
+    tr[x].p = z;
+    tr[y].s[k] = tr[x].s[k ^ 1];
+    tr[tr[x].s[k ^ 1]].p = y;
+    tr[x].s[k ^ 1] = y;
+    tr[y].p = x;
+    pushup(y),pushup(x);
+}
+
+inline void splay(int &root,int x,int k){
+    while(tr[x].p != k){
+        int y = tr[x].p,z = tr[y].p;
+        if(z != k){
+            if((rs(y) == x) ^ (rs(z) == y)) rotate(x);
+            else rotate(y);
+        }
+        rotate(x);
+    }
+    if(k == 0) root = x;
+}
+
+inline void insert(int &root,int v){
+    int u = root,p = 0;
+    while(u){
+        p = u;
+        u = tr[u].s[v > tr[u].v];
+    }
+    u = ++idx;
+    tr[p].s[v > tr[p].v] = u;
+    tr[u].init(p,v);
+    splay(root,u,0);
+}
+
+/*
+树套树构建:外层的线段树正常构建,内层的平衡树在每个节点上构建
+*/
+void build(int u,int l,int r){
+    insert(root[u],-INF),insert(root[u],INF);
+    for(int i = l;i <= r;i++){
+        insert(root[u],w[i]);
+    }
+    if(l == r) return;
+    int mid = l + r >> 1;
+    build(lc,l,mid);
+    build(rc,mid + 1,r);
+}
+/*
+1.求某区间中某值的排名:线段树负责裂开,平衡树负责查找
+把线段树不断裂开,遇到已经覆盖的区间,在该区间平衡树中查找比某值小的元素个数
+区间结果合并的时候,将小的元素个数求和
+*/
+inline int getrank(int root,int v){
+    int u = root,res = 0;
+    while(u){
+        if(tr[u].v < v){
+            res += tr[ls(u)].siz + 1;
+            u = rs(u);
+        } else u = ls(u);
+    }
+    return res;
+}
+
+int queryrank(int u,int l,int r,int x,int y,int v){
+    if(x <= l && y >= r){
+        return getrank(root[u],v) - 1;
+    }
+    int mid = l + r >> 1,res = 0;
+    if(x <= mid) res += queryrank(lc,l,mid,x,y,v);
+    if(y >= mid + 1) res += queryrank(rc,mid + 1,r,x,y,v);
+    return res;
+}
+
+/*
+2.求某区间中排名为k的数值:直接求很难,分裂区间不容易拼凑排名k
+那么可以二分答案求排名,用小于该值的元素个数作为参考进行二分,即可得到答案
+由于多了一个二分过程,时间复杂度为(logn)^3
+*/
+int queryval(int u,int x,int y,int k){
+    int l = 0,r = 1e8,ans;
+    while(l <= r){
+        int mid = l + r >> 1;
+        if(queryrank(1,1,n,x,y,mid) + 1 <= k){
+            l = mid + 1;
+            ans = mid;
+        } else {
+            r = mid - 1;
+        }
+    }
+    return ans;
+}
+
+/*
+3.修改某一位置上的数值:沿着线段树路径走,穿透每一层,在所有包含某数的平衡树中
+先删除某树,再插入另一个数
+*/
+inline void del(int &root,int v){
+    int u = root;
+    //while循环去找v
+    while(u){
+        if(tr[u].v == v) break;
+        if(tr[u].v < v) u = rs(u);
+        else u = ls(u);
+    }
+    //把u转到根
+    splay(root,u,0);
+    int l = ls(u),r = rs(u);
+    //经过while循环之后,l就是要删除节点的前驱
+    //r就是要删除节点的后继
+    //因为u的前驱就是左树上最右的节点,后继就是右树上最左的结点
+    //所以l先是为ls(u),然后一直往右找,r同理
+    while(rs(l)) l = rs(l);
+    while(ls(r)) r = ls(r);
+    //把l转到根上去,把r转到根节点下一层
+    splay(root,l,0);
+    splay(root,r,l);
+    //转完之后的u点必定是在r的左儿子上(u比r小,比l大),所以是l右儿子是r,r左儿子是u这样的情况
+    ls(r) = 0;
+    splay(root,r,0);
+}
+
+void change(int u,int l,int r,int pos,int v){
+    del(root[u],w[pos]);
+    insert(root[u],v);
+    if(l == r) return;
+    int mid = l + r >> 1;
+    if(pos <= mid) change(lc,l,mid,pos,v);
+    else change(rc,mid + 1,r,pos,v);
+}
+
+/*
+4.求某区间中某值的前驱:线段树负责裂开,平衡树负责查找
+把线段树不断裂开,遇到已经覆盖的区间,在该区间平衡树中查找某值的前驱,区间结果合并的时候,取最大值
+*/
+inline int getpre(int root,int v){
+    int u = root,res = -INF;
+    while(u){
+        if(tr[u].v < v){
+            res = tr[u].v;
+            u = rs(u);
+        } else u = ls(u);
+    }
+    return res;
+}
+
+int querypre(int u,int l,int r,int x,int y,int v){
+    if(x <= l && y >= r){
+        return getpre(root[u],v);
+    }
+    int mid = l + r >> 1,res = -INF;
+    if(x <= mid) res = max(res,querypre(lc,l,mid,x,y,v));
+    if(y >= mid + 1) res = max(res,querypre(rc,mid + 1,r,x,y,v));
+    return res;
+}
+
+/*
+5.求某区间中某值的后继:同前驱,只是取最小值
+*/
+inline int getnxt(int root,int v){
+    int u = root,res = INF;
+    while(u){
+        if(tr[u].v > v){
+            res = tr[u].v;
+            u = ls(u);
+        } else u = rs(u);
+    }
+    return res;
+}
+
+inline int querynxt(int u,int l,int r,int x,int y,int v){
+    if(x <= l && y >= r){
+        return getnxt(root[u],v);
+    }
+    int mid = l + r >> 1,res = INF;
+    if(x <= mid) res = min(res,querynxt(lc,l,mid,x,y,v));
+    if(y >= mid + 1) res = min(res,querynxt(rc,mid + 1,r,x,y,v));
+    return res;
+}
+
+void solve(){
+    cin >> n >> m;
+    for(int i = 1;i <= n;i++){
+        cin >> w[i];
+    }
+    build(1,1,n);
+    while(m--){
+        int op,x,y,v;
+        cin >> op;
+        if(op == 3) cin >> x >> v;
+        else cin >> x >> y >> v;
+        if(op == 1){
+            cout << queryrank(1,1,n,x,y,v) + 1 << '\n';
+        }
+        if(op == 2){
+            cout << queryval(1,x,y,v) << '\n';
+        }
+        if(op == 3){
+            change(1,1,n,x,v);
+            w[x] = v;
+        }
+        if(op == 4){
+            cout << querypre(1,1,n,x,y,v) << '\n';
+        }
+        if(op == 5){
+            cout << querynxt(1,1,n,x,y,v) << '\n';
+        }
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

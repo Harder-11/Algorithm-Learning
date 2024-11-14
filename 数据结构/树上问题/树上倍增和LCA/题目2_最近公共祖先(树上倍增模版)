@@ -1,0 +1,120 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    LCA问题
+    给定树上的任意两点a和b,如何快速查询出a和b的最近公共祖先,常见有三个方法
+    (1)树上倍增 (2)tarjan算法+并查集 (3)树链剖分
+
+    对于树上倍增:如下的步骤
+    (1)先让a和b来到同一层
+    (2)一起往上走2^p层,一起走的过程保证各自到达的结点不同(相同的话可能就不是最近的了)
+    (3)最后再向上走一步即可
+    题目2:最近公共祖先模版(p3379)
+    一次查询M次最近公共祖先
+
+    注意:本题Java直接递归会爆栈,但是C++不会
+     */
+    public static int MAXN = 500001;
+    public static int LIMIT = 20;
+    public static int power;
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXN];
+    public static int[] to = new int[MAXN];
+    public static int cnt;
+    public static int[] deep = new int[MAXN];
+    public static int[][] stJump = new int[MAXN][LIMIT];
+    public static int log2(int n){
+        int ans = 0;
+        while((1 << ans) <= (n >> 1)){
+            ans++;
+        }
+        return ans;
+    }
+    public static void build(int n){
+        power = log2(n);
+        cnt = 1;
+        Arrays.fill(head,1,n + 1,0);
+    }
+    public static void addEdge(int u,int v){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        head[u] = cnt++;
+    }
+    public static void dfs(int u,int f){
+        //层数从1开始
+        deep[u] = deep[f] + 1;
+        stJump[u][0] = f;
+        for(int p = 1;(1 << p) <= deep[u];p++){
+            stJump[u][p] = stJump[stJump[u][p - 1]][p - 1];
+        }
+        for(int e = head[u];e != 0;e = next[e]){
+            //往不是父节点的下层进行递归,如果没有填上这个判断会进入死循环
+            if(to[e] != f){
+                dfs(to[e],u);
+            }
+        }
+    }
+    public static int lca(int a,int b){
+        //谁的层数更大,谁用a变量,谁的层小谁用b变量
+        if(deep[a] < deep[b]){
+            int tmp = a;
+            a = b;
+            b = tmp;
+        }
+        for(int p = power;p >= 0;p--){
+            if(deep[stJump[a][p]] >= deep[b]){
+                a = stJump[a][p];
+            }
+        }
+        if(a == b){
+            return a;
+        }
+        for(int p = power;p >= 0;p--){
+            if(stJump[a][p] != stJump[b][p]){
+                a = stJump[a][p];
+                b = stJump[b][p];
+            }
+        }
+        //最后返回a或者b向上跳一层的层数就是答案
+        return stJump[a][0];
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        int n = (int) in.nval;
+        in.nextToken();
+        int m = (int) in.nval;
+        in.nextToken();
+        int root = (int) in.nval;
+        build(n);
+        for (int i = 1, u, v; i < n; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            addEdge(u, v);
+            addEdge(v, u);
+        }
+        dfs(root, 0);
+        for (int i = 1, a, b; i <= m; i++) {
+            in.nextToken();
+            a = (int) in.nval;
+            in.nextToken();
+            b = (int) in.nval;
+            out.println(lca(a, b));
+        }
+        out.println();
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+

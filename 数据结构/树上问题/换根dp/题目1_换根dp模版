@@ -1,0 +1,104 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    换根dp
+    题目1:最大深度和(p3478)
+    给定一棵树有n个结点,找到一个结点,使得以这个节点为根时,到达所有结点的深度之和最大
+    如果有多个结点满足要求,返回节点编号最小的
+    本题Java递归会爆栈,C++不会
+
+    思路:如何通过父节点的答案转移到子节点上?
+    首先实现dfs1,得到以每个结点为根的树的总结点个数,填写到size[]数组
+    然后同时得到sum[i]表示i去往子树所有结点的距离和
+    sum[父]+=sum[子]+size[子](父亲节点相比于子节点离子节点树上的每个结点都远
+    1的单位的距离,所以就是+=sum[子]+size[子])
+    然后求到1号结点作为根的答案就是k,然后dfs2依次求出每个结点作为根的答案
+    此时的转移方程就是dp[子]=dp[父]-size[子]+n-size[子]
+    对于dp[父]-size[子]就是此时子节点的树到达根节点少付出的代价,然后另外一棵树
+    的所有节点代价又增加了1,所以+(n-size[子])
+     */
+    public static int MAXN = 1000001;
+    public static int n;
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXN << 1];
+    public static int[] to = new int[MAXN << 1];
+    public static int cnt;
+    public static int[] size = new int[MAXN];
+    public static long[] sum = new long[MAXN];
+    public static long[] dp = new long[MAXN];
+    public static void build(){
+        cnt = 1;
+        Arrays.fill(head,1,n + 1,0);
+    }
+    public static void addEdge(int u,int v){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        head[u] = cnt++;
+    }
+    //dfs1填写sum和size两个信息
+    public static void dfs1(int u,int f){
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+               dfs1(v,u);
+            }
+        }
+        size[u] = 1;
+        sum[u] = 1;
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                size[u] += size[v];
+                sum[u] += sum[v] + size[v];
+            }
+        }
+    }
+    public static void dfs2(int u,int f){
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                dp[v] = dp[u] - size[v] + (n - size[v]);
+                dfs2(v,u);
+            }
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        build();
+        for (int i = 1, u, v; i < n; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            addEdge(u, v);
+            addEdge(v, u);
+        }
+        dfs1(1, 0);
+        dp[1] = sum[1];
+        dfs2(1, 0);
+        long max = Long.MIN_VALUE;
+        int ans = 0;
+        for (int i = 1; i <= n; i++) {
+            if (dp[i] > max) {
+                max = dp[i];
+                ans = i;
+            }
+        }
+        out.println(ans);
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

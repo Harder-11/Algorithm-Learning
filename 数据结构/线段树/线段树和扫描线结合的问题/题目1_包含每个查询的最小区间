@@ -1,0 +1,68 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    题目1:包含每个查询的最小区间
+    给你一个二维整数数组 intervals
+    其中 intervals[i] = [lefti, righti] 表示:
+    第 i 个区间开始于 lefti 、结束于 righti（包含两侧取值，闭区间）。
+    区间的 长度 定义为区间中包含的整数数目，更正式地表达是 righti - lefti + 1 。
+    再给你一个整数数组 queries 。
+    第 j 个查询的答案是满足 lefti <= queries[j] <= righti的长度最小区间 i 的长度。
+    如果不存在这样的区间，那么答案是 -1 。
+    以数组形式返回对应查询的所有答案。
+
+    思路:实际不需要线段树,只是一道扫描线的题目
+    根据区间的left排序,对于查询也排序,谁小谁先处理(此时要将每一个询问的下标带上)
+    然后建立一个小根堆(按长度排序),堆中存放每个区间的长度和过期的位置,区间left小于等于此时查询的区间
+    就可以加到堆中,此时只要过期记录没有在堆顶,就不用弹出(延迟删除),操作之后堆顶的长度就是答案
+
+    这道题可以把每段区间画出来,然后此时每个查询就像一条线从左往右一次扫描
+    所以是扫描线
+     */
+    public int[] minInterval(int[][] intervals, int[] queries) {
+        int n = intervals.length;
+        int m = queries.length;
+        Arrays.sort(intervals,(a,b)->a[0] - b[0]);
+        int[][] ques = new int[m][2];
+        for(int i = 0;i < m;i++){
+            ques[i][0] = queries[i];
+            ques[i][1] = i;
+        }
+        Arrays.sort(ques,(a,b)->a[0] - b[0]);
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a,b)->a[0]-b[0]);
+        int[] ans = new int[m];
+        for(int i = 0,j = 0;i < m;i++){
+            //j必须写在外层,这样才不会回退
+            for(;j < n && intervals[j][0] <= ques[i][0];j++){
+                heap.add(new int[]{intervals[j][1] - intervals[j][0] + 1,intervals[j][1]});
+            }
+            while(!heap.isEmpty() && heap.peek()[1] < ques[i][0]){
+                heap.poll();
+            }
+            if(!heap.isEmpty()){
+                ans[ques[i][1]] = heap.peek()[0];
+            } else {
+                ans[ques[i][1]] = -1;
+            }
+        }
+        return ans;
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+
+        out.flush();
+        out.close();
+        br.close();
+    }
+
+}
+
+

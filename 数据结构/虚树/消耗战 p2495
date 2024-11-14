@@ -1,0 +1,145 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 250005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+思路:有m次询问,并且n,m很大,且Σki <= 5e5,那么显然就是建立虚树的数据量
+在处理虚树的时候要注意以下几点:
+1.预处理:从根到节点x的最小边,用mn[x]存储
+2.虚树剪枝:剪掉查询点的后代,这样不会影响答案
+3.树型dp:剩下的查询点均在叶节点上,对叶节点直接返回权值
+对父节点累加子节点的权值和,与父节点的权值比较,取更小值
+*/
+
+//建图用
+int h[N],to[N << 1],w[N << 1],nxt[N << 1],tot;
+//fa实质是ST表,树上倍增使用
+int dep[N],fa[N][21],siz[N];
+//dfs序和栈
+int dfn[N],cnt;
+int s[N],top;
+int n,m,k,a[N];
+ll mn[N];
+
+void add(int u,int v,int c){
+    to[++tot] = v;
+    nxt[tot] = h[u];
+    w[tot] = c;
+    h[u] = tot;
+}
+
+int cmp(int a,int b){
+    return dfn[a] < dfn[b];
+}
+
+void dfs(int u,int f){
+    siz[u] = 1,dfn[u] = ++cnt;
+    fa[u][0] = f;
+    dep[u] = dep[f] + 1;
+    for(int i = 1;i <= 20;i++){
+        fa[u][i] = fa[fa[u][i - 1]][i - 1];
+    }
+    for(int i = h[u];i;i = nxt[i]){
+        int v = to[i];
+        if(v == f) continue;
+        mn[v] = min(mn[u],(ll)w[i]);
+        dfs(v,u);
+        siz[u] += siz[v];
+    }
+}
+
+int lca(int x,int y){
+    if(dep[x] < dep[y]) swap(x,y);
+    for(int i = 20;i >= 0;i--){
+        if(dep[fa[x][i]] >= dep[y]){
+            x = fa[x][i];
+        }
+    }
+    if(x == y) return x;
+    for(int i = 20;i >= 0;i--){
+        if(fa[x][i] != fa[y][i]){
+            x = fa[x][i];
+            y = fa[y][i];
+        }
+    }
+    return fa[x][0];
+}
+
+void build(){
+    sort(a + 1,a + k + 1,cmp);
+    tot = 0;
+    top = 1;
+    s[top] = 1;
+    s[++top] = a[1];
+    for(int i = 2;i <= k;i++){
+        int l = lca(a[i],s[top]);
+        //剪枝操作,如果l == s[top],l是关键点,后面的子树就不管了
+        //那么直接continue
+        if(l == s[top]){
+            continue;
+        }
+        while(top > 1 && dep[s[top - 1]] >= dep[l]){
+            add(s[top - 1],s[top],0);
+            top--;
+        }
+        if(l != s[top]){
+            add(l,s[top],0);
+            s[top] = l;
+        }
+        s[++top] = a[i];
+    }
+    while(top){
+        add(s[top - 1],s[top],0);
+        top--;
+    }
+}
+
+ll DP(int x){
+    if(h[x] == 0) return mn[x];
+    ll sum = 0;
+    for(int i = h[x];i;i = nxt[i]){
+        sum += DP(to[i]);
+    }
+    h[x] = 0;
+    return min(sum,mn[x]);
+}
+
+
+void solve(){
+    cin >> n;
+    for(int i = 1;i < n;i++){
+        int x,y,z;
+        cin >> x >> y >> z;
+        add(x,y,z);
+        add(y,x,z);
+    }
+    mn[1] = 2e18;
+    dfs(1,0);
+    memset(h,0,sizeof h);
+    cin >> m;
+    while(m--){
+        cin >> k;
+        for(int i = 1;i <= k;i++){
+            cin >> a[i];
+        }
+        build();
+        cout << DP(1) << '\n';
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

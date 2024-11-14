@@ -1,0 +1,120 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Main {
+    /*
+    题目3:地道相连的房子(p1503)
+    有n个房子排成一排,编号是1~n,一开始每两个相邻的房子之间都有地道
+    实现如下的操作
+    操作D x :把x号房子摧毁,该房子附近的地道也一并摧毁
+    操作R   :恢复上次摧毁的房子,该房子附近的地道一并恢复
+    操作Q x :查询x号房子能到达的房子数量,包括x号房子自身
+
+    怎么恢复?将摧毁的房子放入栈,每次恢复时就提取栈顶元素
+    此时要求能达到的房子,那么就是连续的1长度
+     */
+    public static int MAXN = 50001;
+    //连续1的最长前缀长度
+    public static int[] pre = new int[MAXN << 2];
+    //连续1的最长后缀长度
+    public static int[] suf = new int[MAXN << 2];
+    public static int[] stack = new int[MAXN];
+    public static void up(int l,int r,int i){
+        pre[i] = pre[i << 1];
+        suf[i] = suf[i << 1 | 1];
+        int mid = (l + r) >> 1;
+        if(pre[i << 1] == mid - l + 1){
+            pre[i] += pre[i << 1 | 1];
+        }
+        if(suf[i << 1 | 1] == r - mid){
+            suf[i] += suf[i << 1];
+        }
+    }
+    public static void build(int l,int r,int i){
+        if(l == r){
+            pre[i] = suf[i] = 1;
+        } else {
+            int mid = (l + r) >> 1;
+            build(l,mid,i << 1);
+            build(mid + 1,r,i << 1 | 1);
+            up(l,r,i);
+        }
+    }
+    public static void update(int jobi,int jobv,int l,int r,int i){
+        if(l == r){
+            pre[i] = suf[i] = jobv;
+        } else {
+            int mid = (l + r) >> 1;
+            if(jobi <= mid){
+                update(jobi,jobv,l,mid,i << 1);
+            } else {
+                update(jobi,jobv,mid + 1,r,i << 1 | 1);
+            }
+            up(l,r,i);
+        }
+    }
+    //已知jobi在l...r范围上
+    //jobi往两侧扩展的出的最大长度
+    //jobi往两侧扩展,但是一定无法扩展到l...r范围之外
+    public static int query(int jobi,int l,int r,int i){
+        if(l == r){
+            return pre[i];
+        } else {
+            int mid = (l + r) >> 1;
+            if(jobi <= mid){
+                //看左侧后缀有没有把此时jobi位置包住
+                //如果包住了,直接返回(此时就是左后缀+右前缀)
+                //如果没有包住,继续调用左侧递归
+                if(jobi > mid - suf[i << 1]){
+                    return suf[i << 1] + pre[i << 1 | 1];
+                } else {
+                    return query(jobi,l,mid,i << 1);
+                }
+            } else {
+                //看右侧前缀有没有把jobi包住,和上面代码一样
+                if(mid + pre[i << 1 | 1] >= jobi){
+                    return suf[i << 1] + pre[i << 1 | 1];
+                } else {
+                    return query(jobi,mid + 1,r,i << 1 | 1);
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while (in.nextToken() != StreamTokenizer.TT_EOF) {
+            int n = (int) in.nval;
+            in.nextToken();
+            int m = (int) in.nval;
+            build(1, n, 1);
+            String op;
+            int stackSize = 0;
+            for (int i = 1, x; i <= m; i++) {
+                in.nextToken();
+                op = in.sval;
+                if (op.equals("D")) {
+                    in.nextToken();
+                    x = (int) in.nval;
+                    update(x, 0, 1, n, 1);
+                    stack[stackSize++] = x;
+                } else if (op.equals("R")) {
+                    update(stack[--stackSize], 1, 1, n, 1);
+                } else {
+                    in.nextToken();
+                    x = (int) in.nval;
+                    out.println(query(x, 1, n, 1));
+                }
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+
+}
+

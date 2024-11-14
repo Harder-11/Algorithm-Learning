@@ -1,0 +1,78 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    树状数组范围增加与单点查询模版(p3368)
+    利用差分来范围增加
+    先由原始数组,求到差分数组,将相邻的两项相减就可以得到差分数组(差分数组做前缀和可以得到原数组)
+    此时通过差分数组得到树状数组
+    对于add方法:此时求差分数组的累加和就可以得到原始数组i位置的值
+    对于query方法,在差分数组的l位置+v和r+1位置-v就修改完成了
+    每次都用树状数组维护差分数组
+     */
+    public static int MAXN = 500001;
+    //此时树状数组维护的是原数组的差分信息
+    //下标依然从1开始
+    public static int[] tree = new int[MAXN];
+    public static int n,m;
+    public static int lowbit(int i){
+        return i & -i;
+    }
+    public static void add(int i,int v){
+        while(i <= n){
+            tree[i] += v;
+            i += lowbit(i);
+        }
+    }
+    public static int sum(int i){
+        int ans = 0;
+        while(i > 0){
+            ans += tree[i];
+            i -= lowbit(i);
+        }
+        return ans;
+    }
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while (in.nextToken() != StreamTokenizer.TT_EOF) {
+            n = (int) in.nval;
+            in.nextToken();
+            m = (int) in.nval;
+            //此时对于原数组的每个值都相当于差分数组i位置+v,i+1位置-v
+            for(int i = 1,v;i <= n;i++){
+                in.nextToken();
+                v = (int) in.nval;
+                add(i,v);
+                add(i + 1,-v);
+            }
+            for(int i = 1;i <= m;i++){
+                in.nextToken();
+                int op = (int) in.nval;
+                if(op == 1){
+                    in.nextToken();
+                    int l = (int) in.nval;
+                    in.nextToken();
+                    int r = (int) in.nval;
+                    in.nextToken();
+                    int v = (int) in.nval;
+                    add(l,v);
+                    add(r + 1,-v);
+                } else {
+                    in.nextToken();
+                    int index = (int) in.nval;
+                    System.out.println(sum(index));
+                }
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}

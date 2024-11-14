@@ -1,0 +1,93 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+题意:
+给定一棵n个点的带权树,定义一棵树是好的当且仅当这棵树上任意两点间不存在一条简单路径
+满足:路径上的点权异或和为0
+你可以操作若干次:选择一个点,将其点权更改成任意的正整数
+求出最少需要多少次操作让这棵树变好
+1 <= n <= 2e5,1<=ai<(1<<30)
+
+思路:把每条非法路径的最近公共祖先的点权修改为大整数,因为大整数的高位1做异或的时候不会被消除
+(修改为大于(1<<30)即可)
+如果直接计算路径的异或和是O(n),转化为前缀和计算就是O(1)
+d[u]:表示根节点到u的路径的所有点权的异或和(即前缀和)
+a[u]表示u的点权,设两个点分别为u,v,lca(u,v) = x
+d[u] = a[1] ^ ...^ a[x] ^... ^ a[u]
+d[v] = a[1] ^ ...^ a[x] ^... ^ a[v]
+那么非法路径a[u] ^ ... ^ a[x] ^ ... ^a[v] = 0
+等价于d[u] ^ d[v] ^ a[x] = 0
+等价于d[u] = d[v] ^ a[x]
+此时x相当于一个断电,可以消除所有经过x点的非法路径
+代码实现的时候,只要把以x为根的子树从集合中清空即可
+那么考虑树上启发式合并,每个点开一个set,用来维护每棵子树中各个节点的d值
+1.如果发现结果当前子树根的非法路径,直接让答案+1,清空当前子树的集合
+2.如果没有发现非法路径,就把小集合s[y]并入到大集合s[x]中
+*/
+
+int n,ans,a[N];
+//d[x]表示1到x的异或和
+int d[N];
+vector<int> e[N];
+//s[x]:x子树内各点的d集合
+set<int> s[N];
+
+void dfs(int x,int fa){
+    s[x].insert(d[x]);
+    bool flag = 0;
+    for(int y : e[x]){
+        if(y == fa) continue;
+        d[y] = d[x] ^ a[y];
+        dfs(y,x);
+        if(s[x].size() < s[y].size()){
+            swap(s[x],s[y]);
+        }
+        for(int z : s[y]){
+            if(s[x].find(z ^ a[x]) != s[x].end()) flag = 1;
+        }
+        //小集合并入大集合
+        for(int z : s[y]){
+            s[x].insert(z);
+        }
+    }
+    //答案+1,x子树已经不可能产生贡献了
+    if(flag){
+        ans++;
+        s[x].clear();
+    }
+}
+
+void solve(){
+    cin >> n;
+    for(int i = 1;i <= n;i++){
+        cin >> a[i];
+    }
+    for(int i = 1;i < n;i++){
+        int x,y;
+        cin >> x >> y;
+        e[x].push_back(y);
+        e[y].push_back(x);
+    }
+    d[1] = a[1];
+    dfs(1,0);
+    cout << ans << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

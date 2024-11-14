@@ -1,0 +1,153 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    题目7:Kamp(p6419)
+    给定一棵n个点的树，边权代表走过边需要花费的时间
+    给定k个人分别在树上的哪些节点(有些结点没住人)
+    这k个人选择了一个聚会点，所有的人都去往聚会点进行聚会
+    聚会结束后，所有人都会上一辆车，车会把每个人送回家
+    送完最后一个乘客，车不需要回到聚会点
+    如果聚会点在i，请问从聚会地点出发直到送最后一个人回家，最短用时多少
+    i = 1 ~ n，打印所有的答案
+
+    思路:首先考虑如果车要回到聚集点,那么此时就是聚集点到所有点的距离和减去最长链
+    此时创建以下变量(都是i的内部)
+    (1)people[i]:有多少人要送达 (2)incost[i]:从i出发送完所有人回到i的最低代价
+    (3)inner1[i]:从i出发送乘客的最长链 (4)从i出发送顾客的次长链
+    (5)choose[i]:顾客最长链来自那个儿子
+
+    对于i外部就是换根dp问题
+    outCost[i]:从i出发送完所有人回到i的代价
+    outer[i]:从i出发送完乘客的最长链
+    (1)当i内部无人,那么此时outCost[i]=w+outCost[f]+inCost[f]+w
+    (2)当i内部有人,outCost[i]=w+outCost[f]+outCost+f出发去往i的兄弟结点的代价+w
+    又incost[f]=w+incost[i]+w+f出发去往i的兄弟结点的代价+w
+    这样代换之后,outCost[i]=outCost[f]+incost[f]-incost[i]
+     */
+    public static int MAXN = 500001;
+    public static int n;
+    public static int k;
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXN << 1];
+    public static int[] to = new int[MAXN << 1];
+    public static int[] weight = new int[MAXN << 1];
+    public static int cnt;
+    // people[i]: i内部，有多少乘客要送
+    public static int[] people = new int[MAXN];
+    // incost[i]: i内部，从i出发送完所有乘客回到i的最少代价
+    public static long[] incost = new long[MAXN];
+    // inner1[i]: i内部，从i出发送乘客的最长链
+    public static long[] inner1 = new long[MAXN];
+    // inner2[i]: i内部，从i出发送乘客的次长链
+    public static long[] inner2 = new long[MAXN];
+    // 注意 : inner1[i]和inner2[i]所代表的链，一定要来自i的不同儿子
+    // choose[i]: 送乘客的最长链来自i的哪个儿子
+    public static int[] choose = new int[MAXN];
+    // outcost[i]: i外部，从i出发送完所有乘客回到i的最少代价
+    public static long[] outcost = new long[MAXN];
+    // outer[i]: i外部，从i出发送乘客的最长链
+    public static long[] outer = new long[MAXN];
+
+    public static void build() {
+        cnt = 1;
+        Arrays.fill(head, 1, n + 1, 0);
+        Arrays.fill(people, 1, n + 1, 0);
+        Arrays.fill(incost, 1, n + 1, 0);
+        Arrays.fill(inner1, 1, n + 1, 0);
+        Arrays.fill(inner2, 1, n + 1, 0);
+        Arrays.fill(choose, 1, n + 1, 0);
+        Arrays.fill(outcost, 1, n + 1, 0);
+        Arrays.fill(outer, 1, n + 1, 0);
+    }
+
+    public static void addEdge(int u, int v, int w) {
+        next[cnt] = head[u];
+        to[cnt] = v;
+        weight[cnt] = w;
+        head[u] = cnt++;
+    }
+    public static void dfs1(int u,int f){
+        for(int e = head[u],v,w;e != 0;e = next[e]){
+            v = to[e];
+            w = weight[e];
+            if(v != f){
+                dfs1(v,u);
+                people[u] += people[v];
+                if(people[v] > 0) {
+                    //所有人送完回到u,那么此时要经过两次w边,所以+2w
+                    incost[u] += incost[v] + (long) w * 2;
+                    if (inner1[u] < inner1[v] + w) {
+                        choose[u] = v;
+                        inner2[u] = inner1[u];
+                        inner1[u] = inner1[v] + w;
+                    } else if (inner2[u] < inner1[v] + w) {
+                        inner2[u] = inner1[v] + w;
+                    }
+                }
+            }
+        }
+    }
+    public static void dfs2(int u,int f){
+        for(int e = head[u],v,w;e != 0;e = next[e]) {
+            v = to[e];
+            w = weight[e];
+            if (v != f) {
+                if (k - people[v] > 0) {
+                    if (people[v] == 0) {
+                        outcost[v] = outcost[u] + incost[u] + (long) 2 * w;
+                    } else {
+                        outcost[v] = outcost[u] + incost[u] - incost[v];
+                    }
+                    if (v != choose[u]) {
+                        outer[v] = Math.max(inner1[u], outer[u]) + w;
+                    } else {
+                        outer[v] = Math.max(inner2[u], outer[u]) + w;
+                    }
+                }
+                dfs2(v, u);
+            }
+        }
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        build();
+        in.nextToken();
+        k = (int) in.nval;
+        for (int i = 1, u, v, w; i < n; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            in.nextToken();
+            w = (int) in.nval;
+            addEdge(u, v, w);
+            addEdge(v, u, w);
+        }
+        for (int i = 1, u; i <= k; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            people[u]++;
+        }
+        dfs1(1, 0);
+        dfs2(1, 0);
+        for (int i = 1; i <= n; i++) {
+            out.println(incost[i] + outcost[i] - Math.max(inner1[i], outer[i]));
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

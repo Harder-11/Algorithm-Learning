@@ -1,0 +1,41 @@
+//堆结构和堆排序
+//对于一棵完全二叉树,i结点的父亲结点是(i - 1) / 2,左孩子是 i * 2 + 1,右孩子是i * 2 + 2
+//堆的调整heapInsert(向上调整),heapify(向下调整);
+//大根堆(所有子结构的最大元素在是在根节点)
+//往堆中添加元素,然后一直与父亲结点比较,如果比父亲结点大,那么就往上移动
+import java.io.*;
+import java.util.*;
+
+public class Main {
+    public static void heapInsert(int[] arr,int i){
+        while(arr[i] > arr[(i - 1) / 2]){
+            swap(arr,i,(i - 1) / 2);
+            i = (i - 1) / 2;
+        }
+    }
+    //i位置的数变小,维持大根堆的结构
+    //向下调整大根堆
+    public static void heapify(int[] arr,int i,int size){
+        int l = i * 2 + 1;
+        while(l < size){
+            //说明有左孩子,l
+            //右孩子为l + 1
+            int best = l + 1 < size && arr[l + 1] > arr[l] ? l + 1 : l;
+            //判断:有右孩子并且如果左孩子>右孩子,那么就是左孩子
+            best = arr[best] > arr[i] ? best : i;
+            //父亲和最强孩子之间比较
+            if(best == i) break;//发现最强的是自己,那么就直接跳出循环
+            swap(arr,best,i);//否则就和最强的孩子交换
+            i = best;
+            l = i * 2 + 1;//继续判断有没有底下的孩子
+        }
+    }
+    public static void swap(int[] arr,int x,int y){
+        int t = arr[x];
+        arr[x] = arr[y];
+        arr[y] = t;
+    }
+    public static void main(String[] args){
+
+    }
+}

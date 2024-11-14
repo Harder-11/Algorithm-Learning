@@ -1,0 +1,102 @@
+
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    树的直径
+    树的直径就是指树上最远的两个点形成的路径
+    树的直径两种求法
+    (1)两次dfs,适用于边权非负的树
+    第一次找到离根节点最远的结点,第二次dfs从最远的这个结点开始dfs,然后找最远的结点
+    优点:不仅能得到树的直径,还能得到直径沿途很多点等等信息
+    缺点:遍历两次树
+    (2)树型dp的方式,适用于所有的数
+    定义dist[u]:从u开始必须往下走,能走出来的最大距离(可以不选任何边)
+    dist[u]=0,维持最大值
+    定义ans[u]:路径一定要包含点u的情况下能得到的最大路径长度,ans[u]=0(从u->u)
+    dist[u]+dist[子]+边权 先更新
+    优点:遍历一次树
+    缺点:只能得到直径的长度
+
+    如果树上的边权都是正数,那么有如下结论
+    (1)如果有多条直径,那么这些直径一定拥有共同的中间部分,可能是一个公共点,也可能是一段路径
+    (2)树上任意一点,相隔最远的点的集合,直接的两端点至少有一个在其中
+    */
+    /*
+    题目1:树的直径模版(U81904)
+    给定一棵树,边权可能为负,求直径长度
+    思路:使用树型dp
+     */
+    public static int MAXN = 500001;
+    public static int n,cnt;
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXN << 1];
+    public static int[] to = new int[MAXN << 1];
+    public static int[] weight = new int[MAXN << 1];
+    //dist[u]:从u开始必须向下走,能走出的最大距离,可以不选任何边
+    public static int[] dist = new int[MAXN];
+    //ans[u]:路径必须包含点u的情况下,最大路径和
+    public static int[] ans = new int[MAXN];
+    public static void build(){
+        cnt = 1;
+        Arrays.fill(head,1,n + 1,0);
+        Arrays.fill(dist,1,n + 1,0);
+        Arrays.fill(ans,1,n + 1,0);
+    }
+    public static void addEdge(int u,int v,int w){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        weight[cnt] = w;
+        head[u] = cnt++;
+    }
+    public static void dp(int u,int f){
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                dp(v,u);
+            }
+        }
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                ans[u] = Math.max(ans[u],dist[u] + dist[v] + weight[e]);
+                dist[u] = Math.max(dist[u],dist[v] + weight[e]);
+            }
+        }
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        build();
+        for (int i = 1, u, v, w; i < n; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            in.nextToken();
+            w = (int) in.nval;
+            addEdge(u, v, w);
+            addEdge(v, u, w);
+        }
+        dp(1, 0);
+        int diameter = Integer.MIN_VALUE;
+        for (int i = 1; i <= n; i++) {
+            diameter = Math.max(diameter, ans[i]);
+        }
+        out.println(diameter);
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

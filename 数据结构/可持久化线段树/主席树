@@ -1,0 +1,122 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+可持续化线段树(主席树)
+给定n个整数构成的序列a,将对于指定闭区间[l,r]查询其区间内的第k小值
+
+可持久化线段树:支持回退,访问之前版本的线段树
+主席树的思想:保存每次插入操作时的历史版本
+通过观察,每次只需要更改logn + 1个节点,故只增加更改的节点
+主席树 = n棵线段树的叠合
+主席树的存储:不能使用堆式存储法,应该动态开点
+对于每个结点,应该保存左右儿子的编号
+对于每个历史版本,还应该保存根节点的编号
+*/
+#define lc(x) tr[x].ch[0]
+#define rc(x) tr[x].ch[1]
+int n,m,a[N],b[N];//这里b是用来处理离散化的
+vector<int> v;
+struct node {
+    int ch[2];
+    int s;//节点值域中有多少个数
+} tr[N * 22];
+int root[N],idx;
+
+//1.build()
+//建空树:递归建造域值为[1,n]内的各个结点
+//参数:x为当前节点的编号,x是传引用
+//通过子空间的x值,给父空间的lc(x)和rc(x)赋值
+void build(int &x,int l,int r){
+    x = ++idx;
+    if(l == r) return;
+    int m = l + r >> 1;
+    build(lc(x),l,m);
+    build(rc(x),m + 1,r);
+}
+
+/*
+2.insert()
+建主席树:递归建立各个历史版本的线段树
+参数:x为前一版本的节点指针,y为当前版本的结点指针
+y是传引用,通过子空间y值,给父空间的lc(y)或者rc(y)赋值
+*/
+void insert(int x,int &y,int l,int r,int v){
+    y = ++idx;
+    //结点复制 
+    tr[y] = tr[x];
+    tr[y].s++;
+    if(l == r) return;
+    int m = l + r >> 1;
+    //当v <= m的时候,往左边新开一个结点,否则往右边新开一个节点
+    if(v <= m) insert(lc(x),lc(y),l,m,v);
+    else insert(rc(x),rc(y),m + 1,r,v);
+}
+
+/*
+3.query()
+查询:在主席树上查询区间[l,r]第k小
+简化:求[1,r]区间内的第k小,找到插入r时的历史版本,在权值线段树上二分搜索即可
+扩展:求[l,r]区间内的第k小,那么可以使用前缀和
+[l,r]的信息 = [1,r]的信息 - [1,l - 1]的信息
+*/
+//x是前一个版本的节点指针,y是当前版本的节点指针
+//调用是query(root[l - 1],root[r],1,n,k)
+int query(int x,int y,int l,int r,int k){
+    if(l == r) return l;
+    int m = l + r >> 1;
+    //这里作差就是前缀和的思想,把当前版本的tr[lc]减去之前版本的tr[lc]
+    //那么就求到了在[l,m]范围内数的个数
+    int s = tr[lc(y)].s - tr[lc(x)].s;
+    //如果k <= s,就往左搜索,否则往右搜索并且k -= s
+    if(k <= s) return query(lc(x),lc(y),l,m,k);
+    else return query(rc(x),rc(y),m + 1,r,k - s);
+}
+
+/*
+4.离散化:
+考虑离散化:值域很大而数量有限,问题需要用值域作为下标
+离散化:把系数的值域映射成紧密的下标,排序,去重,二分找下标
+代码:sort(v.begin(),v.end())
+    v.erase(unique(v.begin(),v.end()),v.end())
+    unique方法会把重复元素放在数组后面,然后返回处理后的第一个重复元素下标
+*/
+//返回x的下标,由于返回的是从0开始的,那么最后+1即可
+int get_id(int x){
+    return lower_bound(v.begin(),v.end(),x) - v.end() + 1;
+}
+
+void solve(){
+    cin >> n >> m;
+    for(int i = 1;i <= n;i++){
+        cin >> a[i];
+        b[i] = a[i];
+    }
+    sort(b + 1,b + n + 1);
+    int bn = unique(b + 1,b + n + 1) - b - 1;
+    for(int i = 1;i <= n;i++){
+        int id = lower_bound(b + 1,b + bn + 1,a[i]) - b;
+        insert(root[i - 1],root[i],1,bn,id);
+    }
+    while(m--){
+        int l,r,k;
+        cin >> l >> r >> k;
+        int id = query(root[l - 1],root[r],1,bn,k);
+        cout << b[id] << '\n';
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

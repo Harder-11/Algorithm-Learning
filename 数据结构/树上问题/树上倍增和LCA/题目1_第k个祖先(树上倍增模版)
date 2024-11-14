@@ -1,0 +1,104 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    树上倍增和LCA
+    需要用到的知识:并查集,链式前向星建图,树形dp,倍增算法和ST表
+
+    树上倍增:
+    (1)建立每个结点的深度表,deep数组
+    (2)建立每个结点往上跳1步,2步,4步,8步...能到达的结点标号,ST表
+    (3)给定任意结点,可以快速查询,从i节点往上走的路径中位于s层的结点标号
+    单次查询的时间复杂度是O(log n)
+    对于st[i][p]:表示节点i往上走2^p步到达什么节点
+    此时st(i,0)=i的父节点
+    st(i,p)=st(st(i,p-1),p-1)
+     */
+
+    /*
+    题目1:第k个祖先
+    实现TreeAncestor类
+    TreeAncestor(int n,int[] parent) : 初始化
+    getKthAncestor(int i,int k):返回结点i的第k个祖先节点,不存在返回-1
+     */
+
+    public static class TreeAncestor {
+        public static int MAXN  = 50001;
+        public static int LIMIT = 16;
+        public static int power;
+        public static int log2(int n){
+            int ans = 0;
+            while((1 << ans) <= (n >> 1)){
+                ans++;
+            }
+            return ans;
+        }
+        //链式前向星建图
+        public static int[] head = new int[MAXN];
+        public static int[] to = new int[MAXN];
+        public static int[] next = new int[MAXN];
+        public static int cnt;
+        public static int[] deep = new int[MAXN];
+        //ST表,往上跳2^p步到达的点
+        public static int[][] stJump = new int[MAXN][LIMIT];
+        public TreeAncestor(int n,int[] parent){
+            power = log2(n);
+            cnt = 1;
+            Arrays.fill(head,0,n,0);
+            for(int i = 1;i < parent.length;i++){
+                addEdge(parent[i],i);
+            }
+            dfs(0,0);
+        }
+        public static void addEdge(int u,int v){
+            next[cnt] = head[u];
+            to[cnt] = v;
+            head[u] = cnt++;
+        }
+        public static void dfs(int i,int f){
+            //递归,当递归是第0层(最上面),那么就给deep赋值
+            //这里递归的参数i是子节点,f是父亲节点,所以deep[i]=deep[f]+1
+            //并且这里ST表的第0行都代表当前结点的父亲节点位置(向上跳1个)
+            if(i == 0){
+                deep[i] = 1;
+            } else {
+                deep[i] = deep[f] + 1;
+            }
+            stJump[i][0] = f;
+            for(int p = 1;(1 << p) <= deep[i];p++){
+                stJump[i][p] = stJump[stJump[i][p - 1]][p - 1];
+            }
+            for(int e = head[i];e != 0;e = next[e]){
+                dfs(to[e],i);
+            }
+        }
+        public static int getKthAncestor(int i,int k){
+            if(deep[i] <= k){
+                return -1;
+            }
+            int s = deep[i] - k;
+            for(int p = power;p >= 0;p--){
+                if(deep[stJump[i][p]] >= s){
+                    i = stJump[i][p];
+                }
+            }
+            return i;
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+
+        out.println();
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+

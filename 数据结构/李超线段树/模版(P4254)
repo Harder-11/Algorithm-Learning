@@ -1,0 +1,97 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+李超线段树:用于维护平面直角坐标系内线段关系的树
+给定一个平面直角坐标系,支持动态插入线段,询问从某一个位置x向下看,能看到的
+最高的一条线段,也就是一条竖线,问这条竖线与所有线段的最高交点
+
+修改操作:维护每个区间内中点处的最高线段(最优线段)
+设当前区间为[l,r],新线段的横坐标范围为[L,R]
+1.如果新线段伸入了左区间[l,mid],那么递归左区间
+2.如果新线段伸入了右区间[mid+1,r],那么递归右区间
+3.如果新线段覆盖了当前的区间[l,r]则维护区间的最优线段
+(1)如果新线段中点处的y值小于旧线段中点处的y值,则判断新线段在左端或者右端的y值
+是否更优,如果优,则递归替换
+因为是两条直线,如果新的中点更低,那么有可能左或者右端点比旧的y值更高
+那么就只递归这一边(因为另一边端点一定更低)
+(2)如果新线段的中点处的y值大于旧线段在中点处的y值,那么交换新旧线段的编号
+一箭双雕(交换之后实际上就成了(1)的情况了):新线段的编号称为当前区间的标记tr[u],同时id指向旧线段,tr[u]指向
+新线段,然后判断旧线段在左端或者在有段的y值是否更优,如果优则递归替换
+时间复杂度O(n(logn)^2)
+
+询问操作:对所有包含了横坐标x的位置的区间上的最优线段计算Y值,最后取max
+时间复杂度O(nlogn)
+*/
+
+#define ls u << 1
+#define rs u << 1 | 1
+
+struct line {
+    //斜率和截距
+    double k,b;
+} p[N << 1];
+//线段的编号
+int tr[N << 2],n,cnt;
+
+//就是求y = kx + b的值
+double Y(int id,int x){
+    return p[id].k * x + p[id].b;
+}
+
+void change(int u,int l,int r,int L,int R,int id){
+    int mid = (l + r) >> 1;
+    if(L <= l && R >= r){
+        if(Y(id,mid) > Y(tr[u],mid)) swap(id,tr[u]);
+        if(Y(id,l) > Y(tr[u],l)) change(ls,l,mid,L,R,id);
+        if(Y(id,r) > Y(tr[u],r)) change(rs,mid + 1,r,L,R,id);
+        return;
+    }
+    //这里是log复杂度然后上方又是log,所以复杂度是logn ^ 2 * n
+    if(L <= mid) change(ls,l,mid,L,R,id);
+    if(mid < R) change(rs,mid + 1,r,L,R,id);
+}
+
+double query(int u,int l,int r,int x){
+    if(l == r) return Y(tr[u],x);
+    int mid = (l + r) >> 1;
+    double t = Y(tr[u],x);
+    if(x <= mid) return max(t,query(ls,l,mid,x));
+    else return max(t,query(rs,mid + 1,r,x));
+}
+
+void solve(){
+    cin >> n;
+    for(int i = 1;i <= n;i++){
+        char op[10];
+        cin >> op;
+        if(op[0] == 'P'){
+            double b,k;
+            cin >> b >> k;
+            p[++cnt] = {k,b - k};
+            change(1,1,N,1,N,cnt);
+        } else {
+            int x;
+            cin >> x;
+            cout << (int)query(1,1,N,x) / 100 << '\n';
+        }
+    }
+}   
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

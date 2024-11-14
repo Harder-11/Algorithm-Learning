@@ -1,0 +1,137 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    题目5:哪些点可以改造成重心(CF708C)
+    给定一棵n个点的树,你可以随便删掉一条边,然后随便加上一条边
+    通过这种方式可以让很多点变成重心,打印能变成重心的点
+
+    思路:考虑到树重心的定义
+    当x节点作为根节点时,找到更大的那棵子树,找到这棵子树中<=n/2结点个数并且最接近
+    的那颗子树(x子树的子树),此时就让x直接接上这个子树的子树,如果此时去掉这个
+    子树的子树的这棵子树剩下的结点数是<=n/2,那么此时x就是符合题意的结点
+
+    设置每棵子树的内部信息
+    size[i]:i内部的大小 maxsub[i]:最大子树的根节点是哪一个
+    inner1[i]: <=n/2且第一大的子树大小 inner2[i]: <=n/2且第二大的子树大小
+    (inner1和inner2必须来自不同的子树)
+    choose[i]:拥有inner1[i]的儿子
+    outer[i]:v结点的外部<=n/2的最大子树是多少?记录大小,outer设计如下
+    (1)v外部结点数<=n/2,n-size[v]
+    (2)v!=choose[u],max(outer[u],inner1[u])
+    (3)v==choose[u],max(outer[u],inner2[u])
+     */
+    public static int MAXN = 400001;
+    public static int n;
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXN << 1];
+    public static int[] to = new int[MAXN << 1];
+    public static int cnt;
+    // size[i]: i内部，整棵子树大小
+    public static int[] size = new int[MAXN];
+    // maxsub[i]: i内部，最大子树，是i节点的哪个儿子拥有，记录节点编号
+    public static int[] maxsub = new int[MAXN];
+    // inner1[i]: i内部，<=n/2且第一大的子树是多大，记录大小
+    public static int[] inner1 = new int[MAXN];
+    // inner2[i]: i内部，<=n/2且第二大的子树是多大，记录大小
+    public static int[] inner2 = new int[MAXN];
+    // 注意: inner1[i]和inner2[i]，所代表的子树一定要来自i的不同儿子
+    // choose[i]: inner1[i]所代表的子树，是i节点的哪个儿子拥有，记录节点编号
+    public static int[] choose = new int[MAXN];
+    // outer[i]: i外部，<=n/2且第一大的子树是多大，记录大小
+    public static int[] outer = new int[MAXN];
+    public static void build() {
+        cnt = 1;
+        Arrays.fill(head, 1, n + 1, 0);
+        Arrays.fill(maxsub, 1, n + 1, 0);
+        Arrays.fill(choose, 1, n + 1, 0);
+        Arrays.fill(inner1, 1, n + 1, 0);
+        Arrays.fill(inner2, 1, n + 1, 0);
+        Arrays.fill(outer, 1, n + 1, 0);
+    }
+    public static void addEdge(int u, int v) {
+        next[cnt] = head[u];
+        to[cnt] = v;
+        head[u] = cnt++;
+    }
+    public static void dfs1(int u,int f){
+        size[u] = 1;
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                dfs1(v,u);
+                size[u] += size[v];
+                if(size[maxsub[u]] < size[v]){
+                    maxsub[u] = v;
+                }
+                int innerSize = size[v] <= n / 2 ? size[v] : inner1[v];
+                if(inner1[u] < innerSize){
+                    choose[u] = v;
+                    inner2[u] = inner1[u];
+                    inner1[u] = innerSize;
+                } else if(inner2[u] < innerSize){
+                    inner2[u] = innerSize;
+                }
+            }
+        }
+    }
+    public static void dfs2(int u,int f){
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                if(n - size[v] <= n / 2){
+                    outer[v] = n - size[v];
+                } else if(choose[u] != v){
+                    outer[v] = Math.max(outer[u],inner1[u]);
+                } else {
+                    outer[v] = Math.max(outer[u],inner2[u]);
+                }
+                dfs2(v,u);
+            }
+        }
+    }
+    //check分为两种情况,如果此时u结点内部总结点数>n/2,那么此时就看
+    //去掉其中最大的不超过n/2的子树之后的结点数会不会大于n/2
+    //如果外部的结点数>n/2,那就看去掉外部的<=n/2的最大子树的结果
+    public static boolean check(int u){
+        if(size[maxsub[u]] > n / 2){
+            return size[maxsub[u]] - inner1[maxsub[u]] <= n / 2;
+        }
+        if(n - size[u] > n / 2){
+            return n - size[u] - outer[u] <= n / 2;
+        }
+        return true;
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        build();
+        for (int i = 1, u, v; i < n; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            addEdge(u, v);
+            addEdge(v, u);
+        }
+        dfs1(1, 0);
+        dfs2(1, 0);
+        for (int i = 1; i <= n; i++) {
+            out.print(check(i) ? "1 " : "0 ");
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

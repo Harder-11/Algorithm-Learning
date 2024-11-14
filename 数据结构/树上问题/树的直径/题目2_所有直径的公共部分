@@ -1,0 +1,148 @@
+
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    题目2:所有直径的公共部分(p3304)
+    给定一棵树,边权全是正
+    打印直径长度,所有直径的公共部分有几条边
+
+    思路:使用两次dfs的方式来求到整条路径上有哪些点
+    难点:怎么算公共部分?
+    ---当添完last数组之后,就求得了从start到end的整条路径
+    那么此时对于路径每一个节点,去找它的maxDist,maxDist代表不走该路径能够得到的最大距离.
+    此时先确定了一条直径,在直径上面选一个点P,那么此时p到end的距离一定等于maxDist[P]此时
+    才满足直径的定义,如果>p到end的距离了,那么会产生矛盾(此时直径就会选择该路径,会变大)
+    此时从end开始往start遍历,记录最后一个满足上述条件的点,那么此时重合部分右侧的点就定位了
+    同理对于重合部分左侧点就是Q到start的距离等于maxDist[Q]
+     */
+    public static int MAXN = 200001;
+    public static int n;
+    public static int[] head = new int[MAXN];
+    public static int[] to = new int[MAXN << 1];
+    public static int[] next = new int[MAXN << 1];
+    public static int[] weight = new int[MAXN << 1];
+    public static int cnt;
+    //这里是两次dfs
+    //第一次dfs求到start
+    //然后第二次dfs时将start作为根节点求到end
+    //并将所有的距离存在last数组中
+    public static int start;
+    public static int end;
+    public static long[] dist = new long[MAXN];
+    public static int[] last = new int[MAXN];
+    public static long diameter;
+    //此时路径上的所有点diameterPath就是true,这样dfs就不能走,为false就可以走
+    public static boolean[] diameterPath = new boolean[MAXN];
+    public static int commonEdges;
+    public static void build(){
+        cnt = 1;
+        Arrays.fill(head,1,n + 1,0);
+        Arrays.fill(diameterPath,1,n + 1,false);
+    }
+    public static void addEdge(int u,int v,int w){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        weight[cnt] = w;
+        head[u] = cnt++;
+    }
+    //不能走直接路径上的结点
+    public static long maxDistanceExceptDiameter(int u,int f,int c){
+        long ans = c;
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(!diameterPath[v] && v != f){
+                ans = Math.max(ans,maxDistanceExceptDiameter(v,u,c + weight[e]));
+            }
+        }
+        return ans;
+    }
+    public static void dfs(int u,int f,long c){
+        last[u] = f;
+        dist[u] = c;
+        for(int e = head[u];e != 0;e = next[e]){
+            if(to[e] != f){
+                dfs(to[e],u,c + weight[e]);
+            }
+        }
+    }
+    //road方法,先找到离根节点距离最大的点start,然后从start点出发dfs找最大直径
+    public static void road(){
+        dfs(1,0,0);
+        start = 1;
+        for(int i = 2;i <= n;i++){
+            if(dist[i] > dist[start]){
+                start = i;
+            }
+        }
+        dfs(start,0,0);
+        end = 1;
+        for(int i = 2;i <= n;i++){
+            if(dist[i] > dist[end]){
+                end = i;
+            }
+        }
+        diameter = dist[end];
+    }
+    public static void compute(){
+        road();
+        //把所有的直径上的点置为true
+        for(int i = end;i != 0;i = last[i]){
+            diameterPath[i] = true;
+        }
+        int l = start;
+        int r = end;
+        long maxDist;
+        for(int i = last[end];i != start;i = last[i]){
+            maxDist = maxDistanceExceptDiameter(i,0,0);
+            //直径-i到start的距离就是i到end的距离
+            if(maxDist == diameter - dist[i]){
+                r = i;
+            }
+            //此时左侧的要从右往左第一次达标的,当l改变之后就不可能执行l = i这一步了
+            if(maxDist == dist[i] && l == start){
+                l = i;
+            }
+        }
+        if(l == r){
+            commonEdges = 0;
+        } else {
+            commonEdges = 1;
+            for(int i = last[r];i != l;i = last[i]){
+                commonEdges++;
+            }
+        }
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        build();
+        for (int i = 1, u, v, w; i < n; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            in.nextToken();
+            w = (int) in.nval;
+            addEdge(u, v, w);
+            addEdge(v, u, w);
+        }
+        compute();
+        out.println(diameter);
+        out.println(commonEdges);
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

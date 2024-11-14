@@ -1,0 +1,158 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    题目3:最小化旅行的价格总和
+    现有一棵无向、无根的树，树中有 n 个节点，按从 0 到 n - 1 编号。
+    给你一个整数 n 和一个长度为 n - 1 的二维整数数组 edges
+    其中 edges[i] = [ai, bi] 表示树中节点 ai 和 bi 之间存在一条边。
+    每个节点都关联一个价格。给你一个整数数组 price ，其中 price[i] 是第 i 个节点的价格。
+    给定路径的 价格总和 是该路径上所有节点的价格之和。
+    另给你一个二维整数数组trips ，其中trips[i] = [starti, endi]表示您从节点starti开始第i次旅行
+    并通过任何你喜欢的路径前往节点 endi 。
+    在执行第一次旅行之前，你可以选择一些 非相邻节点 并将价格减半。
+    返回执行所有旅行的最小价格总和。
+
+    思路:首先树上差分算出每个结点到达的次数,然后进行树型dp
+    对于结点u,那么有两种操作:YES(将价格减半)和NO(不将价格减半)
+    如果是u_no : val[u]+min(a_no,a_yes)+min(b_no,b_yes)+.....
+    如果是u_yes : val[u]/2 + a_no + b_no + ....
+
+     */
+    public static int MAXN = 51;
+    public static int LIMIT = 6;
+    public static int power;
+    public static int[] price = new int[MAXN];
+    public static int[] num = new int[MAXN];
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXN << 1];
+    public static int[] to = new int[MAXN << 1];
+    public static int cnt;
+    public static int[] deep = new int[MAXN];
+    public static int[][] stjump = new int[MAXN][LIMIT];
+    public static int no,yes;
+    public static int log2(int n) {
+        int ans = 0;
+        while ((1 << ans) <= (n >> 1)) {
+            ans++;
+        }
+        return ans;
+    }
+    public static void build(int n){
+        power = log2(n);
+        Arrays.fill(head,1,n + 1,0);
+        cnt = 1;
+        Arrays.fill(num,1,n + 1,0);
+    }
+    public static void addEdge(int u,int v){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        head[u] = cnt++;
+    }
+
+    public static void dfs1(int u,int f){
+        deep[u] = deep[f] + 1;
+        stjump[u][0] = f;
+        for(int p = 1;p <= power;p++){
+            stjump[u][p] = stjump[stjump[u][p - 1]][p - 1];
+        }
+        for(int e = head[u];e != 0;e = next[e]){
+            if(to[e] != f){
+                dfs1(to[e],u);
+            }
+        }
+    }
+    public static int lca(int a,int b){
+        if(deep[a] < deep[b]){
+            int tmp = a;
+            a = b;
+            b = tmp;
+        }
+        for(int p = power;p >= 0;p--){
+            if(deep[stjump[a][p]] >= deep[b]){
+                a = stjump[a][p];
+            }
+        }
+        if(a == b){
+            return a;
+        }
+        for(int p = power;p >= 0;p--){
+            if(stjump[a][p] != stjump[b][p]){
+                a = stjump[a][p];
+                b = stjump[b][p];
+            }
+        }
+        return stjump[a][0];
+    }
+    public static void dfs2(int u,int f){
+        for(int e = head[u];e != 0;e = next[e]){
+            int v = to[e];
+            if(v != f){
+                dfs2(v,u);
+            }
+        }
+        for(int e = head[u];e != 0;e = next[e]){
+            int v = to[e];
+            if(v != f){
+                num[u] += num[v];
+            }
+        }
+    }
+    public static void dp(int u,int f){
+        int n = price[u] * num[u];
+        int y = (price[u] / 2) * num[u];
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                dp(v,u);
+                n += Math.min(yes,no);
+                y += no;
+            }
+        }
+        no = n;
+        yes = y;
+    }
+    public static int minimumTotalPrice(int n, int[][] es, int[] ps, int[][] ts) {
+        build(n);
+        for(int i = 0,j = 1;i < n;i++,j++){
+            price[j] = ps[i];
+        }
+        for(int[] edge : es){
+            //从0开始变成从1开始
+            addEdge(edge[0] + 1,edge[1] + 1);
+            addEdge(edge[1] + 1,edge[0] + 1);
+        }
+        //倍增表
+        dfs1(1,0);
+        int u,v,lca,lcaFather;
+        for(int[] trip : ts){
+            u = trip[0] + 1;
+            v = trip[1] + 1;
+            lca = lca(u,v);
+            lcaFather = stjump[lca][0];
+            num[u]++;
+            num[v]++;
+            num[lca]--;
+            num[lcaFather]--;
+        }
+        dfs2(1,0);
+        dp(1,0);
+        return Math.min(no,yes);
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

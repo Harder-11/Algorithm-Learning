@@ -1,0 +1,143 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    如果边界造成的影响很复杂,那么只能用线段树去维护
+    题目3:矩形面积并(p5490)
+    求n个四边平行于坐标轴的矩形面积并
+    输入:第一行输入一个整数n
+    接下来n行,每一行输入非负整数x1,y1,x2,y2,表示一个矩形的四个端点坐标为(x1,y1)(x1,y2)(x2,y1)(x2,y2)
+
+    思路:扫描线,将x1,x2单独提取出来排序,每次到达一个x的坐标点,就结算一次当前的面积
+    (将y覆盖的范围维护起来,每次计算的面积就是两个x的差 * y覆盖的面积)
+    利用线段树维护总长度,覆盖长度,覆盖次数
+    为了维护总长度,此时线段树的每个结点的范围都往上走1个,比如叶节点(只有1范围)此时
+    描述的长度是1~2范围的长度(因为单点是描绘不出来长度的,所以只能这样操作),对于
+    (1~2的结点)描述的长度实际是1~3的长度,以此类推,那么此时要填上一个和最后一个x
+    一样位置的点方便操作,比如总的结点是1~8,8的位置是3100,那么此时填上位置9,位置也是3100
+    并且本题不需要懒信息,因为最后只需要得到头结点覆盖的长度,只需要up方法
+     */
+    public static int MAXN = 300001;
+    //0 1表示左下角的x和y
+    //2 3表示右上角的x和y
+    public static int[][] rec = new int[MAXN][4];
+    public static int[][] line = new int[MAXN][4];
+    //将y离散化,然后排序得到离散化之后的编号
+    public static int[] ysort = new int[MAXN];
+    //线段树范围的总长度
+    public static int[] length = new int[MAXN << 2];
+    //线段树某范围覆盖的长度
+    public static int[] cover = new int[MAXN << 2];
+    //线段树某范围覆盖次数
+    public static int[] times = new int[MAXN << 2];
+    public static int prepare(int n){
+        Arrays.sort(ysort,1,n + 1);
+        int m = 1;
+        for(int i = 2;i <= n;i++){
+            if(ysort[m] != ysort[i]){
+                ysort[++m] = ysort[i];
+            }
+        }
+        //最后填上一个和最后一个下标一样的值,这样方便处理(上面说过了)
+        ysort[m + 1] = ysort[m];
+        return m;
+    }
+    public static int rank(int n,int num){
+        int l = 1,r = n,mid;
+        int ans = 0;
+        while(l <= r){
+            mid = (l + r) >> 1;
+            if(ysort[mid] >= num){
+                ans = mid;
+                r = mid - 1;
+            } else {
+                l = mid + 1;
+            }
+        }
+        return ans;
+    }
+    public static void build(int l,int r,int i){
+        if(l < r){
+            int mid = (l + r) >> 1;
+            build(l,mid,i << 1);
+            build(mid + 1,r,i << 1 | 1);
+        }
+        length[i] = ysort[r + 1] - ysort[l];
+        times[i] = 0;
+        cover[i] = 0;
+    }
+    public static void up(int i){
+        if(times[i] > 0){
+            cover[i] = length[i];
+        } else {
+            cover[i] = cover[i << 1] + cover[i << 1 | 1];
+        }
+    }
+    public static void add(int jobl,int jobr,int jobv,int l,int r,int i){
+        if(jobl <= l && jobr >= r){
+            times[i] += jobv;
+        } else {
+            int mid = (l + r) >> 1;
+            if(jobl <= mid){
+                add(jobl,jobr,jobv,l,mid,i << 1);
+            }
+            if(jobr >= mid + 1){
+                add(jobl,jobr,jobv,mid + 1,r,i << 1 | 1);
+            }
+        }
+        //这里的up要写对位置不要写到else里面了,当times[i]减小到0的时候可能cover[i]会变
+        up(i);
+    }
+    public static long compute(int n){
+        for(int i = 1,j = 1 + n,x1,y1,x2,y2;i <= n;i++,j++){
+            x1 = rec[i][0]; y1 = rec[i][1]; x2 = rec[i][2]; y2 = rec[i][3];
+            ysort[i] = y1; ysort[j] = y2;
+            //添加line[][3]的原因是分辨左右端点,如果是左端点就是在线段树中加上区间
+            //如果是右端点就是减去区间
+            line[i][0] = x1;line[i][1] = y1;line[i][2] = y2;line[i][3] = 1;
+            line[j][0] = x2;line[j][1] = y1;line[j][2] = y2;line[j][3] = -1;
+        }
+        //每个矩形的y有上下两个,所以这里n自增为2倍
+        n <<= 1;
+        //常规的离散化处理,进行排序后去重,然后统计此时去重之后的元素个数
+        int m = prepare(n);
+        build(1,m,1);
+        Arrays.sort(line,1,n + 1,(a,b)->a[0] - b[0]);
+        long ans = 0;
+        for(int i = 1,pre = 0;i <= n;i++){
+            //cover[1]就是总的y覆盖的范围
+            //每次计算当前的面积(现在的x的值-之前x的值)*y覆盖的长度
+            ans += (long) cover[1] * (line[i][0] - pre);
+            pre = line[i][0];
+            //这里line[i][2]-1还是上述的原因,便于计算
+            add(rank(m,line[i][1]),rank(m,line[i][2]) - 1,line[i][3],1,m,1);
+        }
+        return ans;
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        int n = (int) in.nval;
+        for (int i = 1; i <= n; i++) {
+            // 左下角下标
+            in.nextToken(); rec[i][0] = (int) in.nval;
+            in.nextToken(); rec[i][1] = (int) in.nval;
+            // 右上角下标
+            in.nextToken(); rec[i][2] = (int) in.nval;
+            in.nextToken(); rec[i][3] = (int) in.nval;
+        }
+        out.println(compute(n));
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+

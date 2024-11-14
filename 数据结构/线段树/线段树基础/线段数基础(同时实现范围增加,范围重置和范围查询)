@@ -1,0 +1,117 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    线段数同时支持范围重置,范围增加和范围查询
+    维护累加和
+
+    本题需要同时支持范围更新和范围增加操作,那么就要掌握修改操作优先级整理
+    此时的update会彻底取消add操作的影响
+    所以先下发重置任务的lazy信息,然后再下发add信息(因为add信息一定是重置信息之后出现的)
+    */
+    public static int MAXN = 1000001;
+    public static long[] arr = new long[MAXN];
+    public static long[] sum = new long[MAXN << 2];
+    public static long[] add = new long[MAXN << 2];
+    public static long[] change = new long[MAXN << 2];
+    public static boolean[] update = new boolean[MAXN << 2];
+    public static void up(int i){
+        sum[i] = sum[i << 1] + sum[i << 1 | 1];
+    }
+    public static void updateLazy(int i,long v,int n){
+        sum[i] = v * n;
+        //只要重置了,那么就将add的懒信息全部清空
+        add[i] = 0;
+        change[i] = v;
+        update[i] = true;
+    }
+    public static void addLazy(int i,long v,int n){
+        sum[i] += v * n;
+        add[i] += v;
+    }
+    public static void down(int i,int ln,int rn){
+        if(update[i]){
+            updateLazy(i << 1,change[i],ln);
+            updateLazy(i << 1 | 1,change[i],rn);
+            update[i] = false;
+        }
+        if(add[i] != 0){
+            addLazy(i << 1,add[i],ln);
+            addLazy(i << 1 | 1,add[i],rn);
+            add[i] = 0;
+        }
+    }
+    public static void build(int l,int r,int i){
+        if(l == r){
+            sum[i] = arr[l];
+        } else {
+            int mid = (l + r) >> 1;
+            build(l,mid,i << 1);
+            build(mid + 1,r,i << 1 | 1);
+            up(i);
+        }
+        add[i] = 0;
+        change[i] = 0;
+        update[i] = false;
+    }
+    public static void update(int jobl,int jobr,long jobv,int l,int r,int i){
+        if(jobl <= l && jobr >= r){
+            updateLazy(i,jobv,r - l + 1);
+        } else {
+            int mid = (l + r) >> 1;
+            down(i,mid - l + 1,r - mid);
+            if(jobl <= mid){
+                update(jobl,jobr,jobv,l,mid,i << 1);
+            }
+            if(jobr >= mid + 1){
+                update(jobl,jobr,jobv,mid + 1,r,i << 1 | 1);
+            }
+            up(i);
+        }
+    }
+    public static void add(int jobl,int jobr,long jobv,int l,int r,int i){
+        if(jobl <= l && jobr >= r){
+            addLazy(i,jobv,r - l + 1);
+        } else {
+            int mid = (l + r) >> 1;
+            down(i,mid - l + 1,r - mid);
+            if(jobl <= mid){
+                add(jobl,jobr,jobv,l,mid,i << 1);
+            }
+            if(jobr >= mid + 1){
+                add(jobl,jobr,jobv,mid + 1,r,i << 1 | 1);
+            }
+            up(i);
+        }
+    }
+    public static long query(int jobl,int jobr,int l,int r,int i){
+        if(jobl <= l && jobr >= r){
+            return sum[i];
+        }
+        int mid = (l + r) >> 1;
+        down(i,mid - l + 1,r - mid);
+        long ans = 0;
+        if(jobl <= mid){
+            ans += query(jobl,jobr,l,mid,i << 1);
+        }
+        if(jobr >= mid + 1){
+            ans += query(jobl,jobr,mid + 1,r,i << 1 | 1);
+        }
+        return ans;
+    }
+    
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        out.flush();
+        out.close();
+        br.close();
+    }
+
+}

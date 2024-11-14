@@ -1,0 +1,154 @@
+/*
+二叉树的高频题,不包括树形dp
+ */
+import java.util.*;
+public class learn {
+    public static class TreeNode{
+        public int val;
+        public TreeNode left;
+        public TreeNode right;
+        public TreeNode(int val){
+            this.val = val;
+        }
+    }
+    //1.普通二叉树上查找两个二叉树的最近公共祖先
+    public static TreeNode lowestCommonAncestor(TreeNode root,TreeNode p,TreeNode q){
+        //遇到空或者p,q直接返回,因为最近公共祖先不可能再p或者q的子树上面
+        if(root == null || root == p || root == q) return root;
+        //分别在左树和右树搜索
+        TreeNode l = lowestCommonAncestor(root.left,p,q);
+        TreeNode r = lowestCommonAncestor(root.right,p,q);
+        if(l != null && r != null){
+            //左树搜到,右树搜到就返回root,然后把这个root一直向上传,直到根节点
+            return root;
+        }
+        if(l == null && r == null){
+            //都没搜到就返回空
+            return null;
+        }
+        //如果l和r一个为空,一个不空,就返回不空那个,其实就是将p或者q一直上移直到他们两个成为兄弟节点
+        return l == null ? r : l;
+    }
+    //2.二叉搜索树中查找两个二叉树的最近公共祖先(分类讨论)
+    //root从上到下
+    //如果先遇到p,那么p就是答案,如果先遇到q,那么q就是答案
+    //如果root在pq的值之间,不用管p,q谁大谁小,只要root在中间,那么此时root就是答案
+    //如果root在p~q的值左侧,那么root往右移动
+    //如果root在p~q的值右侧,那么root往左移动
+    public static TreeNode SearchTreeLowestCommonAncestor(TreeNode root,TreeNode p,TreeNode q){
+        while(root.val != p.val && root.val != q.val){
+            if(Math.min(p.val,q.val) < root.val && root.val < Math.max(p.val,q.val)){
+                return root;
+            }
+            root = root.val < Math.max(p.val,q.val) ? root.right : root.left;
+        }
+        return root;
+    }
+    //3.给定一棵树和一个整数Sum,如果从根节点到叶节点的累加和是sum,那么就收集该路径,返回所有满足的路径
+    //还原现场
+    public static List<List<Integer>> pathSum(TreeNode root,int aim){
+        List<List<Integer>> ans = new ArrayList<>();
+        if(root == null) return ans;
+        List<Integer> path = new ArrayList<>();
+        dfs(root,aim,0,path,ans);
+        return ans;
+    }
+    public static void dfs(TreeNode cur, int aim, int sum, List<Integer> path,List<List<Integer>> ans) {
+        if (cur.left == null && cur.right == null) {
+            if (cur.val + sum == aim) {
+                path.add(cur.val);
+                ans.add(new ArrayList<>(path));//开辟一个新的List添加到ans中
+                path.remove(path.size() - 1);
+            }
+        } else {
+            path.add(cur.val);
+            if (cur.left != null) {
+                dfs(cur.left, aim, sum + cur.val, path, ans);
+            }
+            if (cur.right != null) {
+                dfs(cur.right, aim, sum + cur.val, path, ans);
+            }
+            path.remove(path.size() - 1);//恢复现场
+            //由于sum是原始数据类型,所以不用恢复
+        }
+    }
+    //4.验证平衡二叉树(AVL树)(对于所有的结点,左右子树高度差 <= 1)
+    public static boolean balance;
+    public static boolean isAVL(TreeNode root){
+        balance = true;
+        height(root);
+        return balance;
+    }
+    public static int height(TreeNode root){
+        if(!balance || root == null) return 0;
+        //一旦发现不平衡,一直返回0
+        int l = height(root.left);
+        int r = height(root.right);//每次获得每个结点左右子树的最大深度,然后判断是否差值小于等于1
+        if(Math.abs(l - r) > 1){
+            balance = false;
+        }
+        return Math.max(l,r) + 1;//获取最大深度
+    }
+    //5.修建二叉搜索树
+    //将一个二叉搜索树修剪为树中结点大小均在low和high之间
+    public static TreeNode trimBST(TreeNode root,int low,int high){
+        if(root == null) return null;
+        if(root.val < low){
+            return trimBST(root.right,low,high);
+        }
+        //由于是二叉搜索树,如果root.val < low,那么左子树的值更小,肯定不符合,所以到右子树找
+        //下面同理
+        if(root.val > high){
+            return trimBST(root.left,low,high);
+        }
+        //当root.val在范围内,就在左右两棵树上找
+        root.left = trimBST(root.left,low,high);
+        root.right = trimBST(root.right,low,high);
+        //从叶节点判断一层层向上返回符合的结点,不满足的就是返回null
+        return root;
+    }
+    //二叉树打家劫舍,不能连着偷相邻的结点,求能偷的结点值总和的最大值
+    //全局变量,完成了一颗x子树的遍历,返回之后yes变成x子树在偷头结点的情况下的最大收益
+    public static int yes;
+    //这是不偷根节点的最好收益
+    public static int no;
+    //那么最好收益就是Math.max(yes,no);
+    public static int rob(TreeNode root){
+        dfs(root);
+        return Math.max(yes,no);
+    }
+    public static void dfs(TreeNode root){
+        if(root == null){//从下往上找
+            yes = 0;
+            no = 0;
+        } else {
+            int y = root.val;//该节点的yes
+            int n = 0;//该节点的no
+            dfs(root.left);
+            y += no;//选根节点的 += 不选根节点的
+            n += Math.max(yes,no);//不选根节点的 += 选/不选中最大的才能是最终结果最大
+            dfs(root.right);
+            y += no;
+            n += Math.max(yes,no);
+            yes = y;
+            no = n;//最后更新全局变量yes和no
+        }
+    }
+    //第二种树形dp做法,更直观
+    public int rob2(TreeNode root) {
+        int[] ans = dfs2(root);
+        return Math.max(ans[0],ans[1]);//取偷或者不偷的最大一个
+    }
+    public int[] dfs2(TreeNode node){
+        if(node == null) return new int[]{0,0};//[0]代表偷,[1]代表不偷
+        int[] left = dfs2(node.left);
+        int[] right = dfs2(node.right);
+        int rob = left[1] + right[1] + node.val;//偷了根结点就不偷左右结点
+        //这里从叶子结点往上走,如果偷了本节点,那么左右节点就不能偷,所以是left和right[1];
+        int Nrob = Math.max(left[0],left[1]) + Math.max(right[0], right[1]);
+        //如果不偷本节点,那么就是偷左节点或者不偷左节点的最大的一个
+        //和偷右节点和不偷右节点的最大的一个相加;
+        return new int[]{rob,Nrob};//返回偷 / 不偷
+    }
+}
+

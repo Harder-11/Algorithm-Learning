@@ -1,0 +1,30 @@
+//堆排序经典题:线段最多重合问题
+//给定一个线段的数组arr[n][2],其中arr[i][0]是线段左端点,arr[i][1]是线段右端点
+//点重合不算
+
+/*
+先按照开始位置排序,创建小根堆,让后放结尾数字
+向后遍历arr,每次将heap中所有小于等于arr[i][0]的元素弹出,因为已经排序好,此时右端点小于等于arr[i][0]的线段
+不可能再与后面的线段有交集
+然后计数cnt加上heap中元素的个数即可
+ */
+import java.util.*;
+
+public class Main {
+    public static final int MAXN = 10001;
+    public static int[][] line = new int[MAXN][2];
+    public static int compute(){
+        PriorityQueue<Integer> heap = new PriorityQueue<>();
+        Arrays.sort(line,(a,b)->a[0] - b[0]);
+        int cnt = 0;
+        int n = line.length;
+        for(int i = 0;i < n;++i){
+            while(!heap.isEmpty() && heap.peek() <= line[i][0]){
+                heap.poll();
+            }
+            heap.offer(line[i][1]);
+            cnt += heap.size();
+        }
+        return cnt;
+    }
+}

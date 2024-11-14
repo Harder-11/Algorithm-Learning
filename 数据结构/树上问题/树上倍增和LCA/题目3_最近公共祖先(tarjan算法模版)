@@ -1,0 +1,135 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    tarjan算法解决lca问题
+    算法过程:使用并查集
+    (1)处理所有问题,建好每个结点的问题列表,然后遍历树
+    (2)来到当前结点cur,令visited[cur] = true表示当前结点已经被访问过
+    (3)遍历cur的所有子树,每个子树遍历完都和cur节点合并为一个集合,集合设置cur为头结点
+    (4)遍历完所有子树之后,处理关于cur节点的每一条查询(cur,x)
+    如果发现x被访问过,cur和x的最近公共祖先 = x所在集合的头结点
+    如果发现x没有被访问过,那么当前查询先不处理,等到x结点时再去处理查询(x,cur)得到答案
+    问题列表可以使用链式前向星来表示
+
+    */
+    public static int MAXN = 500001;
+    //链式前向星建图
+    public static int[] headEdge = new int[MAXN];
+    public static int[] edgeNext = new int[MAXN << 1];
+    public static int[] edgeTo = new int[MAXN << 1];
+    public static int tcnt;
+    //每个节点有哪些查询也用链式前向星储存
+    public static int[] headQuery = new int[MAXN];
+    public static int[] queryNext = new int[MAXN << 1];
+    public static int[] queryTo = new int[MAXN << 1];
+    //问题的编号,一旦有答案就可以知道填在哪里
+    public static int[] queryIndex = new int[MAXN << 1];
+    public static int qcnt;
+    public static boolean[] visited = new boolean[MAXN];
+    public static int[] father = new int[MAXN];
+    //收集的答案
+    public static int[] ans = new int[MAXN];
+    public static void build(int n){
+        tcnt = qcnt = 1;
+        Arrays.fill(headEdge,1,n + 1,0);
+        Arrays.fill(headQuery,1,n + 1,0);
+        Arrays.fill(visited,1,n + 1,false);
+        for(int i = 1;i <= n;i++){
+            father[i] = i;
+        }
+    }
+    public static void addEdge(int u,int v){
+        edgeNext[tcnt] = headEdge[u];
+        edgeTo[tcnt] = v;
+        headEdge[u] = tcnt++;
+    }
+    public static void addQuery(int u,int v,int i){
+        queryNext[qcnt] = headQuery[u];
+        queryTo[qcnt] = v;
+        queryIndex[qcnt] = i;
+        headQuery[u] = qcnt++;
+    }
+    //这里find也会爆栈
+    //Java过不了但是C++能过
+    public static int find(int i){
+        if(i != father[i]){
+            father[i] = find(father[i]);
+        }
+        return father[i];
+    }
+    // 为了实现迭代版而准备的栈
+    public static int[] stack = new int[MAXN];
+
+    // 并查集找头节点迭代版
+    public static int find2(int i) {
+        int size = 0;
+        while (i != father[i]) {
+            stack[size++] = i;
+            i = father[i];
+        }
+        //这里i已经更新到根节点的值
+        while (size > 0) {
+            father[stack[--size]] = i;
+        }
+        return i;
+    }
+    public static void tarjan(int u,int f){
+        visited[u] = true;
+        for(int e = headEdge[u],v;e != 0;e = edgeNext[e]){
+            v = edgeTo[e];
+            if(v != f){
+                tarjan(v,u);
+                father[v] = u;
+            }
+        }
+        for(int e = headQuery[u],v;e != 0;e = queryNext[e]){
+            v = queryTo[e];
+            if(visited[v]){
+                ans[queryIndex[e]] = find(v);
+            }
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        int n = (int) in.nval;
+        in.nextToken();
+        int m = (int) in.nval;
+        in.nextToken();
+        int root = (int) in.nval;
+        build(n);
+        for (int i = 1, u, v; i < n; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            addEdge(u, v);
+            addEdge(v, u);
+        }
+        for (int i = 1, u, v; i <= m; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            addQuery(u, v, i);
+            addQuery(v, u, i);
+        }
+        tarjan(root, 0);
+        for (int i = 1; i <= m; i++) {
+            out.println(ans[i]);
+        }
+        out.println();
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+

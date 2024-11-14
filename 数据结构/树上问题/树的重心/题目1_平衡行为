@@ -1,0 +1,107 @@
+
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    树的重心
+    树的重心是指,有三种定义
+    (1)以某个结点为根节点时,最大子树的节点数最少,那么这个节点是重心
+    (2)以某个结点为根时,每棵子树的结点数不超过总结点数的一半,那么这个节点是重心
+    (3)以某个结点为根时,所有结点走向重心的总步数最少,那么这个节点是重心
+
+    性质:
+    (1)一棵树最多有两个重心,如果有两个重心,那么这两个重心一定相邻
+    (2)如果树上增加或者删除一个叶节点,转移后的重心最多移动一条边
+    (3)如果把两棵树连起来,那么新树的重心一定在原来两棵树重心的路径上
+    (4)树上的边权都>=0,不管边权怎么分布,所有结点都走向重心的总距离和最小
+
+    题目1:平衡行为
+    一共有n个结点,编号为1~n,有n-1条边构成了一颗树
+    返回重心点,返回重心点最大子树的结点数
+    如果有多个重心,那么取节点编号更小的那个
+
+    思路:求重心,来到每个结点都收集下面所有的结点之和,每次求出最大子树的大小,然后
+    求到最大子树结点的最小值就是答案
+    */
+    public static int MAXN = 20001;
+
+    public static int n;
+
+    public static int[] head = new int[MAXN];
+
+    public static int[] next = new int[MAXN << 1];
+
+    public static int[] to = new int[MAXN << 1];
+
+    public static int cnt;
+
+    public static int[] size = new int[MAXN];
+
+    public static int center;
+
+    public static int best;
+
+    public static void build() {
+        cnt = 1;
+        Arrays.fill(head, 1, n + 1, 0);
+        best = Integer.MAX_VALUE;
+    }
+
+    public static void addEdge(int u, int v) {
+        next[cnt] = head[u];
+        to[cnt] = v;
+        head[u] = cnt++;
+    }
+    public static void dfs(int u,int f){
+        //自己本身包含了一个结点
+        size[u] = 1;
+        int maxsub = 0;
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                dfs(v,u);
+                size[u] += size[v];
+                maxsub = Math.max(maxsub,size[v]);
+            }
+        }
+        maxsub = Math.max(maxsub,n - size[u]);
+        if(maxsub < best || (maxsub == best && u < center)){
+            best = maxsub;
+            center = u;
+        }
+    }
+
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        int testCase = (int) in.nval;
+        for (int t = 1; t <= testCase; t++) {
+            in.nextToken();
+            n = (int) in.nval;
+            build();
+            for (int i = 1, u, v; i < n; i++) {
+                in.nextToken();
+                u = (int) in.nval;
+                in.nextToken();
+                v = (int) in.nval;
+                addEdge(u, v);
+                addEdge(v, u);
+            }
+            dfs(1, 0);
+            out.println(center + " " + best);
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

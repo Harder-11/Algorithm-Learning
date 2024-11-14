@@ -1,0 +1,157 @@
+
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    树上差分
+    解决的问题:每次路径上的修改能不能减小代价,最后得到所有修改都生效之后的正确点权
+    使用树上倍增或者tarjan算法,可以快速查询每条路径两端点的最近公共祖先
+
+    点的差分:
+    假设a和b的最近公共祖先为lca,从a到b的路径上把所有点权都增加v,可以进行如下操作
+    num[a]+=v,num[b]+=v,num[lca]-=v,nums[lca的父节点]-=v
+    每次修改都这样操作,最后只需要按如下方法遍历树
+    dfs(u)
+    1.当前来到结点u,遍历u的所有子节点,dfs(u的每个子节点)
+    2.num[u] += num[u所有的子节点]
+    (此时根节点上方要添加一个虚拟点)
+
+    边的差分:
+    num[a]+=v,num[b]+=v,num[lca]-=2*v(此时是处理点权)
+    此时dfs仍然是来到结点u,遍历u的所有子节点,dfs(u的每个子节点)
+    遍历u的每条边,假设边e从父节点u连向子节点v,令weight[e]+=num[v]
+    num[u]+=num[u的所有子节点]
+     */
+    /*
+    题目1:树上点差分模版(p3128)
+    有n个节点形成一棵树，一开始所有点权都是0
+    给定很多操作，每个操作(a,b)表示从a到b路径上所有点的点权增加1
+    所有操作完成后，返回树上的最大点权
+    本题Java会爆栈,但是C++不会
+     */
+    public static int MAXN = 50001;
+    public static int LIMIT = 16;
+    public static int power;
+    public static int[] num = new int[MAXN];
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXN << 1];
+    public static int[] to = new int[MAXN << 1];
+    public static int cnt;
+    public static int[] deep = new int[MAXN];
+    public static int[][] stJump = new int[MAXN][LIMIT];
+    public static int log2(int n){
+        int ans = 0;
+        while((1 << ans) <= (n >> 1)){
+            ans++;
+        }
+        return ans;
+    }
+    public static void build(int n){
+        power = log2(n);
+        Arrays.fill(num,1,n + 1,0);
+        cnt = 1;
+        Arrays.fill(head,1,n + 1,0);
+    }
+    public static void addEdge(int u,int v){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        head[u] = cnt++;
+    }
+    public static void dfs1(int u,int f){
+        deep[u] = deep[f] + 1;
+        stJump[u][0] = f;
+        for(int p = 1;p <= power;p++){
+            stJump[u][p] = stJump[stJump[u][p - 1]][p - 1];
+        }
+        for(int e = head[u];e != 0;e = next[e]){
+            if(to[e] != f){
+                dfs1(to[e],u);
+            }
+        }
+    }
+    public static void dfs2(int u,int f){
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                dfs2(v,u);
+            }
+        }
+        for(int e = head[u],v;e != 0;e = next[e]){
+            v = to[e];
+            if(v != f){
+                num[u] += num[v];
+            }
+        }
+    }
+    public static int lca(int a,int b){
+        if(deep[a] < deep[b]){
+            int tmp = a;
+            a = b;
+            b = tmp;
+        }
+        for(int p = power;p >= 0;p--){
+            if(deep[stJump[a][p]] >= deep[b]){
+                a = stJump[a][p];
+            }
+        }
+        if(a == b){
+            return a;
+        }
+        for(int p = power;p >= 0;p--){
+            if(stJump[a][p] != stJump[b][p]){
+                a = stJump[a][p];
+                b = stJump[b][p];
+            }
+        }
+        return stJump[a][0];
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        int n = (int) in.nval;
+        build(n);
+        in.nextToken();
+        int m = (int) in.nval;
+        for (int i = 1, u, v; i < n; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            addEdge(u, v);
+            addEdge(v, u);
+        }
+        //建立ST表
+        dfs1(1, 0);
+        for (int i = 1, u, v, lca, lcafather; i <= m; i++) {
+            in.nextToken();
+            u = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            lca = lca(u, v);
+            lcafather = stJump[lca][0];
+            num[u]++;
+            num[v]++;
+            num[lca]--;
+            num[lcafather]--;
+        }
+        //汇总点权
+        dfs2(1, 0);
+        int max = 0;
+        for (int i = 1; i <= n; i++) {
+            max = Math.max(max, num[i]);
+        }
+        out.println(max);
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

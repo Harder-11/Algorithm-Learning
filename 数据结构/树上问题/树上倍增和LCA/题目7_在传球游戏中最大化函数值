@@ -1,0 +1,89 @@
+
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    题目7:在传球游戏中最大化函数值
+    给你一个长度为 n 下标从 0 开始的整数数组 receiver 和一个整数 k 。
+    总共有 n 名玩家，玩家 编号 互不相同，且为 [0, n - 1] 中的整数。
+    这些玩家玩一个传球游戏,receiver[i]表示编号为i的玩家会传球给编号为receiver[i]的玩家
+    玩家可以传球给自己，也就是说 receiver[i] 可能等于 i 。
+    你需要从 n 名玩家中选择一名玩家作为游戏开始时唯一手中有球的玩家，球会被传恰好k次。
+    如果选择编号 x的玩家作为开始玩家，定义函数f(x)表示从编号为x的玩家开始
+    k次传球内所有接触过球玩家的编号之和 ，如果有玩家多次触球，则累加多次
+    换句话说,f(x)=x+receiver[x]+receiver[receiver[x]]+...+receiver(k)[x]
+    你的任务时选择开始玩家x ，目的是最大化f(x) 。
+    请你返回函数的最大值 。
+    注意：receiver 可能含有重复元素。
+
+    思路:完全符合ST表的思路
+    此时跳k次就是对于k的二进制位,是1就跳,是0就不跳,每次跳就是从右往左数(0开始)的位数次方
+    比如k=7,那么就是111(2),所以就是2^0跳一次,2^1跳一次,2^2跳一次,此时正好可以用ST表
+    stJump[i][p]=stJump[stJump[i][p-1]][p-1](stJump[i][p]指的是i号往上传2^p步到哪个玩家)
+    stSum[i][p]=stSum[i][p-1]+stSum[stJump[i][p-1]][p-1]
+
+    本题的最优解实际是基环树dp,使用ST表比较慢
+    */
+    public static int MAXN = 100001;
+    public static int LIMIT = 34;
+    public static int power;
+    public static int m;
+    public static int[] kbits = new int[LIMIT];
+    public static int[][] stJump = new int[MAXN][LIMIT];
+    public static long[][] stSum = new long[MAXN][LIMIT];
+    public static void build(long k){
+        power = 0;
+        while((1L << power) <= (k >> 1)){
+            power++;
+        }
+        //数字k在哪些位有1都收集起来
+        m = 0;
+        for(int p = power;p >= 0;p--){
+            if((1L << p) <= k){
+                kbits[m++] = p;
+                k -= 1L << p;
+            }
+        }
+    }
+    public static long getMaxFunctionValue(List<Integer> receiver, long k) {
+        build(k);
+        int n = receiver.size();
+        for(int i = 0;i < n;i++){
+            stJump[i][0] = receiver.get(i);
+            stSum[i][0] = receiver.get(i);
+        }
+        for(int p = 1;p <= power;p++){
+            for(int i = 0;i < n;i++){
+                stJump[i][p] = stJump[stJump[i][p - 1]][p - 1];
+                stSum[i][p] = stSum[i][p - 1] + stSum[stJump[i][p - 1]][p - 1];
+            }
+        }
+        long sum,ans = 0;
+        for(int i = 0,cur;i < n;i++){
+            cur = i;
+            sum = i;
+            for(int j = 0;j < m;j++){
+                sum += stSum[cur][kbits[j]];
+                cur = stJump[cur][kbits[j]];
+            }
+            ans = Math.max(ans,sum);
+        }
+        return ans;
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

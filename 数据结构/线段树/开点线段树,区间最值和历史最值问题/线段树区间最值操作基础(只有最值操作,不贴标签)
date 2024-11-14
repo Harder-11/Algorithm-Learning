@@ -1,0 +1,123 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    开点线段树,区间最值操作和历史最值
+    线段树的区间最值操作(吉如一线段树)
+    给定一个长度为n的数组arr,实现支持以下三种操作
+    操作 0 l r x : 把arr[l...r]范围的每个数,更新成min(v,x)
+    操作 1 l r : 查询arr[l...r]范围上的最大值
+    操作 2 l r : 查询arr[l...r]范围上的累加和
+    核心剪枝策略:标签回收模型 + 势能分析(必定会搭配剪枝)
+
+    思路:对于每个区间,用线段树维护最大值max,最大值的个数n,次大值secMax和累加和sum这4个信息
+    剪枝:(1)如果此时v>=max,那么直接返回
+    (2)如果v<=max并且v>secMax,那么此时就将max=v,然后sum-=n*(max-v)
+    (3)当v<=secMax,只有下发,此时使用标签,当该节点的最大值和父亲一样,那就不打标签
+    否则将就打上标签,现在,开始进行操作0 l r x,根据递归,当遇见此时x>secMax的情况时
+    那么就停止下发,然后修改当前的max值和sum值,然后在这里停住作为懒信息,然后继续递归
+    另外的子树,到过的位置标签都回收(只要一颗子树没有标签了就不需要往下走了(此时已经
+    所有的结点都没有次大值了,可以直接操作))然后每次up操作更新父节点的最大值,次大值
+    累加和和最大值个数
+     */
+    public static int MAXN = 100001;
+    //原始数组中的值不会出现比LOWEST还小的值
+    //所以当值为LOWEST的时候说明不存在次大值了
+    public static int LOWEST = -100001;
+    public static int[] arr = new int[MAXN];
+    public static int[] sum = new int[MAXN << 2];
+    public static int[] max = new int[MAXN << 2];
+    //最大值的个数
+    public static int[] cnt = new int[MAXN << 2];
+    //次大值
+    public static int[] sem = new int[MAXN << 2];
+    public static void up(int i){
+        int l = i << 1;
+        int r = i << 1 | 1;
+        sum[i] = sum[l] + sum[r];
+        max[i] = Math.max(max[l],max[r]);
+        if(max[l] > max[r]){
+            cnt[i] = cnt[l];
+            sem[i] = Math.max(sem[l],max[r]);
+        } else if(max[l] < max[r]){
+            cnt[i] = cnt[r];
+            sem[i] = Math.max(max[l],sem[r]);
+        } else {
+            cnt[i] = cnt[l] + cnt[r];
+            sem[i] = Math.max(sem[l],sem[r]);
+        }
+    }
+    public static void down(int i){
+        lazy(i << 1,max[i]);
+        lazy(i << 1 | 1,max[i]);
+    }
+    public static void lazy(int i,int v){
+        if(v < max[i]){
+            sum[i] -= ((long) max[i] - v) * cnt[i];
+            max[i] = v;
+        }
+    }
+    public static void build(int l,int r,int i){
+        if(l == r){
+            max[i] = arr[l];
+            sem[i] = LOWEST;
+            sum[i] = arr[l];
+        } else {
+            int mid = (l + r) >> 1;
+            build(l,mid,i << 1);
+            build(mid + 1,r,i << 1 | 1);
+            up(i);
+        }
+    }
+    public static void setMin(int jobl,int jobr,int jobv,int l,int r,int i){
+        if(jobv >= max[i]){
+            return;
+        }
+        if(jobl <= l && r <= jobr && sem[i] < jobv){
+            lazy(i,jobv);
+        } else {
+            //(1)任务没有全包
+            //(2)jobv <= sem[i]
+            down(i);
+            int mid = (l + r) >> 1;
+            if(jobl <= mid){
+                setMin(jobl,jobr,jobv,l,mid,i << 1);
+            }
+            if(jobr >= mid + 1){
+                setMin(jobl,jobr,jobv,mid + 1,r,i << 1 | 1);
+            }
+            up(i);
+        }
+    }
+    public static long queryMax(int jobl,int jobr,int l,int r,int i){
+        if(jobl <= l && jobr >= r){
+            return sum[i];
+        }
+        int mid = (l + r) >> 1;
+        down(i);
+        long ans = 0;
+        if(jobl <= mid){
+            ans += queryMax(jobl,jobr,l,mid,i << 1);
+        }
+        if(jobr >= mid + 1){
+            ans += queryMax(jobl,jobr,mid + 1,r,i << 1 | 1);
+        }
+        return ans;
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+
+        out.flush();
+        out.close();
+        br.close();
+    }
+
+}
+
+

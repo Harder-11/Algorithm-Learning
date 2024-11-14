@@ -1,0 +1,209 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+写一种数据结构,用来维护一些数,提供以下操作
+1.插入x数
+2.删除x数
+3.查询x数的排名
+4.查询排名为x的数值
+5.求x的前驱
+6.求x的后继
+
+Splay(伸展树)是一种二叉平衡树,它通过不断将某个结点旋转到根节点,使得
+整棵树仍然满足BST的性质,并且保持平衡而不至于退化成链
+
+伸展操作splay:访问一个x就把x旋转到根节点
+(1)如果y是根,那么做单旋
+(2)如果y不是根,那么x->y->z就是直线型的,做双旋(先转y再转x)
+(3)如果y不是根,是折线型的,那么也是做双旋,但是每次都是转x节点,不转y
+
+对于del方法(删除)将树上加上两个哨兵表示最大和最小节点,保证
+能找到每个结点的前驱和后继点
+
+*/
+
+struct node {
+    int s[2];//左右儿子编号
+    int p;//父亲节点的编号
+    int v;//节点的权值
+    int cnt;//权值出现的次数
+    int size;//子树的大小
+    void init(int p1,int v1){
+        p = p1,v = v1;
+        cnt = size = 1;
+    }
+} tr[N];
+//根节点个数和结点的编号
+int root,idx;
+
+void pushup(int x){
+    tr[x].size = tr[tr[x].s[0]].size + tr[tr[x].s[1]].size + tr[x].cnt;
+}
+
+
+//将左旋和右旋操作合并在一起
+void rotate(int x){
+    //找到x的父节点和父节点的父节点
+    int y = tr[x].p,z = tr[y].p;
+    //k如果此时是右旋那么取0,如果是左旋就取1
+    int k = tr[y].s[1] == x;
+    //如果是右旋,那么此时把x的右儿子给y当做左儿子
+    //如果是左旋,那么此时让x的左儿子给y当做右儿子
+    tr[y].s[k] = tr[x].s[k ^ 1];
+    //如果是右旋,把x的右儿子的父亲节点置为y
+    tr[tr[x].s[k ^ 1]].p = y;
+    //如果是右旋,把y当做x的右儿子
+    tr[x].s[k ^ 1] = y;
+    //如果是右旋,那么y的父节点就是x
+    tr[y].p = x;
+    //建立的是最初y的父节点的子节点从y变成x
+    //这里必须是s[1],说明是z的右节点,如果不成立那么就得到的s[0],就是左节点是y,正好对应
+    tr[z].s[tr[z].s[1] == y] = x;
+    //将x的父节点置为z
+    tr[x].p = z;
+    pushup(y),pushup(x);
+}
+
+//x:要旋转的结点,k:目标,将x旋转到k的下面(x要成为k的儿子)
+void splay(int x,int k){
+    while(tr[x].p != k){
+        int y = tr[x].p,z = tr[y].p;
+        if(z != k){
+            //判断是不是直线型,如果都是左或者右儿子,那么就在一条直线上,就是直线型,进行y旋转
+            (tr[y].s[0] == x) ^ (tr[z].s[0] == y) ? rotate(x) : rotate(y);
+        }
+        rotate(x);
+    }
+    //特判,如果k == 0,说明要把x转到根(k == 0没有节点存在,说明x不是任何节点的儿子)
+    if(k == 0) root = x;
+}
+
+//插入操作
+void insert(int v){
+    //p用来记录当前结点的父节点
+    int x = root,p = 0;
+    while(x && tr[x].v != v){
+        p = x;
+        x = tr[x].s[v > tr[x].v];
+    }
+    if(x) tr[x].cnt++;
+    else {
+        x = ++idx;
+        tr[p].s[v > tr[p].v] = x;
+        tr[x].init(p,v);
+    }
+    splay(x,0);
+}
+
+//find:找到v(节点权值)所在的结点,并把该节点转化为根
+//根据的BST性质进行寻找,如果v>tr[x].v,那么就向右边找,否则向左找
+void find(int v){
+    int x = root;
+    while(tr[x].s[v > tr[x].v] && v != tr[x].v){
+        x = tr[x].s[v > tr[x].v];
+    }
+    splay(x,0);
+}
+
+//求v的前驱,返回结点编号
+int get_pre(int v){
+    find(v);
+    int x = root;
+    //在find方法里面已经进行了splay方法了,已经将此时的v根节点了
+    if(tr[x].v < v) return x;
+    x = tr[x].s[0];
+    while(tr[x].s[1]){
+        x = tr[x].s[1];
+    }
+    splay(x,0);
+    return x;
+}
+//求x的后继,返回结点编号
+int get_suc(int v){
+    find(v);
+    int x = root;
+    if(tr[x].v > v) return x;
+    x = tr[x].s[1];
+    while(tr[x].s[0]){
+        x = tr[x].s[0];
+    }
+    splay(x,0);
+    return x;
+}
+
+//删除节点
+//将要删除的节点转到叶节点上去便于删除
+//先找到前驱结点和后继节点,把前驱节点转到根节点,然后把后继节点转到前驱结点的子节点位置
+//此时的结点就必定在叶节点上
+void del(int v){
+    int pre = get_pre(v);
+    int suc = get_suc(v);
+    splay(pre,0),splay(suc,pre);
+    int del = tr[suc].s[0];
+    if(tr[del].cnt > 1){
+        tr[del].cnt--;
+        //删除之后为了保证树的平衡,都要splay
+        splay(del,0);
+    } else {
+        tr[suc].s[0] = 0;
+        splay(suc,0);
+    }
+}
+
+//查询排名
+int get_rank(int v){
+    insert(v);
+    //插入之后v就是根节点,那么此时排名就是s[0]的size
+    int res = tr[tr[root].s[0]].size;
+    del(v);
+    return res;
+}
+
+//查排名为k的数值
+int get_val(int k){
+    int x = root;
+    while(1){
+        int y = tr[x].s[0];
+        if(tr[y].size + tr[x].cnt < k){
+            k -= tr[y].size + tr[x].cnt;
+            x = tr[x].s[1];
+        } else {
+            if(tr[y].size >= k) x = tr[x].s[0];
+            else break;
+        }
+    }
+    splay(x,0);
+    return tr[x].v;
+}
+
+void solve(){
+    //哨兵,保证每个节点有前驱和后继节点,避免进行分类讨论
+    insert(-INF),insert(INF);
+    int n,op,x;
+    cin >> n;
+    while(n--){
+        cin >> op >> x;
+        if(op == 1) insert(x);
+        else if(op == 2) del(x);
+        else if(op == 3) cout << get_rank(x) << '\n';
+        else if(op == 4) cout << get_val(x + 1) << '\n';
+        else if(op == 5) cout << tr[get_pre(x)].v << '\n';\
+        else cout << tr[get_suc(x)].v << '\n';
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

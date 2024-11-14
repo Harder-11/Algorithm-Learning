@@ -1,0 +1,128 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    线段树原理和代码
+    线段树维护的信息类型
+    父范围上的某个信息,可以用O(1)的时间,从子范围的信息加工得到
+    满足的信息比如:累加和,最大值,最小值;不满足的信息比如:某范围上出现次数最多的数
+    线段树的经典功能,如下操作单次调用时间都是O(logn)
+    1.范围查询,包括范围内累加和,最大值,最小值等信息
+    2.范围修改,包括范围内每个数都增加,重置等操作
+
+    线段树的范围修改功能,想做到单次调用时复杂度为O(logn)的要求:
+    一段范围上统一进行了某种修改操作,可以用O(1)的时间,就把这段范围维护的信息加工出来
+    满足的情况,比如:这段范围所有的数字都+v,累加和可以快速加工出来
+    不满足的情况,比如:这段范围的数字逆序,累加和不能快速加工出来
+
+    线段树的组织,以最经典的累加和举例
+    1.线段树开始下标可以是1也可以是0,下标是1是最简单的设定
+    2.线段树需要再初始化是就指定范围的规模[1~n],一旦确定之后不能更改
+    3.任何一个大范围[l...r],严格从中点mid,拆分为左范围[l...mid]和右范围[mid+1...r]
+    4.每个范围的信息,填写在独立的,连续数组sum中,最大的范围[1~n],把信息填写在sum[1]
+    5.如果父范围把信息填写在sum[i],那么左范围填写在sum[i*2],右范围填写在sum[i*2+1]
+    6.范围[l...r]和i值的对应是由公式限制死的,由递归参数维护,无需去记录对应关系
+    如果线段树的范围是1~n,那么要开4*n的大小的记录数组才够用
+    因为范围是1~n,形成的满二叉树高度会达到(logn + 2),那么节点数会达到2^(log2+2)=4*n
+
+    建树过程void build(l,r,i)(O(n))
+    范围查询过程int query(jobl,jobr,l,r,i)(单次查询O(logn))
+    在查询过程中,还是从根节点出发搜索左右两边
+
+    核心是范围增加,涉及到懒更新
+    add数组:范围上每个数的增加值(懒信息)
+    范围内每个数字都增加:void add(jobl,jobr,jobv,l,r,i)
+    前三个参数表示,jobl~jobr范围上,每个数增加jobv,递归过程这三个参数永远固定
+    后三个是范围参数,表示当前来到线段树的l~r范围上,信息存储的位置是i,递归过程中这三个参数可变
+    开始调用add方法时,实现懒更新机制
+    1.如果发现范围(jobl,jobr)把当前范围全部覆盖了,不再向下传递任务
+    add[i]+=jobv;sum[i]+=jobv*(r-l+1)
+    2.如果任务范围不能把当前范围全包,把该范围上积攒的懒信息,往下只下发一层,down过程
+    然后决定当前任务时候要去往左范围或者右范围,继续调用子递归过程
+    子递归完成后,利用左右范围的sum信息,把当前范围的sum[i]信息修改正确,up过程
+    3.退出当前递归过程
+     */
+    public static int MAXN = 100001;
+    public static long[] arr = new long[MAXN];
+    public static long[] sum = new long[MAXN << 2];
+    public static long[] add = new long[MAXN << 2];
+    public static void build(int l,int r,int i){
+        if(l == r){
+            sum[i] = arr[l];
+        } else {
+            int mid = (l + r) >> 1;
+            build(l,mid,i << 1);
+            build(mid + 1,r,i << 1 | 1);
+            up(i);
+        }
+        add[i] = 0;
+    }
+    //查询范围累加和
+    public static long query(int jobl,int jobr,int l,int r,int i){
+        //需要的范围包含了此时树上结点的范围,那么直接返回
+        if(jobl <= l && r <= jobr){
+            return sum[i];
+        }
+        int mid = (l + r) >> 1;
+        down(i,mid - l + 1,r - mid);
+        long ans = 0;
+        if(jobl <= mid){
+            ans += query(jobl,jobr,l,mid,i << 1);
+        }
+        if(jobr >= mid + 1){
+            ans += query(jobl,jobr,mid + 1,r,i << 1 | 1);
+        }
+        return ans;
+    }
+    //当前来到l~r范围,对应信息的下标是i,范围上数字的个数是n==r-l+1
+    //现在收到一个懒更新任务:l~r范围上每个数字都+v
+    //sum数组和add数组如果调整
+    public static void lazy(int i,long v,int n){
+        sum[i] += v * n;
+        add[i] += v;
+    }
+    //累加和信息汇总,往上走
+    public static void up(int i){
+        sum[i] = sum[i << 1] + sum[i << 1 | 1];
+    }
+    //ln:左侧有多少个结点
+    //rn:右侧有多少个结点
+    //每一次只更新一层
+    public static void down(int i,int ln,int rn){
+        if(add[i] != 0){
+            lazy(i << 1,add[i],ln);
+            lazy(i << 1 | 1,add[i],rn);
+            add[i] = 0;
+        }
+    }
+    public static void add(int jobl,int jobr,long jobv,int l,int r,int i){
+        if(jobl <= l && r <= jobr){
+            lazy(i,jobv,r - l + 1);
+        } else {
+            int mid = (l + r) >> 1;
+            down(i,mid - l + 1,r - mid);
+            if(jobl <= mid){
+                add(jobl,jobr,jobv,l,mid,i << 1);
+            }
+            if(jobr >= mid + 1){
+                add(jobl,jobr,jobv,mid + 1,r,i << 1 | 1);
+            }
+            up(i);
+        }
+    }
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        out.flush();
+        out.close();
+        br.close();
+    }
+
+}

@@ -1,0 +1,61 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    二维数组上的单点增加和范围查询
+    (1)add(i,j,+v) (2)query(a,b,c,d)点(a,b)到点(c,d)范围上的累加和
+    拿原始的数组来构建二维树状数组,最左上的点是(1,1)
+    那么通过二维前缀和,可以直到此时的累加和可以转化为(c,d,1,1)-(c,b-1,1,1)-(a-1,d,1,1)+(a-1,b-1,1,1)
+     */
+    public static class NumMatrix{
+        public int[][] tree;
+        public int[][] nums;
+        public int n,m;
+        public NumMatrix(int[][] matrix){
+            n = matrix.length;
+            m = matrix[0].length;
+            tree = new int[n + 1][m + 1];
+            nums = new int[n + 1][m + 1];
+            for(int i = 0;i < n;i++){
+                for(int j = 0;j < m;j++){
+                    update(i,j,matrix[i][j]);
+                }
+            }
+        }
+        public int lowbit(int i){
+            return i & -i;
+        }
+        public void add(int x,int y,int v){
+            for(int i = x;i <= n;i += lowbit(i)){
+                for(int j = y;j <= m;j += lowbit(j)){
+                    tree[i][j] += v;
+                }
+            }
+        }
+        //(1,1)到(x,y)的累加和
+        public int sum(int x,int y){
+            int ans = 0;
+            for(int i = x;i >= 0;i -= lowbit(i)){
+                for(int j = y;j >= 0;j -= lowbit(j)){
+                    ans += tree[i][j];
+                }
+            }
+            return ans;
+        }
+        //实际二维数组的位置是(x,y)
+        //树状数组的位置是(x+1,y+1)
+        //题目说的单点更新,转化为单点增加(老值-新值)即可
+        public void update(int x,int y,int v){
+            add(x + 1,y + 1,v - nums[x + 1][y + 1]);
+            nums[x + 1][y + 1] = v;
+        }
+        public int sumRegion(int a,int b,int c,int d){
+            return sum(c + 1,d + 1) - sum(a,d + 1) - sum(c + 1,d) + sum(a,b);
+        }
+    }
+}

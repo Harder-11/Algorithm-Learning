@@ -1,0 +1,142 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    倍增算法和ST表
+    线段上有n个点,给定每个点i往右边跳一步能最远覆盖的点jump[i]
+    已知从任意点出发都能到达最后的点,并且在i<j时,必有jump[i]<=jump[j]
+    (1)如何构建一张表
+    可以查询从任意点出发,跳1步,2步,4步,8步...每回最远能到达的点
+    也就是查询从任意点i出发,任意跳2^p步,最远能达到的点
+    (2)如何快速计算任意的两点之间,最少跳几步能到达
+
+    构建出来的表叫做ST表(Sparse Table)
+    构建方式:st[i][p]=st[st[i][p-1]][p-1],p代表:跳2的p次方步,表的大小为n*logn
+    利用ST表,从x到y跳跃的过程中,先从最大步长开始,每次步长减少一半去尝试,最终得到答案
+    时间复杂度为O(logn)
+    比如17~77需要几步?77-17=60,此时只需要6个二进制位就足够了,然后从大到小尝试,此时从32步开始
+    尝试,如果加上32步>77,那么舍弃,然后尝试16步,如果<77,那么此时就走当前步数,然后继续尝试
+    最后全部选完之后一定还没到77,增加1步即可(因为之前都是<77的情况做操作,只会逼近,当选完之后
+    一定是最接近的一个位置,那么最后只需要再增加一步即可)
+     */
+
+    /*
+    题目1:国旗计划(p4155)
+    给定点的数量m，点的编号1~m，所有点围成一个环
+    i号点一定顺时针到达i+1号点，最终m号点顺指针回到1号点
+    给定n条线段，每条线段(a, b)，表示线段从点a顺时针到点b
+    输入数据保证所有线段可以把整个环覆盖
+    输入数据保证每条线段不会完全在另一条线段的内部
+    也就是线段之间可能有重合但一定互不包含
+    返回一个长度为n的结果数组ans，ans[x]表示一定选x号线段的情况下
+    至少选几条线段能覆盖整个环
+
+    思路:如何转化?将环拉直,然后重复多次环的长度,将每条线段按周期往后移然后在线段中补出来
+    对于某一个线段假设是[a,b]然后一个环的长度是c,那么问题就转化成了最少跳几次能到a+c位置
+     */
+    public static int MAXN = 200001;
+    public static int LIMIT = 18;
+    public static int power;
+    //每条线段三个信息:线段编号,线段左边界,线段右边界
+    public static int[][] line = new int[MAXN << 1][3];
+    //stJump[i][p]:从i号线段出发,跳的次数是2^p,能到达的最右线段的编号
+    public static int[][] stJump = new int[MAXN << 1][LIMIT];
+    public static int[] ans = new int[MAXN];
+    public static int n,m;
+
+    public static void compute(){
+        //求ST表的列数,就是最接近n的2的幂是多少
+        power = log2(n);
+        build();
+        for(int i = 1;i <= n;i++){
+            ans[line[i][0]] = jump(i);
+        }
+    }
+    public static int log2(int n){
+        int ans = 0;
+        while((1 << ans) <= (n >> 1)){
+            ans++;
+        }
+        return ans;
+    }
+    //这里填写ST表,ST表的本质就是当前格子对应的线段到离右端点最近的下一条线段的左端点的线段编号
+    //其中转移方程是显而易见的ST[i][p] = ST[ST[i][p-1]][p-1]
+    public static void build(){
+        //处理跨两个周期的线段,此时将右端点+一个周期(即m)即可
+        for(int i = 1;i <= n;i++){
+            if(line[i][1] > line[i][2]){
+                line[i][2] += m;
+            }
+        }
+        //按右端点排序之后克隆
+        Arrays.sort(line,1,n + 1,(a,b)->a[1] - b[1]);
+        for(int i = 1;i <= n;i++){
+            //线段的编号要一样,然后左右端点的下标往后移一个周期长度
+            line[i + n][0] = line[i][0];
+            line[i + n][1] = line[i][1] + m;
+            line[i + n][2] = line[i][2] + m;
+        }
+        //那么此时线段总数量成2n了
+        int e = n << 1;
+        //每一次找自己范围内最右边的开始点,此时把第一列ST表填好
+        for(int i = 1,arrive = 1;i <= e;i++){
+            while(arrive + 1 <= e && line[arrive + 1][1] <= line[i][2]){
+                arrive++;
+            }
+            //此时是i跳2的0次方步可以到达的线段编号
+            //注意ST表存的是下一条线段的编号!!!!
+            stJump[i][0] = arrive;
+        }
+        //ST表求出任意一个点开始经过2^p步数可以到达的下一个点
+        for(int p = 1;p <= power;p++){
+            for(int i = 1;i <= e;i++){
+                stJump[i][p] = stJump[stJump[i][p - 1]][p - 1];
+            }
+        }
+    }
+    public static int jump(int i){
+        //来到i号线段,那么此时目标点就是line[i][1]+m
+        //一开始就来到了本身这一条线段,所以ans初识就是1
+        int aim = line[i][1] + m,cur = i,next,ans = 1;
+        //此时ST表可以告诉你此时p值可以到达的点是next位置,然后查line在next的右端点如果<aim
+        //那么此时更新ans,cur来到此时的next点继续查询,直到查询完毕,最后+1就是答案
+        for(int p = power;p >= 0;p--){
+            next = stJump[cur][p];
+            if(next != 0 && line[next][2] < aim){
+                ans += 1 << p;
+                cur = next;
+            }
+        }
+        return ans + 1;
+    }
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        in.nextToken();
+        m = (int) in.nval;
+        for(int i = 1;i <= n;i++){
+            line[i][0] = i;
+            in.nextToken();
+            line[i][1] = (int) in.nval;
+            in.nextToken();
+            line[i][2] = (int) in.nval;
+        }
+        compute();
+        out.print(ans[1]);
+        for(int i = 2;i <= n;i++){
+            out.print(" " + ans[i]);
+        }
+        out.println();
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+

@@ -1,0 +1,40 @@
+//堆排序经典题:合并k个有序链表
+//创建小根堆
+import java.util.*;
+
+public class Main {
+    public class ListNode{
+        public int val;
+        public ListNode next;
+    }
+    public static ListNode mergeKList(ArrayList<ListNode> list){
+        PriorityQueue<ListNode> heap = new PriorityQueue<>((a,b)->a.val - b.val);
+        //自定义类型必须填上比较条件(小根堆)
+        for(ListNode h : list) {
+            //遍历所有的头结点,如果不是空,就往heap里放
+            if (h != null) {
+                heap.add(h);
+            }
+        }
+        if (heap.isEmpty()) {
+            return null;
+        }
+        //先弹出一个结点做总头部
+        ListNode h = heap.poll();
+        //p指针是随着链表加长不断往下走,方便新结点的加入
+        //每次加入新结点后p = p.next
+        ListNode pre = h;
+        if(pre.next != null){
+            heap.add(pre.next);//将弹出链表的下一个结点重新放回堆中
+        }
+        while(!heap.isEmpty()){
+            ListNode cur = heap.poll();
+            pre.next = cur;
+            pre = cur;
+            if(cur.next != null){
+                heap.add(cur.next);
+            }
+        }
+        return h;
+    }
+}

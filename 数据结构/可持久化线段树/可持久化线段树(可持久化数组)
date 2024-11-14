@@ -1,0 +1,104 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 1000005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+可持久化线段树(可持久化数组)
+维护一个长度为N的数组,支持以下操作
+1.在某个历史版本上修改某个位置的值
+2.访问某个历史版本上的某一位置的值
+此外,每进行一次操作(对于操作2,即生成一个完全一样的版本,不做任何改动),就会生成一个
+新的版本,版本编号就是当前操作的编号(从1开始编号,版本0表示初识状态数组)
+
+可持久化线段树,用ls[N]和rs[N]代表该节点的左右儿子编号
+每次只修改logn + 1个节点即可
+*/
+
+int n,m,a[N];
+//存根节点,每开一次logn数量的线段树都要新增一个根节点
+//tot是节点个数
+int root[N],tot;
+int ls[N * 25],rs[N * 25],val[N * 25];
+
+//u传引用,代表的是当前结点的编号
+//通过子空间的u值给父空间的ls[u]和rs[u]赋值
+//比如是[1,4]区间,此时root[0] = 1(主函数调用就是build(root[0],1,n))
+//然后往下递归[1,2]区间,ls[1] = 2,因为此时ls[u]在后面的函数也是引用类型,会被直接赋值
+void build(int &u,int l,int r){
+    u = ++tot;
+    if(l == r){
+        val[u] = a[l];
+        return;
+    }
+    int mid = (l + r) >> 1;
+    build(ls[u],l,mid);
+    build(rs[u],mid + 1,r);
+}
+
+//change():实现单点(p位置)修改为x
+//参数u仍然是传引用,每次都动态开点,创建新增节点
+//v是历史版本的结点编号,双指针同步搜索
+//p是当前的位置,如果此时p是<=mid,那么说明要修改的区间是在ls里面,就往ls里面递归
+//否则就往rs里面递归,然后新开一个结点代表一个新的线段树区间,这样每次调用函数会开logn + 1个区间
+
+void change(int &u,int v,int l,int r,int p,int x){
+    u = ++tot;
+    ls[u] = ls[v];
+    rs[u] = rs[v];
+    val[u] = val[v];
+    if(l == r){
+        val[u] = x;
+        return;
+    }
+    int mid = (l + r) >> 1;
+    if(p <= mid) change(ls[u],ls[v],l,mid,p,x);
+    else change(rs[u],rs[v],mid + 1,r,p,x);
+}
+
+//query():参数u为历史版本的结点编号
+//到达叶节点,返回val[u],查询不开点,只是把当前的版本号指向历史的版本号(题目要求)
+//在主函数里面root[i] = root[ver]即可
+int query(int u,int l,int r,int p){
+    if(l == r) return val[u];
+    int mid = (l + r) >> 1;
+    if(p <= mid) return query(ls[u],l,mid,p);
+    else return query(rs[u],mid + 1,r,p);
+}
+
+void solve(){
+    cin >> n >> m;
+    for(int i = 1;i <= n;i++){
+        cin >> a[i];
+    }
+    build(root[0],1,n);
+    for(int i = 1;i <= m;i++){
+        int ver,op,p,x;
+        cin >> ver >> op;
+        if(op == 1){
+            cin >> p >> x;
+            change(root[i],root[ver],1,n,p,x);
+        } else {
+            cin >> p;
+            //这里是题目要求
+            root[i] = root[ver];
+            cout << query(root[ver],1,n,p) << '\n';
+        }
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

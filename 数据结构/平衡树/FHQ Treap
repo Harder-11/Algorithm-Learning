@@ -1,0 +1,157 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+FHQ Treap
+有旋Treap依靠旋转操作维护树的平衡
+FHQ Treap又称为无旋Treap,抛弃了旋转操作
+使用分裂和合并两个操作来维护树的平衡
+FHQ Treap和Splay的性能相当,代码量少,适合比赛使用
+
+Treap的原理:Treap = Tree + Heap
+平衡树上的每个节点放两个值:树的权值val和堆的随机值key
+对于val值,维护查找树的性质,对于key值,维护堆的性质
+这样,即使顺序插入一个有序序列,也不会退化成一条链
+堆的随机值等价于随机打乱了有序序列插入的顺序
+
+1.分裂split
+按值分裂:根据给的值v把一棵树分裂成两棵树,一棵树的值val <= v,另一棵 > v
+如果当前结点p的val <= v,说明p以及p的左子树都在分裂之后的左Treap,p的右子树也可能部分 <= v
+所以需要继续递归分裂右子树,把<=v的那一部分作为p的右子树,把x指向左Treap的根
+同理val > v的情况也是一样的,此时p的右子树也是满足条件,那么就递归p的左子树
+把>v的部分作为p的左子树,把y指向右Treap的根
+
+2.合并merge
+两个参数:左Treap的根指针x和右Treap的根指针y
+必须满足x中所有结点的val值小于等于所有节点的val值
+因为两个Treap已经有序,所以在合并的过程中只需要考虑把哪个树放在上方,哪个树放下方
+(哪个树作为子树),根据小根堆的性质,把key值小的放在上面
+*/
+
+struct node {
+    int l,r;//左右儿子
+    int val;//树的权值
+    int key;//堆的随机值
+    int size;//子树的大小
+} tr[N];
+int n,root,idx;
+
+int newnode(int v){
+    tr[++idx].val = v;
+    tr[idx].key = rand();
+    tr[idx].size = 1;
+    return idx;
+}
+
+void split(int p,int v,int &x,int &y){
+    //此时到达了空节点,那么此时x = y = 0,然后开始pushup为每个结点赋值
+    if(!p){
+        x = y = 0;
+        return;
+    }
+    if(tr[p].val <= v){
+        x = p;
+        split(tr[x].r,v,tr[x].r,y);
+    } else {
+        y = p;
+        split(tr[y].l,v,x,tr[y].l);
+    }
+    pushup(p);
+}
+
+int merge(int x,int y){
+    if(!x || !y) return x + y;
+    if(tr[x].key < tr[y].key){
+        tr[x].r = merge(tr[x].r,y);
+        pushup(x);
+        return x;
+    } else {
+        tr[y].l = merge(x,tr[y].l);
+        pushup(y);
+        return y;
+    }
+}
+
+//插入操作,把树拆开然后两两合并
+void insert(int v){
+    int x,y,z;
+    split(root,v,x,y);
+    z = newnode(v);
+    root = merge(merge(x,z),y);
+}
+
+void del(int v){
+    int x,y,z;
+    split(root,v,x,z);
+    split(x,v - 1,x,y);
+    //将y的左右子树合并了,那么就把根节点给删除了
+    y = merge(tr[y].l,tr[y].r);
+    root = merge(merge(x,y),z);
+}
+
+//返回第k大结点的权值
+int get_k(int p,int k){
+    //找左子树,如果k <= 左子树的大小,就递归往左子树找
+    if(k <= tr[tr[p].l].size){
+        return get_k(tr[p].l,k);
+    }
+    if(k == tr[tr[p].l].size + 1){
+        return p;
+    }
+    //找右子树
+    return get_k(tr[p].r,k - tr[tr[p].l].size - 1);
+}
+
+int get_pre(int v){
+    int x,y;
+    split(root,v - 1,x,y);
+    int p = get_k(x,tr[x].size);
+    cout << tr[p].val << " ";
+    root = merge(x,y);
+}
+
+int get_suc(int v){
+    int x,y;
+    split(root,v,x,y);
+    int p = get_k(y,1);
+    cout << tr[p].val << " ";
+    root = merge(x,y);
+}
+
+void pushup(int p){
+    tr[p].size = tr[tr[p].l].size + tr[tr[p].r].size + 1;
+}
+
+//获得权值排名
+void get_rank(int v){
+    int x,y;
+    split(root,v - 1,x,y);
+    cout << tr[x].size + 1 << " ";
+    root = merge(x,y);
+}
+
+//根据排名查询数值
+void get_val(int k){
+    int p = get_k(root,k);
+    cout << tr[p].val << " ";
+}
+
+
+void solve(){
+
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

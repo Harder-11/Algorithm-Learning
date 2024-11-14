@@ -1,0 +1,129 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+题意:有一棵n个节点的以1号节点为根的有根树
+每个结点都有一种颜色,颜色是以编号表示的,i号节点的颜色编号为ci
+如果一种颜色在以x为根的子树内出现最多,那么称其在以x为根的子树中占据主导地位
+显然,同一子树中可能有多种颜色占主导地位(出现的次数相同)
+你的任务是对于每一个i∈[1,n],求出以i为根的子树中,栈主导地位的颜色的编号和
+n <= 1e5,ci <= n
+
+树上启发式合并(dsn on tree)
+把小子树中的结果合并到大子树中去(类似与并查集中按siz合并集合,所以叫做dsn on tree)
+步骤:
+先跑重链剖分,预处理出每个节点的重儿子
+用cnt[i]记录颜色i的出现次数,ans[x]记录节点x的答案,我们遍历一个节点x,按以下步骤进行
+1.先遍历x的轻儿子,并计算答案,但不保留遍历后它对cnt数组的贡献
+(相当于是遍历每个轻儿子为根的子树之后会清空cnt数组)
+2.遍历x的重儿子,保留遍历后它对cnt数组的贡献
+3.再次遍历x的轻儿子,加入轻子树的贡献,得到x的答案
+(树上启发式合并:轻子树的结果并入重子树,先是保留的重子树的cnt,然后是轻子树)
+为什么不合并第一步和第三步呢?
+---因为我们要重复使用cnt数组,a子树不能影响b子树
+对于每个结点,我们遍历了一次重子树,2次轻子树
+*/
+
+//col[x]:结点的颜色编号,son:重儿子,cnt[i]:颜色编号i的数量
+//sum是答案
+int n,col[N],siz[N],son[N],cnt[N],mx;
+ll sum,ans[N];
+vector<int> e[N];
+
+//dfs1预处理出重儿子
+void dfs1(int x,int fa){
+    siz[x] = 1;
+    for(int y : e[x]){
+        if(y == fa) continue;
+        dfs1(y,x);
+        siz[x] += siz[y];
+        if(siz[y] > siz[son[x]]) son[x] = y;
+    }
+}
+
+void add(int x,int fa,int son){
+    cnt[col[x]]++;
+    if(cnt[col[x]] > mx){
+        mx = cnt[col[x]];
+        sum = col[x];
+    } else if(cnt[col[x]] == mx){
+        sum += col[x];
+    }
+    //跑第一遍dfs,只遍历轻子树,然后不统计cnt数组
+    //但是实际是这个cnt数组和sum以及mx值是在添加了ans之后再清空的
+    //那么就可以做到由小树合并到大树,减小了时间复杂度
+    for(int y : e[x]){
+        if(y != fa && y != son){
+            add(y,x,son);
+        }
+    }
+}
+
+//用来递归减去轻子树的贡献
+void sub(int x,int fa){
+    cnt[col[x]]--;
+    for(int y : e[x]){
+        if(y != fa){
+            sub(y,x);
+        }
+    }
+}
+
+void dfs2(int x,int fa,int opt){
+    //这里先搜的轻儿子
+    for(int y : e[x]){
+        if(y != fa && y != son[x]){
+            dfs2(y,x,0);
+        }
+    }
+    //后搜重儿子
+    if(son[x]) dfs2(son[x],x,1);
+    add(x,fa,son[x]);
+    //储存答案之后再清空轻子树的影响,所以体现了两次遍历的优点
+    //并不是没有意义地递归
+    ans[x] = sum;
+    //如果opt是0,那么说明处理的轻儿子
+    //那么调用sub函数递归情况轻子树的贡献,同时重置sum和mx
+    if(!opt){
+        sub(x,fa);
+        sum = mx = 0;
+    }
+}
+
+void solve(){
+    cin >> n;
+    for(int i = 1;i <= n;i++){
+        cin >> col[i];
+    }
+    for(int i = 1;i <= n - 1;i++){
+        int x,y;
+        cin >> x >> y;
+        e[x].push_back(y);
+        e[y].push_back(x);
+    }
+    //第一次dfs跑重链剖分,求到重儿子结点
+    dfs1(1,0);
+    //第二次跑树上启发式合并,得到答案
+    dfs2(1,0,0);
+    for(int i = 1;i <= n;i++){
+        cout << ans[i] << " ";
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

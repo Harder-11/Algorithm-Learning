@@ -1,0 +1,193 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+#define fa(x) tr[x].p
+#define lc(x) tr[x].s[0]
+#define rc(x) tr[x].s[1]
+//判断x是不是splay的根
+#define notroot(x) lc(fa(x)) == x || rc(fa(x)) == x
+
+/*
+动态树(LCT)
+给定n个点以及每个点的权值,要你处理接下来m个操作
+操作有4种,操作从0到3编号,点从1到n编号
+0 x y:代表询问从x到y的路径的点的权值的XOR和,保证x到y是联通的
+1 x y:代表连接x到y,若x到y已经联通,那么无需连接
+2 x y:代表删除边(x,y),不保证边(x,y)存在
+3 x y:代表将x上的权值改为y
+
+树链剖分的实链剖分:
+把树拆分为若干条实链,用splay这种动态数据结构来维护实链,通过对实链进行拆分和组合构造答案
+一个节点只能选择一个儿子作为实儿子,其他的都是虚儿子
+实边:父节点和实儿子连成的边,是双向边
+虚边:由虚儿子指向父节点的边,是单向边(认父不认子)
+实链:由实边构成的链,每条实链的节点深度是严格递增的
+辅助树:由若干个splay构成,与原树是等价的,只需要维护辅助树
+性质:每条实链用一个splay维护,中序遍历按深度严格递增
+注意:(1)区分树根和splay的根
+    (2)虚边从下面splay的根指向上面splay中的父亲(单向通道)
+    (3)实边和虚边是动态变化的
+一些辅助树构成了LCT,其维护的是整个森林
+*/
+
+struct node {
+    //sum是异或和,p是父节点编号,v是结点权值
+    int s[2],p,v,sum;
+    int tag;//翻转懒标记
+} tr[N];
+int n,m;
+
+void pushup(int x){
+    tr[x].sum = tr[lc(x)].sum ^ tr[rc(x)].sum ^ tr[x].v;
+}
+
+void pushdown(int x){
+    if(tr[x].tag){
+        swap(lc(x),rc(x));
+        tr[lc(x)].tag ^= 1;
+        tr[rc(x)].tag ^= 1;
+        tr[x].tag = 0;
+    }
+}
+
+void rotate(int x){
+    int y = fa(x),z = fa(y);
+    int k = rc(y) == x;
+    //这里写一个特判是为了保持两个splay之间的虚边性质(不加会让虚边变成实边)
+    //这里z和x边的连接也必须放在最上面,防止破坏虚边性质,所以要最先判断
+    if(notroot(y)){
+        tr[z].s[rc(z) == y] = x;
+    }
+    fa(x) = z;
+    tr[y].s[k] = tr[x].s[k ^ 1];
+    fa(tr[x].s[k ^ 1]) = y;
+    tr[x].s[k ^ 1] = y;
+    fa(y) = x;
+    //这里顺序不能改变
+    pushup(y),pushup(x);
+}
+
+void pushall(int x){
+    if(notroot(x)){
+        pushall(fa(x));
+    }
+    pushdown(x);
+}
+
+void splay(int x){
+    pushall(x);
+    while(notroot(x)){
+        int y = fa(x),z = fa(y);
+        if(notroot(y)){
+            (rc(y) == x) ^ (rc(z) == y) ? rotate(x) : rotate(y);
+        }
+        rotate(x);
+    }
+}
+
+//access(x):打通从x到树根的路径,把路径变成一条实链
+//从下到上逐步更新splay:
+//1.把当前点转到当前splay的根
+//2.把当前点的右儿子换成之前的节点
+//3.更新当前点的信息
+//4.把当前点换成当前点的父亲,继续操作
+//这样操作是为了把所有的实点放在一个splay维护
+void access(int x){
+    for(int y = 0;x;y = x,x = fa(x)){
+        splay(x);
+        rc(x) = y;
+        pushup(x);
+    }
+}
+
+//makeroot(x)
+//换根,把指定点x变成根,把x提起来,让x成为深度最小的点
+//换根 = 通路 + 伸展 + 翻转
+void makeroot(int x){
+    access(x);
+    splay(x);
+    tr[x].tag ^= 1;
+}
+
+//split(x,y)
+//把从x到y的路径分离出来
+//把路径变成一条实链,把y转到根
+void split(int x,int y){
+    makeroot(x);
+    access(y);
+    splay(y);
+}
+
+void output(int x,int y){
+    split(x,y);
+    cout << tr[y].sum << '\n';
+}
+
+//findroot(x)
+//找根:把树根找出来,并转到根
+int findroot(int x){
+    access(x);
+    splay(x);
+    while(lc(x)){
+        pushdown(x);
+        x = lc(x);
+    }
+    splay(x);
+    return x;
+}
+
+//连边操作link(x,y)
+//条件:y和x不在同一棵树中
+//因为x是splay的根,y不是splay的根,所以虚边是x指向y
+void link(int x,int y){
+    //先把x换成根
+    makeroot(x);
+    //如果此时y的根不是x,那么此时就可以相连,那么此时虚边x指向y
+    if(findroot(y) != x) fa(x) = y;
+}
+
+//断边的操作
+void cut(int x,int y){
+    makeroot(x);
+    //只有由于进行了splay操作,那么必须保证y的左子树为空才能保证原树上x和y相邻
+    //满足条件之后让x的右结点 = 0,y的父节点是0,那么就断掉了
+    if(findroot(y) == x && fa(y) == x && !lc(y)){
+        rc(x) = fa(y) = 0;
+        pushup(x);
+    }
+}
+//更改节点的权值
+void change(int x,int y){
+    splay(x);
+    tr[x].v = y;
+    pushup(x);
+}
+
+void solve(){
+    cin >> n >> m;
+    int t,x,y;
+    for(int i = 1;i <= n;i++){
+        cin >> tr[i].v;
+    }
+    while(m--){
+        cin >> t >> x >> y;
+        if(t == 0) output(x,y);
+        else if(t == 1) link(x,y);
+        else if(t == 2) cut(x,y);
+        else change(x,y);
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

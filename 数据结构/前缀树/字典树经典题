@@ -1,0 +1,277 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+
+public class learn {
+    /*
+    1.接头密匙,牛牛和他的朋友约定的一套接头密匙系统,用于确认彼此的身份
+    密匙由一组数字序列表示,两个密匙被认为是一致的,如果满足一下条件:
+    密匙b的长度不超过密匙a的长度
+    对于任意0 <= i < length(b),有b[i + 1] - b[i] = a[i + 1] - a[i]
+    现在给定的m个密匙b的数组,已经n个密匙a的数组
+    返回一个长度为m的结果数组ans,表示每个密匙b都有多少一致的密匙
+    a,b元素个数都不超过1e5
+    1 <= m,n <= 1000;
+
+    思路:把a中每一个数组都添加到前缀树中,然后将b中的每个数组去匹配,提取出来的字符串用#来分开,否则不知道数字是合起来还是单独的
+    如果两个数差值很大,比如说是13423,那么就把这个差值拆开成1,3,4,2,3加上一个#,这样能避免空间开太大
+     */
+    public static int[] countComsistentKeys(int[][] b,int[][] a){
+        build();
+        StringBuilder sb = new StringBuilder();
+        for(int[] nums : a){
+            sb.setLength(0);
+            for(int i = 1;i < nums.length;++i){
+                sb.append(String.valueOf(nums[i] - nums[i - 1]) + '#');
+            }
+            insert(sb.toString());
+        }
+        int[] ans = new int[b.length];
+        for(int i = 0;i < b.length;++i){
+            sb.setLength(0);
+            int[] nums = b[i];
+            for(int j = 1;j < nums.length;++j){
+                sb.append(String.valueOf(nums[j] - nums[j - 1]) + "#");
+            }
+            ans[i] = count(sb.toString());
+        }
+        clean();
+        return ans;
+    }
+    public static int MAXN = 2000001;
+    //0~9 还有#和-,一共12个字符(用负号存在,所以有'-')
+    public static int[][] tree = new int[MAXN][12];
+    public static int[] pass = new int[MAXN];
+    public static int cnt;
+    public static void build(){
+        cnt = 1;
+    }
+    public static int path(char cha){
+        if(cha == '#'){
+            return 10;
+        } else if(cha == '-'){
+            return 11;
+        } else {
+            return cha - '0';
+        }
+    }
+    public static void insert(String word){
+        int cur = 1;
+        pass[cur]++;
+        for(int i = 1,path;i < word.length();++i){
+            path = path(word.charAt(i));
+            if(tree[cur][path] == 0){
+                tree[cur][path] = ++cnt;
+            }
+            cur = tree[cur][path];
+            pass[cur]++;
+        }
+    }
+    public static int count(String pre){
+        int cur = 1;
+        for(int i = 0,path;i < pre.length();++i){
+            path = path(pre.charAt(i));
+            if(tree[cur][path] == 0){
+                return 0;
+            }
+            cur = tree[cur][path];
+        }
+        return pass[cur];
+    }
+    public static void clean(){
+        for(int i = 1;i <= cnt;++i){
+            Arrays.fill(tree[i],0);
+            pass[i] = 0;
+        }
+    }
+    //2.数组中两个数的最大异或值,给你一个整数数组nums,返回nums[i] XOR nums[j]的最大运算结果,其中0 <= i <= j <= n
+    //1 <= nums.length <= 2 * 10^5;
+    //0 <= nums[i] <= 2^31 - 1;
+    //思路:对于nums[i]的二进制数,比如是0110001....(首位是符号位),那么根据异或,后面每一位都希望遇到和该位不一样的数字
+    //这样异或才最大
+    public static int findMaximumXOR1(int[] nums){
+        build2(nums);
+        int ans = 0;
+        for(int num : nums){
+            ans = Math.max(ans,maxXor(num));
+        }
+        //由于是全局变量,clean2必不可少,否则进行后一个案例时tree数组已经有元素存在
+        clean2();
+        return ans;
+    }
+    public static int MAXN2 = 5000001;
+    public static int[][] tree2 = new int[MAXN2][2];
+    public static int cnt2;
+    public static int high;
+    public static void build2(int[] nums){
+        cnt2 = 1;
+        int max = Integer.MIN_VALUE;
+        for(int num : nums){
+            max = Math.max(num,max);
+        }
+        //计算数组最大值的二进制状态,有多少个前缀的0
+        //可以忽略这些前缀的0,从high位开始考虑
+        high = 31 - Integer.numberOfLeadingZeros(max);
+        for(int num : nums){
+            insert2(num);
+        }
+    }
+    public static void insert2(int num){
+        int cur = 1;
+        for(int i = high,path;i >= 0;i--){
+            path = (num >> i) & 1;
+            if(tree2[cur][path] == 0){
+                tree2[cur][path] = ++cnt2;
+            }
+            cur = tree2[cur][path];
+        }
+    }
+    //求XOR最大值,那么总是想每一位遇到不同的状态,这样才能取最大
+    //熟练使用位运算
+    public static int maxXor(int num){
+        int ans = 0;
+        int cur = 1;
+        for(int i = high,status,want;i >= 0;--i){
+            status = (num >> i) & 1;
+            //status表示是取出了最左侧的一位
+            //want如果是0,那么想要1,如果是1,那些想要0,所以want是status ^ 1,代表取另一个状态
+            want = status ^ 1;
+            //如果判断出来,没有这条路,那么就要使该位异或结果为0,所以此时将want取反之后^status 再 << i,添加回ans中
+            //tree2[cur][want] == 0说明你想选的那条路没有,所以只能该位异或只能是0
+            if(tree2[cur][want] == 0){
+                want ^= 1;
+            }
+            //如果if不成立,那么status ^ want = status ^ status ^ 1 = 1
+            ans |= (status ^ want) << i;
+            cur = tree2[cur][want];
+        }
+        return ans;
+    }
+    public static void clean2(){
+        for(int i = 1;i <= cnt2;++i){
+            tree2[i][0] = tree2[i][1] = 0;
+        }
+    }
+    //第二题的哈希表做法
+    /*
+    小技巧:想把num的从第k位往右的所有数字都置为0,就(num >> k) << k;
+    原理:找到最大值,如果在第27位开始才有1,那么从27位开始考虑,那么此时ans在第31位到28位肯定是0,
+    现在就是想实现ans第27位是1,此时遍历所有的数字,如果存在一个数a,在第27位是0,那么就可以使ans
+    在第27位是0,如果没有这种数,那么就往第26位看,是否可以异或结果是1
+    你希望找到的状态是ans,此时状态为s,你要找的状态是s',此时s ^ s' = ans,那么有s' = ans ^ s
+    每次把状态都放到HashSet中去,方便寻找状态
+     */
+    public int findMaximumXOR2(int[] nums){
+        //先找nums最大值
+        int max = Integer.MIN_VALUE;
+        for(int num : nums){
+            max = Math.max(num,max);
+        }
+        int ans = 0;
+        HashSet<Integer> set = new HashSet<>();
+        for(int i = 31 - Integer.numberOfLeadingZeros(max);i >= 0;i--){
+            //ans是指从31到i + 1位已经达成的目标,现在讨论第i位能不能达成1
+            //better是指更好的目标,就是ans的第i位是1的数
+            int better = ans | (1 << i);
+            //每次clear set
+            set.clear();
+            for(int num : nums){
+                //保留从31 ~ i位的状态,剩下的全部变成0,然后加入set中
+                num = (num >> i) << i;
+                set.add(num);
+                //查询是否有better ^ num的状态,如果有,那么ans就是better
+                if(set.contains(better ^ num)){
+                    ans = better;
+                    break;
+                }
+            }
+        }
+        return ans;
+    }
+    //3.在二维字符数组中搜索可能的单词
+    /*
+    给定一个m * n的二维字符网络board和一个单词列表words,返回所有二维网路上的单词,单词必须按照字母顺序
+    ,通过相邻的单元格内的字母构成,其中相邻的单元格是那些水平相邻或者垂直相邻的单元格(可以拐弯)
+    同一个单元格内的字母在一个单词中不允许被重复使用
+    1 <= m,n <= 12;
+    1 <= words.length <= 3 * 10^4;
+    1 <= words[i].length <= 10
+     */
+    public static List<String> findWords(char[][] board,String[] words){
+        build1(words);
+        List<String> ans = new ArrayList<>();
+        for(int i = 0;i < board.length;i++){
+            for(int j = 0;j < board[0].length;j++){
+                dfs(board,i,j,1,ans);
+            }
+        }
+        clear();
+        return ans;
+    }
+    /*
+    ij:board中的第i行,第j列
+    t:前缀树的编号,从1开始,每搜索一次,前缀树编号更新成结点编号
+    dfs的返回值:收集到了几个字符串
+     */
+    public static int dfs(char[][] board,int i,int j,int t,List<String> ans){
+        //如果i,j越界,或者遇到的字符ASCII码是0,因为每次经过一个字符都要将这个字符的ASCII码置为0,来确保
+        //没有一个字符用了两次
+        if(i < 0 || i == board.length || j < 0 || j == board[0].length || board[i][j] == 0){
+            return 0;
+        }
+        char tmp = board[i][j];
+        int road = tmp - 'a';
+        t = tree1[t][road];
+        //结点标号为0,或者pass[t]==0,说明所有结果已经收集全了
+        if(t == 0 || pass1[t] == 0){
+            return 0;
+        }
+        //当前i,j位置有必要来
+        //fix指从当前位置出发,一个收集到了几个字符串
+        int fix = 0;
+        if(end1[t] != null){
+            fix++;
+            ans.add(end1[t]);
+            end1[t] = null;//已经收集到了,那end1[t]就再也用不到了,置为空
+        }
+        board[i][j] = 0;
+        fix += dfs(board,i - 1,j,t,ans);
+        fix += dfs(board,i + 1,j,t,ans);
+        fix += dfs(board,i,j + 1,t,ans);
+        fix += dfs(board,i,j - 1,t,ans);
+        pass1[t] -= fix;
+        board[i][j] = tmp;//恢复现场
+        return fix;
+    }
+    public static int MAXN1 = 10001;
+    public static int[][] tree1 = new int[MAXN1][26];
+    public static int[] pass1 = new int[MAXN1];
+    //把单词挂到end1上,表示这个单词的结尾,同时可以通过end1,找出以这个字母结尾的这个单词是什么
+    public static String[] end1 = new String[MAXN1];
+    public static int cnt1;
+    //build1函数直接把所有单词添加到前缀树上
+    public static void build1(String[] words){
+        cnt1 = 1;
+        for(String word : words){
+            int cur = 1;
+            pass1[cur]++;
+            for(int i = 0,path;i < word.length();i++){
+                path = word.charAt(i) - 'a';
+                if(tree1[cur][path] == 0){
+                    tree1[cur][path] = ++cnt1;
+                }
+                cur = tree1[cur][path];
+                pass1[cur]++;
+            }
+            end1[cur] = word;
+        }
+    }
+    public static void clear(){
+        for(int i = 1;i <= cnt1;i++){
+            Arrays.fill(tree1[i],0);
+            pass1[i] = 0;
+            end1[i] = null;
+        }
+    }
+}

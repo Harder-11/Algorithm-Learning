@@ -1,0 +1,91 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+#define mid ((l + r) >> 1)
+
+/*
+三种操作:
+1.T x:末尾添加x
+2.U x:撤销最后x次修改操作
+3.Q x:查询当前的x字母并输出
+
+很明显,有撤销操作,那么一定是设计可持久化的数据结构,再加上有添加和查询操作
+很容易就想到了主席树,又查询不算修改,那么用变量记录修改次数(根节点的个数)
+*/
+
+int root[N],tot,cnt,n;
+int ls[N * 20],rs[N * 20],sum[N * 20];
+char ch[N * 20];
+
+void pushup(int u){
+    sum[u] = sum[ls[u]] + sum[rs[u]];
+}
+
+//点修改,根据前一版本动态开点,从根到叶添加一条分支
+//叶节点存字母,各节点存字母个数
+//二分条件:sum[ls[u]] < mid - l + 1:如果左区间有空位,那么就走左区间
+void change(int &u,int v,int l,int r,char c){
+    u = ++tot;
+    ls[u] = ls[v];
+    rs[u] = rs[v];
+    sum[u] = sum[v];
+    if(l == r){
+        sum[u] = 1;
+        ch[u] = c;
+        return;
+    }
+    if(sum[ls[u]] < mid - l + 1) change(ls[u],ls[v],l,mid,c);
+    else change(rs[u],rs[v],mid + 1,r,c);
+    pushup(u);
+}
+
+//查询当前版本的第x个字母:
+//二分的条件:x <= sum[ls[u]]:如果在做区间,那么就走左区间
+//否则走右区间,并且把左区间的个数减掉
+
+char query(int u,int l,int r,int x){
+    if(l == r){
+        return ch[u];
+    }
+    if(x <= sum[ls[u]]) return query(ls[u],l,mid,x);
+    else return query(rs[u],mid + 1,r,x - sum[ls[u]]);
+}
+
+void solve(){
+    cin >> n;
+    for(int i = 1;i <= n;i++){
+        char o,c; int x;
+        cin >> o;
+        if(o == 'T'){
+            cin >> c;
+            cnt++;
+            change(root[cnt],root[cnt - 1],1,n,c);
+        }
+        if(o == 'U'){
+            cin >> x;
+            cnt++;
+            root[cnt] = root[cnt - x - 1];
+        }
+        if(o == 'Q'){
+            cin >> x;
+            cout << query(root[cnt],1,n,x) << '\n';
+        }
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,190 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+
+public class learn {
+    /*
+    前缀树(字典树)
+    前缀树的原理和代码详解
+    前缀树的实现方式:
+    (1)类描述的实现方法:不推荐但最常用
+    1.路的可能性范围较小,用固定数组实现路
+    2.路的可能性范围较大,用哈希表实现路
+    (2)静态数组实现方法
+    1.一切都是由静态数组实现,提前准备好够用的空间
+    2.如果路的可能性比较大,就用每一位的信息建树,
+
+    比如要实现一个字符串"abc",就建立一棵树,从根节点到叶节点的路径(边)依次是a,b,c这样就建好了,如果还有字符串"cba"
+    此时没有根结点通往c的路,那么就新建一条路,代表cba,如果还有字符串"acc",此时用通往ac的路,到第一个c之后,没有再通向第二个c的路了
+    所以又在第一个c的基础上添加一条路
+
+    每个节点都有一个pass信息,表示所有的路过了几次,有一个end信息表示有多少个字符串是以当前节点结尾的
+    所以每建一个新节点p = 1,如果此时字符串结束,那么e = 1,根节点的e永远是0,每加一个字符串根节点的p都会加一
+    所以前缀树比哈希表多的一个功能就是:查以某个字符串开头的字符串有多少个(p值多少就是多少个以该字符串开头的)
+
+    实现前缀树Trie类
+    1.Trie()初始化前缀树对象
+    2.void insert(String word)将字符串word插入前缀树
+    3.int search(String word)返回前缀树种字符串word实例个数
+    4.int prefixNumber(String prefix)返回字符串以prefix前缀的字符串个数
+    5.void delete(String word)从前缀树中移除字符串word,当某个节点p = 0,那么可以直接把这条路给删了
+     */
+    class Trie {
+        class TrieNode {
+            public int pass;
+            public int end;
+            //如果nexts数组为null,那么就没有路,只要不是空,就有路
+            //a~z分别对于0和25
+            //注意:这里可以把TrieNode[]类型改为HashMap<Integer,TrieNode>类型
+            //来存储,这样可以避免由于字符过多而开过多的数组
+            public TrieNode[] nexts;
+
+            public TrieNode() {
+                pass = 0;
+                end = 0;
+                nexts = new TrieNode[26];
+            }
+        }
+
+        //所有字符串都是从头结点开始挂下来的
+        private TrieNode root;
+        //所以初始化前缀树实际上就初始化根节点就行
+        public Trie() {
+            root = new TrieNode();
+        }
+        public void insert(String word){
+            TrieNode node = root;
+            node.pass++;
+            for(int i = 0,path;i < word.length();i++){
+                path = word.charAt(i) - 'a';
+                if(node.nexts[path] == null){
+                    node.nexts[path] = new TrieNode();
+                }
+                node = node.nexts[path];
+                node.pass++;
+            }
+            node.end++;
+        }
+        //查询有多少单词由pre做前缀
+        public int countWordsEqualTo(String word){
+            TrieNode node = root;
+            for(int i = 0,path;i < word.length();i++){
+                path = word.charAt(i) - 'a';
+                if(node.nexts[path] == null){
+                    return 0;
+                }
+                node = node.nexts[path];
+            }
+            return node.end;
+        }
+        public int countWordsStartingWith(String pre){
+            TrieNode node = root;
+            for(int i = 0,path;i < pre.length();i++){
+                path = pre.charAt(i) - 'a';
+                if(node.nexts[path] == null){
+                    return 0;
+                }
+                node = node.nexts[path];
+            }
+            return node.pass;
+        }
+        //如果之前word没有插入过前缀树,什么都不做
+        //如果word插入管前缀树,那么此时删掉一次
+        public void erase(String word){
+            if(countWordsEqualTo(word) > 0){
+                TrieNode node = root;
+                node.pass--;
+                for(int i = 0,path;i < word.length();i++){
+                    path = word.charAt(i) - 'a';
+                    //把每个节点的p--,先--,再判断是不是p == 0
+                    if(--node.nexts[path].pass == 0){
+                        node.nexts[path] = null;
+                        //只要减了之后是0,那么后面跟着的结点减了之后全是0,
+                        //所以直接把这条路置为null,return;
+                        return;
+                    }
+                    node = node.nexts[path];
+                }
+                node.end--;
+            }
+        }
+    }
+    //推荐!!!!!!!!!!!!!!!!
+    /*
+    以静态方法实现前缀树:假设有三个字符,abc
+    一次性准备好够用的空间,建立一个二维数组tree[n][3];
+    那么abc分别对于的是0,1,2,初始化二维数组,从0~n-1行都是:{0,0,0},数值0代表没有路
+    然后第0行不用,从cnt = 1(根节点)开始,对于字符串"abc"中的a,从1开始的路走到2号空间,
+    第一行改为{2,0,0},然后cnt++;对于字符串中的c,c - a = 2,所以把第二行第三列改成3:{0,0,3},
+    最后把第三行改成{0,4,0}
+    然后建立pass和end数组,每次都pass[cur]++,结束时end[cur]++
+     */
+    public static int MAXN = 150001;
+    public static int[][] tree = new int[MAXN][26];
+    public static int[] end2 = new int[MAXN];
+    public static int[] pass2 = new int[MAXN];
+    public static int cnt;
+    public static void build(){
+        cnt = 1;
+    }
+    public static void insert(String word){
+        int cur = 1;
+        pass2[cur]++;
+        for(int i = 0,path;i < word.length();i++){
+            path = word.charAt(i) - 'a';
+            if(tree[cur][path] == 0){
+                tree[cur][path] = ++cnt;
+            }
+            cur = tree[cur][path];
+            pass2[cur]++;
+        }
+        end2[cur]++;
+    }
+    public static int search(String word){
+        int cur = 1;
+        for(int i = 0,path;i < word.length();i++){
+            path = word.charAt(i) - 'a';
+            if(tree[cur][path] == 0){
+                return 0;
+            }
+            cur = tree[cur][path];
+        }
+        return end2[cur];
+    }
+    //返回以pre为前缀的个数
+    public static int prefixNumber(String pre){
+        int cur = 1;
+        for(int i = 0,path;i < pre.length();i++){
+            path = pre.charAt(i) - 'a';
+            if(tree[cur][path] == 0){
+                return 0;
+            }
+            cur = tree[cur][path];
+        }
+        return pass2[cur];
+    }
+    public static void delete(String word){
+        if(search(word) > 0){
+            int cur = 1;
+            for(int i = 0,path;i < word.length();i++){
+                path = word.charAt(i) - 'a';
+                //这里只需要把tree[cur][path]置为0就可以把这条路截断
+                if(--pass2[tree[cur][path]] == 0){
+                    tree[cur][path] = 0;
+                    return;
+                }
+                cur = tree[cur][path];
+            }
+            end2[cur]--;
+        }
+    }
+    //清空前缀树
+    public static void clear(){
+        for(int i = 0;i <= cnt;++i){
+            Arrays.fill(tree[i],0);
+            end2[i] = 0;
+            pass2[i] = 0;
+        }
+    }
+}

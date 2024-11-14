@@ -1,0 +1,212 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+
+/*
+虚树(模版题)
+给定一棵有n个点的树,有q组询问,每组询问给定k个点,你可以删掉不同于这k个点的一些点
+使得这些点两两不相通,求最少删除多少点,如果不可能输出-1
+
+思路:如果在原树上暴力枚举,那么时间复杂度O(nq)会超时
+注意到Σk <= 1e5,那么查询点的总数是有限的,那么每次把k个点抽离出来,重构一棵小规模的树(虚树)
+,时间复杂度降为O(Σk)
+
+虚树:
+抽离查询点和它们两两之间的最近公共祖先以及树根而成的树称为虚树
+构成虚树的点称为关键点,关键点 = 查询点 + 两两最近的公共祖先 + 树根
+这样虚树减少了结点并且保留了原树的骨架
+
+大小:
+选择k个查询点,构成虚树的关键点最多不超过2 * k,比如选择满二叉树的所有叶节点构成虚树就是最大情况
+
+应用:虚树就是为了解决一类树型dp问题而诞生的,题目通常是计算树上的部分信息,给出多组询问
+询问点的总数量有限,通常考虑建虚树,缩小查询的规模,降低时间复杂度
+常见的题型就是:树上倍增求lca + 虚树 + 树型dp
+
+虚树的构建:
+1.先预处理原树的lca和dfs序(深搜遍历的先序序号),然后用栈维护关键点,构造虚树
+2.对k个查询点按dfs序排序,先加入根节点,再按顺序加入查询点
+3.栈维护从跟向下的一条链上的关键点(注意:只有关键点入栈),按深度从小到大存储
+当加入a[x]后,满足s[1] = root,s[top] = a[x],s[x]为s[x-1]的后代(s是栈数组)
+4.现在考虑加入查询点a[i],设lca = LCA(s[top],a[i]),分两类讨论:
+(1)lca = s[top],即a[i]是s[top]子树内的结点,直接把a[i]入栈
+(2)lca != s[top],即a[i]不是子树内的结点
+那么lca下面路径上的关键点都应该出栈,出栈时从s[top-1]向s[top]连边(因为栈中都是关键点)
+注意:当dep[s[top-1]] < dep[lca]时停止出栈,此时
+①:如果lca = s[top],说明lca已经在栈中,那么直接把a[i]入栈
+②:如果lca != s[top](此时是s[top]是lca的子节点情况),说明lca不在栈中,s[top]依然在lca的下面
+先从lca向s[top]连一条边,再把s[top]出栈,把lca入栈,把a[i]入栈,枚举结束的时候
+还要把最后一条链上的关键点连边,出栈
+这样一来就把虚树给建好了
+*/
+
+//建图用
+int h[N],to[N],nxt[N],tot;
+//fa实质是ST表,树上倍增使用
+int dep[N],fa[N][20],siz[N];
+//dfs序和栈
+int dfn[N],cnt;
+int s[N],top;
+int n,k,q,a[N],ans;
+
+void add(int u,int v){
+    nxt[++tot] = h[u];
+    to[tot] = v;
+    h[u] = tot;
+}
+
+void dfs(int x,int f){
+    dfn[x] = ++cnt;
+    dep[x] = dep[f] + 1;
+    fa[x][0] = f;
+    siz[x] = 1;
+    for(int i = 1;i <= 19;i++){
+        fa[x][i] = fa[fa[x][i - 1]][i - 1];
+    }
+    for(int i = h[x];i;i = nxt[i]){
+        int v = to[i];
+        if(v == f) continue;
+        dfs(v,x);
+        siz[x] += siz[v];
+    }
+}
+
+int lca(int x,int y){
+    if(dep[x] < dep[y]) swap(x,y);
+    for(int i = 19;i >= 0;i--){
+        if(dep[fa[x][i]] >= dep[y]){
+            x = fa[x][i];
+        }
+    }
+    if(x == y) return y;
+    for(int i = 19;i >= 0;i--){
+        if(fa[x][i] != fa[y][i]){
+            x = fa[x][i];
+            y = fa[y][i];
+        }
+    }
+    return fa[x][0];
+}
+
+//这里是按dfn序来排序
+int cmp(int a,int b){
+    return dfn[a] < dfn[b];
+}
+
+void build(){
+    sort(a + 1,a + k + 1,cmp);
+    tot = 0;
+    //根节点入栈,根节点一定是1,然后看a[1],如果a[1]=1,那么
+    //就是根节点,跳过,否则就入栈
+    top = 1;
+    s[1] = 1;
+    if(a[1] != 1) s[++top] = a[1];
+    for(int i = 2;i <= k;i++){
+        int l = lca(s[top],a[i]);
+        while(top > 1 && dep[s[top - 1]] >= dep[l]){
+            add(s[top - 1],s[top]);
+            top--;
+        }
+        if(l != s[top]){
+            add(l,s[top]);
+            s[top] = l;
+        }
+        s[++top] = a[i];
+    }
+    //对最后一条链连边,top出栈
+    while(top){
+        add(s[top - 1],s[top]);
+        top--;
+    }
+}
+
+//树型dp,让你删掉不同于k个查询点的一些点,使得这k个点的两两不联通,求
+//最少删掉多少点
+//思路:令k个查询点的siz均为1,其他点的siz都是0
+//在虚树上做树型dp:
+//1.当前点是查询点:搜索其儿子,回溯的时候如果儿子的siz大于0,那么砍断父子边
+//ans++,清空儿子的siz
+//2.当前点不是查询点:搜索其儿子,回溯的时候累加其儿子的siz,搜索完儿子,
+//如果siz>1(什么当前点是连接两个子树中的查询点的点,所以砍掉),那么砍掉当前点,ans++,清空当前节点的siz
+//搜完儿子,如果siz = 1,说明不用砍掉当前点
+
+void DP(int x){
+    if(siz[x]){
+        for(int i = h[x];i;i = nxt[i]){
+            DP(to[i]);
+            if(siz[to[i]]){
+                ans++;
+                siz[to[i]] = 0;
+            }
+        }
+        //else:x不是查询点
+    } else {
+        for(int i = h[x];i;i = nxt[i]){
+            DP(to[i]);
+            siz[x] += siz[to[i]];
+            siz[to[i]] = 0;
+        }
+        if(siz[x] > 1){
+            ans++;
+            siz[x] = 0;
+        }
+    }
+    //h数组清空(链式前向星都是清空h)
+    h[x] = 0;
+}
+
+void solve(){
+    cin >> n;
+    for(int i = 1;i < n;i++){
+        int x,y;
+        cin >> x >> y;
+        add(x,y);
+        add(y,x);
+    }
+    dfs(1,0);
+    memset(h + 1,0,n << 2);
+    memset(siz + 1,0,n << 2);
+    cin >> q;
+    while(q--){
+        cin >> k;
+        bool flag = 0;
+        siz[1] = 0;
+        for(int i = 1;i <= k;i++){
+            cin >> a[i];
+            siz[a[i]] = 1;
+        }
+        for(int i = 1;i <= k;i++){
+            //此时无解
+            if(siz[fa[a[i]][0]]){
+                while(k){
+                    siz[a[k--]] = 0;
+                }
+                cout << "-1" << '\n';
+                flag = 1;
+                break;
+            }
+        }
+        if(flag) continue;
+        build();
+        ans = 0;
+        DP(1);
+        cout << ans << '\n';
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}
