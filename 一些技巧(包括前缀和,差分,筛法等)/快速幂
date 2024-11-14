@@ -1,0 +1,207 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //矩阵快速幂,对一个矩阵求幂运算
+    public static int[][] multiply(int[][] a,int[][] b){
+        int n = a.length;
+        int m = b[0].length;
+        int k = a[0].length;
+        int[][] ans = new int[n][m];
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < m;j++){
+                for(int c = 0;c < k;c++){
+                    ans[i][j] += a[i][c] * b[c][j];
+                }
+            }
+        }
+        return ans;
+    }
+    public static int[][] power(int[][] m,int p){
+        int n = m.length;
+        int[][] ans = new int[n][n];
+        for(int i = 0;i < n;i++){
+            ans[i][i] = 1;
+        }
+        for(;p != 0;p >>= 1){
+            if((p & 1) != 0){
+                ans = multiply(ans,m);
+            }
+            m = multiply(m,m);
+        }
+        return ans;
+    }
+
+    /*
+    题目1:求斐波那契数列的第n项
+    矩阵快速幂
+    斐波那契数列是属于1维二阶矩阵的矩阵快速幂,初识的矩阵是[1,0]代表第一和第0项
+    然后每一次乘上矩阵[[1,1],[1,0]]得到后一项,怎么求到这个矩阵的呢?
+    首先假设这个矩阵是[[a,c][b,d]],对于斐波那契数列是F(n)=F(n-1)+F(n-2)
+    那么此时a=b=1,直接确定(第零列直接由关系得到),然后将此时的[[1,c][1,d]]*第0项 ==
+    第一项,得到c,然后第一项和第二项个关系得到d,最终得到[[1,1][1,0]]
+     */
+    public static int fib(int n){
+        if(n == 0){
+            return 0;
+        }
+        if(n == 1){
+            return 1;
+        }
+        int[][] start = {{1,0}};
+        int[][] base = {{1,1},{1,0}};
+        int[][] ans = multiply(start,power(base,n - 1));
+        return ans[0][0];
+    }
+    /*
+    题目2:爬楼梯
+    一次可以爬1阶或者2阶台阶,问到第n层有多少种方法
+    从第n层开始往前推,在第n层时可以由n-1层来到,也可以由n-2层来到
+    所以仍然是f(n)=f(n-1)+f(n-2)
+     */
+    public static int climbStairs(int n){
+        if(n == 0){
+            return 1;
+        }
+        if(n == 1){
+            return 1;
+        }
+        int[][] start = {{1,1}};
+        int[][] base = {{1,1},{1,0}};
+        int[][] ans = multiply(start,power(base,n - 1));
+        return ans[0][0];
+    }
+    /*
+    题目3:求n个泰波那契数
+    t(0)=0,t(1)=1,t(2)=1
+    t(i)=t(i-1)+t(i-2)+t(i-3),求t(n)
+    思路:矩阵快速幂,求到中间矩阵[[1,1,1][1,0,0][0,1,0]]
+     */
+    public static int tribonacci(int n) {
+        if(n == 0){
+            return 0;
+        }
+        if(n == 1){
+            return 1;
+        }
+        if(n == 2){
+            return 1;
+        }
+        int[][] start = {{1,1,0}};
+        int[][] base = {{1,1,0},{1,0,1},{1,0,0}};
+        int[][] ans = multiply(start,power(base,n - 2));
+        return ans[0][0];
+    }
+    /*
+    题目4:多米诺和托米诺平铺
+    有两种形状的瓷砖;一种是2x1的多米诺形,另一种是形如"L"(大小为3)的托米诺形.
+    两种形状都可以旋转。
+    给定整数 n ，返回可以平铺 2 x n 的面板的方法的数量。返回对 10^9 + 7 取模 的值。
+    平铺指的是每个正方形都必须有瓷砖覆盖。
+    通过打表找规律,f(n)=2*f(n-1)+f(n-3)
+    所以是三阶的快速幂,此时通过关系找到中间矩阵是[[2,0,1][1,0,0][0,1,0]]
+
+     */
+    public static int numTilings(int k) {
+        int mod = (int) 1e9 + 7;
+        int n = k - 1;
+        if(n == 0){
+            return 1;
+        }
+        if(n == 1){
+            return 2;
+        }
+        if(n == 2){
+            return 5;
+        }
+        int[][] start = {{5,2,1}};
+        int[][] base = {{2,1,0},{0,0,1},{1,0,0}};
+        int[][] ans = multiply(start,power(base, n - 2));
+        return ans[0][0];
+    }
+    /*
+    题目6:统计元音字母序列的数目(k维一阶递推表达式)
+    给你一个整数 n，请你帮忙统计一下我们可以按下述规则形成多少个长度为 n 的字符串：
+    字符串中的每个字符都应当是小写元音字母（'a', 'e', 'i', 'o', 'u'）
+    每个元音 'a' 后面都只能跟着 'e'
+    每个元音 'e' 后面只能跟着 'a' 或者是 'i'
+    每个元音 'i' 后面 不能 再跟着另一个 'i'
+    每个元音 'o' 后面只能跟着 'i' 或者是 'u'
+    每个元音 'u' 后面只能跟着 'a'
+    由于答案可能会很大，所以请你返回 模 10^9 + 7 之后的结果。
+
+    思路:定义dp[i][x]:长度为i,且以x字符结尾的合法串数量
+    那么此时
+    dp[i][a]=dp[i-1][e,I,u]
+    dp[i][e]=dp[i-1][a,I]
+    dp[i][I]=dp[i-1][e,o]
+    dp[i][o]=dp[i-1][I]
+    dp[i][u]=dp[i-1][I,o]
+    那么此时可以得到中间矩阵
+    [[0,1,0,0,0],[1,0,1,0,0],[1,1,0,1,1],[0,0,1,0,0],[1,0,0,0,0]];
+     */
+    public static int mod = (int) 1e9 + 7;
+    public int countVowelPermutation(int n) {
+        int[][] start = {{1,1,1,1,1}};
+        int[][] base = {
+                {0,1,0,0,0},
+                {1,0,1,0,0},
+                {1,1,0,1,1},
+                {0,0,1,0,1},
+                {1,0,0,0,0}
+        };
+        int[][] ans = multiply(start,power(base,n - 1));
+        int ret = 0;
+        for(int a : ans[0]){
+            ret = (ret + a) % mod;
+        }
+        return ret;
+    }
+    /*
+    题目7:学生出勤记录II
+    可以用字符串表示一个学生的出勤记录，
+    其中的每个字符用来标记当天的出勤情况（缺勤、迟到、到场）。
+    记录中只含下面三种字符：
+    'A'：Absent，缺勤
+    'L'：Late，迟到
+    'P'：Present，到场
+    如果学生能够 同时 满足下面两个条件，则可以获得出勤奖励：
+    按 总出勤 计，学生缺勤（'A'）严格 少于两天。
+    学生 不会 存在 连续 3 天或 连续 3 天以上的迟到（'L'）记录。
+    给你一个整数 n ，表示出勤记录的长度（次数）。
+    请你返回记录长度为 n 时，可能获得出勤奖励的记录情况 数量 。
+    答案可能很大，所以返回对 109 + 7 取余 的结果。
+
+    思路:定义dp[i][a][b]:前i天中,有a天缺勤,且最后正好有b天连续迟到的情况
+    所有可能的合法记录数量
+    那么就有以下六种情况,然后做压缩操作
+    [i][0][0]-->[i][0] = [i-1][0,1,2]
+    [i][0][1]-->[i][1] = [i-1][0]
+    [i][0][2]-->[i][2] = [i-1][1]
+    [i][1][0]-->[i][3] = [i-1][0,1,2,3,4,5]
+    [i][1][1]-->[i][4] = [i-1][3]
+    [i][1][2]-->[i][5] = [i-1][4]
+    [i][a][b]-->[i][a*3+b]
+     */
+    public int checkRecord(int n) {
+        int[][] start = {{1,1,0,1,0,0}};
+        int[][] base = {
+                {1,1,0,1,0,0},
+                {1,0,1,1,0,0},
+                {1,0,0,1,0,0},
+                {0,0,0,1,1,0},
+                {0,0,0,1,0,1},
+                {0,0,0,1,0,0}
+        };
+        int[][] ans = multiply(start,power(base,n - 1));
+        int ret = 0;
+        for(int a : ans[0]){
+            ret = (ret + a) % mod;
+        }
+        return ret;
+    }
+}

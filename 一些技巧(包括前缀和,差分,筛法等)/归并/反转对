@@ -1,0 +1,58 @@
+给定一个数组 nums ，如果 i < j 且 nums[i] > 2*nums[j] 我们就将 (i, j) 称作一个重要翻转对。
+你需要返回给定数组中的重要翻转对的数量。
+
+示例 1:
+输入: [1,3,2,3,1]
+输出: 2
+示例 2:
+输入: [2,4,3,5,1]
+输出: 3
+注意:
+给定数组的长度不会超过50000。
+输入数组中的所有数字都在32位整数的表示范围内。
+
+//本题就是一个最简单的归并然后排序,但是要注意给的数据可能到2 ^ 31 - 1,所以比较式要强制转化为long类型再比较
+
+class Solution {
+    public int[] nums;
+    public int[] help;
+    public int reversePairs(int[] nums) {
+        int n = nums.length;
+        this.nums = nums;
+        this.help = new int[n];
+        int l = 0, r = n - 1;
+        return count(l, r);
+    }
+
+    public int count(int l, int r) {
+        if (l == r)
+            return 0;
+        int m = (l + r) >> 1;
+        return count(l, m) + count(m + 1, r) + merge(l, m, r);
+    }
+
+    public int merge(int l, int m, int r) {
+        int ans = 0;
+        for (int i = l, j = m + 1, sum = 0; i <= m; ++i) {
+            while (j <= r && (long)nums[j] * 2 < (long)nums[i]) {
+                sum++;
+                j++;
+            }
+            ans += sum;
+        }
+        int i = l,a = l,b = m + 1;
+        while(a <= m && b <= r){
+            help[i++] = nums[a] <= nums[b] ? nums[a++] : nums[b++];
+        }
+        while(a <= m){
+            help[i++] = nums[a++];
+        }
+        while(b <= r){
+            help[i++] = nums[b++];
+        }
+        for(int j = l;j <= r;++j){
+            nums[j] = help[j];
+        }
+        return ans;
+    }
+}

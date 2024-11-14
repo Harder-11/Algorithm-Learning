@@ -1,0 +1,185 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+
+public class learn {
+    //双指针技巧(双指针通常会包含单调性(贪心)方面的考虑,牵扯到可能性的取舍)
+    /*
+    1.按奇偶排序数组,给一个非负整数数组nums,nums中一半整数是奇数,一半是偶数,对数组进行排序,以便当
+    nums[i]为奇数时i也是奇数,当nums[i]是偶数时,i也是偶数,可以返回满足上述条件的任何数组作为答案
+
+    思路将nums[n - 1]的数当做哨兵,当此时nums[n - 1] 为奇数,将odd下标与n - 1下标的数交换
+    否则为偶数,那么将even下标与n - 1下标交换,直到odd 或者 even 下标大于等于n
+     */
+    public static int[] sortArrayByParityII(int[] nums){
+        int n = nums.length;
+        for(int odd = 1,even = 0;odd < n && even < n;){
+            //此时nums[n - 1]为奇数
+            if((nums[n - 1] & 1) == 1){
+                swap(nums,odd,n - 1);
+                odd += 2;
+            } else {
+                swap(nums,even,n - 1);
+                even += 2;
+            }
+        }
+        return nums;
+    }
+    public static void swap(int[] nums,int i,int j){
+        int t = nums[i];
+        nums[i] = nums[j];
+        nums[j] = t;
+    }
+    /*
+    寻找重复数:给定一个包含n + 1个整数的数组,数组都在[1,n]内,找出这个重复的数
+    要求空间复杂度是常数级别
+
+    思路:由于数组中有n + 1个元素,且元素的值都在[1,n]内,所以从1-n必定每个数都至少有一个,所以从0开始
+    0->nums[0]->nums[nums[0]]->nums[nums[nums[0]]]...都存在一条边,又因为有一个数出现了两次,那么
+    就肯定出现了一个环,目标就是要找到环的入口处,那么就转化成了快慢指针问题
+     */
+    public static int findDuplicate(int[] nums){
+        if(nums == null || nums.length < 2){
+            return -1;
+        }
+        int slow = nums[0];
+        int fast = nums[nums[0]];
+        while(slow != fast){
+            slow = nums[slow];
+            fast = nums[nums[fast]];
+        }
+        fast = 0;
+        while(slow != fast){
+            fast = nums[fast];
+            slow = nums[slow];
+        }
+        return slow;
+    }
+    /*
+    3.接雨水(经典题)
+    对于每一个x坐标能接的水量,就是左边和右边最高的柱子的更小值减去该位置的柱子高度,如果<0,则不能接水
+    max{min{left(max),right(max)} - arr[i],0};
+    然后求出从从左到右的最大值left数组和从右到左的最大值right数组
+     */
+    public static int trap(int[] nums){
+        int n = nums.length;
+        int[] lmax = new int[n];
+        int[] rmax = new int[n];
+        lmax[0] = nums[0];
+        rmax[n - 1] = nums[n - 1];
+        for(int i = 1;i < n;i++){
+            lmax[i] = Math.max(lmax[i - 1],nums[i]);
+        }
+        for(int i = n - 2;i >= 0;i--){
+            rmax[i] = Math.max(rmax[i + 1],nums[i]);
+        }
+        int ans = 0;
+        for(int i = 1;i < n - 1;i++){
+            ans += Math.max(0,Math.min(lmax[i - 1],rmax[i + 1]) - nums[i]);
+        }
+        return ans;
+    }
+    /*
+    4.救生艇
+    给定数组people,people[i]表示第i个人的体重,船的数量不限,每艘船可以承载的最大重量为limit
+    每艘船最多可以同时承载两人,但条件是这些人的重量之和最多为limit
+
+     */
+    public static int numRescueBoats(int[] people,int limit){
+        Arrays.sort(people);
+        int ans = 0;
+        int l = 0,r = people.length - 1;
+        int sum = 0;
+        while(l <= r){
+            sum = l == r ? people[l] : people[l] + people[r];
+            if(sum > limit){
+                r--;
+            } else {
+                l++;
+                r--;
+            }
+            ans++;
+        }
+        return ans;
+    }
+    /*
+    5.盛水最多的容器
+    给定一个长度为n的整数数组height,有n条垂线,第i条线的两个端点是(i,0)和(i,height[i])
+    找出其中的两条线,使得它们与x轴共同构成的容器可以容纳最多的水
+    返回容器可以储存的最大水量
+
+    能盛水的大小是Math.min(left,right) * (right - left)
+     */
+    public static int maxArea(int[] height){
+        int ans = 0;
+        for(int l = 0,r = height.length - 1;l < r;){
+            ans = Math.max(ans,Math.min(height[l],height[r]) * (r - l));
+            if(height[l] <= height[r]){
+                l++;
+            } else {
+                r--;
+            }
+        }
+        return ans;
+    }
+    /*
+    供暖器:
+    设计一个由固定加热半径的供暖器向所有房屋供暖,在加热器的加热范围内的每个房屋都可以获得供暖
+    现在,给出位于一条水平线上的房屋houses和供暖器heaters的位置,请你找出并返回可以覆盖所有房屋的最小
+    加热半径,
+    比如 houses = [1,2,3], heaters = [2]
+    输出: 1
+    解释: 仅在位置 2 上有一个供暖器。如果我们将加热半径设为 1，那么所有房屋就都能得到供暖。
+    对于一条线上的房屋用指针l,每次访问供暖器heaters[r]和heaters[r + 1],如果距离[i + 1]更小或者相等,那么r++
+    每次都l++,找到求出的距离的最大值
+     */
+    public int findRadius(int[] houses, int[] heaters) {
+        Arrays.sort(houses);
+        Arrays.sort(heaters);
+        int ans = 0;
+        for(int i = 0,j = 0;i < houses.length;i++){
+            while(!best(houses,heaters,i,j)){
+                j++;
+            }
+            ans = Math.max(ans,Math.abs(heaters[j] - houses[i]));
+        }
+        return ans;
+    }
+    public static boolean best(int[] houses,int[] heaters,int i,int j){
+        return j == heaters.length - 1 || Math.abs(heaters[j] - houses[i]) < Math.abs(heaters[j + 1] - houses[i]);
+    }
+    /*
+    7.缺失的第一个正数,给一个未排序的整数数组nums,请你找出其中没有出现的最小正整数
+    要求:时间复杂度O(n),并且空间复杂度是常熟级;
+
+    思路:使用双指针l和r,l在开头,r在n位置(此时越界)
+    其中l的含义:l的左边都是做到i位置上放的i + 1.
+    r的含义:r是一个垃圾区,没有用的数就扔进去,其次如果最好状况1~r每个数字都只收集一次且收集全
+    如果l处的数就是l + 1,那么l++;
+    如果arr[l] <= l,那么就是垃圾数字,因为<=l已经收集全了,那就把垃圾区的前一个数和当前数做交换,然后r--,扩充垃圾区
+    如果arr[l] > r,由于r是指能用是数的个数,如果此时大于r,也是垃圾,也和垃圾区前一个数交换,然后r--
+    如果arr[arr[l] - 1] == arr[l]垃圾,说明有重复的,因为此时已经满足arr[l]处已经是l + 1,但是现在arr[arr[l] - 1] == arr[l]
+    说明了有两个相同的元素,此时也是垃圾
+    否则前面的都不满足就交换,将l与arr[l] - 1处的数字交换,这样就可以把l处的数字换到正确位置arr[l] - 1上
+     */
+    public static int firstMissingPositive(int[] nums){
+        int l = 0;
+        int r = nums.length;
+        while(l < r){
+            if(nums[l] == l + 1){
+                l++;
+            } else if(nums[l] <= l || nums[l] > r || nums[nums[l] - 1] == nums[l]){
+                swap2(nums,l,--r);
+            } else {
+                swap2(nums,l,nums[l] - 1);
+            }
+        }
+        return r;
+    }
+    public static void swap2(int[] arr,int i,int j){
+        int t = arr[i];
+        arr[i] = arr[j];
+        arr[j] = t;
+    }
+}

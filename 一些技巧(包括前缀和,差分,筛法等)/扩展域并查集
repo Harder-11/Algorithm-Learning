@@ -1,0 +1,68 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+#define ls u << 1
+#define rs u << 1 | 1
+#define mid ((l + r) >> 1)
+mt19937_64 rnd(chrono::steady_clock::now().time_since_epoch().count());
+typedef unsigned long long ull;
+
+/*
+扩展域并查集
+把人分为两个域:朋友域和敌人域(n+1~2n)
+1.如果ab是朋友,那么直接合并a,b
+2.如果ab是敌人,那么a与b的敌人域b+n必然是朋友,同时b与a的敌人域a+n必然是朋友
+那么合并a,b+n以及b,a+n
+3.合并完成之后,统计以下集合的个数就是答案
+*/
+
+int n,m,a,b,ans;
+int fa[2005];
+
+int find(int x){
+    if(x != fa[x]){
+        fa[x] = find(fa[x]);
+    }
+    return fa[x];
+}
+
+void upset(int x,int y){
+    fa[find(y)] = find(x);
+}
+
+void solve(){
+    cin >> n >> m;
+    for(int i = 1;i <= 2 * n;i++){
+        fa[i] = i;
+    }
+    for(int i = 1;i <= m;i++){
+        char ch;
+        cin >> ch >> a >> b;
+        if(ch == 'F') upset(a,b);
+        else {
+            upset(a,b + n);
+            upset(b,a + n);
+        }
+    }
+    for(int i = 1;i <= n;i++){
+        if(fa[i] == i) ans++;
+    }
+    cout << ans << '\n';
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,107 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 5e4 + 5;
+const int mod = 1e9 + 7;
+const double eps = 1e-9;
+const int hs = 1331;
+const double PI = acos(-1);
+#define ls u << 1
+#define rs u << 1 | 1
+#define mid ((l + r) >> 1)
+mt19937_64 rnd(chrono::steady_clock::now().time_since_epoch().count());
+typedef unsigned long long ull;
+
+/*
+分块操作
+首先是查询操作:
+若l和r在一个块里面,那么直接暴力求和(遍历累加)
+若l和r不在同一个块里面,那么答案由三部分构成:以l开头的不完整块
+中间的几个完整块,以r结尾的不完整块,对于不完整块依然是采用暴力求和,对于完整块,直接利用已经求出的bi求和
+这种情况下最坏复杂度是O(n/s+s)
+然后是修改操作:
+若l和r是在同一个块里面,那么直接暴力修改即可,因为块长是s,最坏复杂度就是O(s)
+若l和r不在一个块里面,那么需要修改三部分:以l开头的不完整块,中间的完整块
+和以r结尾的不完整块,对于不完整块,依然是暴力修改,同时更新区间和bi
+对于完整块,直接修改bi即可,这种情况下,最坏复杂度和依然是O(n/s+s)
+根据均值不等式,n/s=s的时候,即s=√n,单词操作的时间复杂度最低,为O(√n)
+*/
+
+//id是块的编号,len = sqrt(n)
+//对于id数组,每一块的编号都是一样的,也就是每len长度的编号是一样的
+int id[N],len;
+//a表示数据数组,b数组记录了每个块整体的赋值情况,类似与lazy_tag
+//s表示块内元素的总和
+ll a[N],b[N],s[N];
+
+void add(int l,int r,ll x){
+    //初识的块编号和末尾块编号
+    int sid = id[l],eid = id[r];
+    //在同一个块当中
+    if(sid == eid){
+        for(int i = l;i <= r;i++){
+            a[i] += x;
+            s[sid] += x;
+        }
+        return;
+    }
+    //处理开头不完整块
+    for(int i = l;id[i] == sid;i++){
+        a[i] += x;
+        s[sid] += x;
+    }
+    //处理中间完整块
+    for(int i = sid + 1;i < eid;i++){
+        //b类似与懒标记
+        b[i] += x;
+        s[i] += len * x;
+    }
+    for(int i = r;id[i] == eid;i--){
+        a[i] += x;
+        s[eid] += x;
+    }
+}
+
+ll query(int l,int r,ll p){
+    int sid = id[l],eid = id[r];
+    ll ans = 0;
+    if(sid == eid){
+        for(int i = l;i <= r;i++) ans = (ans + a[i] + b[sid]) % p;
+        return ans;
+    }
+    for(int i = l;id[i] == sid;i++) ans = (ans + a[i] + b[sid]) % p;
+    for(int i = sid + 1;i < eid;i++) ans = (ans + s[i]) % p;
+    for(int i = r;id[i] == eid;i--) ans = (ans + a[i] + b[eid]) % p;
+    return ans;
+}
+
+void solve(){
+    int n; cin >> n;
+    len = sqrt(n);
+    for(int i = 1;i <= n;i++){
+        cin >> a[i];
+        id[i] = (i - 1) / len + 1;
+        s[id[i]] += a[i];
+    }
+    for(int i = 1;i <= n;i++){
+        int op,l,r,c;
+        cin >> op >> l >> r >> c;
+        if(op == 0){
+            add(l,r,c);
+        } else {
+            cout << query(l,r,c + 1) << '\n';
+        }
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

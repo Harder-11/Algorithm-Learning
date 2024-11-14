@@ -1,0 +1,40 @@
+//归并排序
+import java.util.*;
+
+public class Main {
+    public static int MAXN = 501;
+    public static int[] arr = new int[MAXN];
+    public static int[] help = new int[MAXN];//辅助数组,用来记录数据
+
+    public static int n;
+    public static void main(String[] args) {
+        arr = new int[]{0,33,54,45};
+        mergeSort(0,3);
+        for(int i = 0;i <= 3;++i){
+            System.out.println(arr[i]);
+        }
+    }
+    public static void mergeSort(int l,int r){
+        if(l == r) return;
+        int m = (r + l) >> 1;
+        mergeSort(l,m);
+        mergeSort(m + 1,r);//递归左右两边
+        merge(l,m,r);
+    }
+    public static void merge(int l,int m,int r){//因为l~m,和m + 1~r都是有序的,所以引入三个参数
+        int i = l,a = l,b = m + 1;
+        while(a <= m && b <= r){//表示左侧指针和右侧指针都没有出界,那么就一直往help中添加元素,直到一侧耗尽
+            help[i++] = arr[a] <= arr[b] ? arr[a++] : arr[b++];
+        }
+        while(a <= m){
+            help[i++] = arr[a++];
+        }
+        while(b <= r){
+            help[i++] = arr[b++];
+        }
+        //处理可能剩下的左边的元素或者右边的元素
+        for(i = l;i <= r;++i){ //将help的l到r拷贝到arr中
+            arr[i] = help[i];
+        }
+    }
+}

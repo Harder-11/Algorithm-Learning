@@ -1,0 +1,94 @@
+import java.util.*;
+
+public class learn {
+    //N皇后的实现 N皇后有N * N的格子,放N个皇后,互相不能攻击,问情况的总数
+    //1.数组实现N皇后
+    /*
+    如果abs(当前行-之前行) == abs(当前列-之前列),其实就是斜率是正负1的情况,此时主次对角线都成立
+     */
+    public static int totalNQueens(int n){
+        if(n < 1) return 0;
+        return f1(0,new int[n],n);
+    }
+    //i:当前来到的行
+    //path:0...i - 1行的皇后都摆在了哪些列
+    public static int f1(int i,int[] path,int n){
+        //从0 ~ n - 1已经检验完了,当i = n时就直接返回1,说明有一种情况
+        if(i == n){
+            return 1;
+        }
+        int res = 0;
+        for(int j = 0;j < n;++j){
+            if(check(path,i,j)){
+                path[i] = j;
+                res += f1(i + 1,path,n);
+            }
+        }
+        return res;
+    }
+    //当前在第i行,第j列位置放了一个皇后
+    //0..i-1行皇后的状况,path[0...n-1]
+    //返回会不会冲突
+    public static boolean check(int[] path,int i,int j){
+        for(int k = 0;k < i;++k){
+            //之前行是k,之前列是path[k]
+            if(j == path[k] || Math.abs(i - k) == Math.abs(path[k] - j)){
+                return false;
+            }
+        }
+        return true;
+    }
+    //2.用位运算解决N皇后问题(巧妙)
+    /*
+    用一个整数col(int)可以代表32位的二进制位,用于记录每一行皇后所在的列(下标从0开始),如果该列有皇后,那么
+    这位的二进制数就换成1,否则都是0
+    对于右上到左下,用整型数left存储,比如,第0行第二列有一个皇后那么最后五位就是00100,检测时就>>1个单位
+    当left有多个1时,那就从最上层依次>>1,比如第一行第二列,第二行第四列有皇后,那么left先是等于000100,>>1
+    之后等于000010,到第二行,把第四列的皇后表示出来,left就是010010,此时一起右移,就是001001,所以第三行的
+    第0和第3列都不能放皇后
+    同理,左上到右下的,用right存储,每次左移
+
+    综上所述,每个格子对应的二进制位就是col|left|right之后如果是0,就可以放皇后,否则不行
+     */
+    public static int totalNQueens2(int n){
+        if(n < 1) return 0;
+        //当n = 5,limit = 0...011111;,limit用于规定范围用
+        //说明limit后面有几个1,就是几皇后问题
+        int limit = (1 << n) - 1;
+        return f2(limit,0,0,0);
+    }
+    //limit:当前是几皇后问题
+    //之前皇后的列的影响:col
+    //之前皇后的左下对角线的影响:left
+    //之前皇后右下对角线的影响:right
+    public static int f2(int limit,int col,int left,int right){
+        //col指的是在哪些列放了皇后,如果所有列都已经放了皇后,那么二进制后五位都是1,所以此时col = limit
+        //返回此时有的一种情况
+        if(col == limit){
+            return 1;
+        }
+        //不使用值,只使用状态
+        //总限制
+        int ban = col | left | right;
+        //~ban:1是可以放皇后,0不可以放
+        //这里 & limit不可以省,这里是为了处理边界情况,比如说是5皇后,left和right可能超范围(超出0~4),此时& limit
+        //就可以把范围限定到0~4以内
+        int candidate = limit & (~ban);
+        //放置皇后的尝试
+        int place = 0;
+        //总方法数
+        int ans = 0;
+        //依次尝试每一位放皇后,每次都将尝试过的位置置为0,所以当candidate等于0时,说明所有位置已经尝试过了
+        while(candidate != 0){
+            //取最右侧的1
+            //比如是001110,此时place就是000010
+            place = candidate & (~candidate);
+            //把该位置置为0
+            candidate ^= place;
+            //对于f2中的col变量,col | place就说明了填上这一列的皇后,以后这里就不能放皇后了
+            //对于left变量,就是填上这一行皇后的位置,然后>>1,就是下一行不能放皇后的位置,同理,right
+            ans += f2(limit,col | place,(left | place) >> 1,(right | place) << 1);
+        }
+        return ans;
+    }
+}

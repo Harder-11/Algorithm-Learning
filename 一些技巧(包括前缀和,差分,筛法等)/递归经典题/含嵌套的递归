@@ -1,0 +1,185 @@
+import java.util.*;
+/*
+嵌套类问题的递归思路解决
+ */
+public class learn {
+    //1.含有嵌套的表达式求值
+    /*
+    有括号:
+    将字符串的每一位加上下标,从零开始,设置一个全局变量where,函数f,变量cur
+    将cur从左往右检测字符串,比如字符串36-(4*(3+2*(1-6))+5)+17,用cur检测,在0位置,cur = 3,1位置,cur = 36
+    然后遇到减号,就把cur的数字push入数字栈,将-push入字符栈,然后将cur变成0,在3位置遇到左括号,就直接调用f(4),
+    因为这里又是下一个嵌套的开始,以此类推
+    当遇到右括号,就将最后一次递归返回
+    同时,如果栈顶是乘除号,就计算之后再push会数字栈中
+     */
+    public static int where;
+    public static int calculate(String str){
+        where = 0;
+        return dfs(str.toCharArray(),0);
+    }
+    /*
+    s[i...]开始计算,遇到字符串终止,或者遇到')'停止
+    返回自己负责的这一段计算的结果
+    更新全局变量where,为了让上游函数知道从哪里继续
+     */
+    public static int dfs(char[] s,int i){
+        int cur = 0;
+        ArrayList<Integer> numbers = new ArrayList<>();
+        ArrayList<Character> ops = new ArrayList<>();
+        while(i < s.length && s[i] != ')'){
+            if(s[i] >= '0' && s[i] <= '9'){
+                cur = cur * 10 + s[i++] - '0';
+            } else if(s[i] != '('){
+                push(numbers,ops,cur,s[i++]);
+                cur = 0;
+            } else {
+                //遇到了左括号
+                cur = dfs(s,i + 1);
+                i = where + 1;
+            }
+        }
+        //最后一个数字可能没有加进来,一个单独的处理,默认是加号(其实什么符号都无所谓),因为数字比符号要多一个
+        //比如最简单的3 + 4,此时cur = 4,然后i = s.length(),就跳出循环了,此时还没加,所以将number和ops加入栈
+        push(numbers,ops,cur,'+');
+        where = i;
+        //由于*/号已经优先进行运算了,所以此时ops中只有加减号
+        return compute(numbers,ops);
+    }
+    public static void push(ArrayList<Integer> numbers,ArrayList<Character> ops,int cur,char op){
+        int n = numbers.size();
+        if(n == 0 || ops.get(n - 1) == '+' || ops.get(n - 1) == '-'){
+            numbers.add(cur);
+            ops.add(op);
+        } else {
+            int topNumber = numbers.get(n - 1);
+            char topOp = ops.get(n - 1);
+            if(topOp == '*'){
+                numbers.set(n - 1,topNumber * cur);
+            } else {
+                numbers.set(n - 1,topNumber / cur);
+            }
+            ops.set(n - 1,op);
+        }
+    }
+    public static int compute(ArrayList<Integer> numbers,ArrayList<Character> ops){
+        int n = numbers.size();
+        int ans = numbers.get(0);
+        for(int i = 1;i < n;++i){
+            ans += ops.get(i - 1) == '+' ? numbers.get(i) : -numbers.get(i);
+        }
+        return ans;
+    }
+    //2.字符串解码:比如3[a]2[bc]解码后就是aaabcbc
+    //还可能多重嵌套:3[a2[c]]:accaccacc
+    /*
+    遇到数字了必定就有嵌套了,与上一题很相似
+    准备一个where表示下标,用f函数递归,用ArrayList的path填字母,直到遇到数字
+     */
+    public static int where2;
+    public static String decodeString(String str){
+        where2 = 0;
+        return f(str.toCharArray(),0);
+    }
+    public static String f(char[] s,int i){
+        StringBuilder path = new StringBuilder();
+        int cnt = 0;
+        while(i < s.length && s[i] != ']'){
+            if((s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z')) {
+                path.append(s[i++]);
+            } else if(s[i] >= '0' && s[i] <= '9'){
+                cnt = cnt * 10 + s[i++] - '0';
+            } else {
+                //遇到了左括号,就进行递归,从i + 1开始
+                path.append(get(cnt,f(s,i + 1)));
+                //这里递归之后where会更新到下一个右括号处,所以这里i = where + 1,就是本层嵌套
+                i = where2 + 1;
+                cnt = 0;
+            }
+        }
+        where2 = i;//更新全局变量到此时的i位置,每次递归后,where都会更新到i就是右括号处
+        return path.toString();
+    }
+    //实现cnt个重复str的打印
+    public static String get(int cnt,String str){
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0;i < cnt;++i){
+            sb.append(str);
+        }
+        return sb.toString();
+    }
+    //3.含有嵌套的分子式求原子数
+    /*
+    输出由字典序排列
+    比如:H2O:输出H2O;Mg(OH)2:输出:H2MgO2
+    多重嵌套比如:K4(ON(SO3)2)2:K4N2O14S4
+    思路:
+    由于输出是字典序,那么就用有序表 + 比较器(TreeMap)存储后,最后排序
+    对于分子式,可能包括字母大小写,数字,左右括号,对于大写字母和左括号,一旦出现,就说明了有新的元素(要结算个数)
+     */
+    public static int where3;
+    public static String countOfAtoms(String str){
+        where3 = 0;
+        TreeMap<String,Integer> map = f2(str.toCharArray(),0);
+        StringBuilder ans = new StringBuilder();
+        for(String key : map.keySet()){
+            ans.append(key);
+            int cnt = map.get(key);
+            if(cnt > 1){
+                ans.append(cnt);
+            }
+        }
+        return ans.toString();
+    }
+    public static TreeMap<String,Integer> f2(char[] s,int i){
+        //ans是总表
+        TreeMap<String,Integer> ans = new TreeMap<>();
+        StringBuilder sb = new StringBuilder();
+        TreeMap<String,Integer> pre = null;
+        int cnt = 0;
+        while(i < s.length && s[i] != ')'){
+            if(s[i] >= 'A' && s[i] <= 'Z' || s[i] == '('){
+                fill(ans,sb,cnt,pre);
+                //将老表填入新表后,将sb,pre全部清空
+                sb.setLength(0);
+                cnt = 0;
+                pre = null;
+                if(s[i] >= 'A' && s[i] <= 'Z'){
+                    sb.append(s[i++]);
+                } else {
+                    //遇到左括号,就递归
+                    pre = f2(s,i + 1);
+                    i = where3 + 1;
+                }
+            } else if(s[i] >= 'a' && s[i] <= 'z'){
+                sb.append(s[i++]);
+            } else {
+                cnt = cnt * 10 + s[i++] - '0';
+            }
+        }
+        //特殊处理最后一个是数字的情况
+        fill(ans,sb,cnt,pre);
+        where3 = i;
+        return ans;
+    }
+    //遇到大写字母,就把前一个字母的下标cnt和StringBuilder传入fill函数内
+    //如果StringBuilder的length是0,说明了先前是处理的括号内的,此时cnt是括号外的下标,而通过递归,套内的元素已经传入了pre中,所以此时
+    //将pre中所有的元素都*cnt然后加到ans中
+    //如果length不是0,说明就是处理的普通下标,并且此时由化学知识知道sb中length肯定为一个化学元素(不包括括号),直接把key对于的value + cnt即可
+    public static void fill(TreeMap<String,Integer> ans,StringBuilder name,int cnt,TreeMap<String,Integer> pre){
+        //pre树是通过递归添加元素的,所以填的是嵌套套内的元素
+        if(name.length() > 0 || pre != null){
+            //cnt是0说明下标是1省略了,否则就是cnt(cnt不可能是1)
+            cnt = cnt == 0 ? 1 : cnt;
+
+            if(name.length() > 0){
+                String key = name.toString();
+                ans.put(key,ans.getOrDefault(key,0) + cnt);
+            } else {
+                for(String key : pre.keySet()){
+                    ans.put(key,ans.getOrDefault(key,0) + pre.get(key) * cnt);
+                }
+            }
+        }
+    }
+}

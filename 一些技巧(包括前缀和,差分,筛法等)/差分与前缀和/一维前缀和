@@ -1,0 +1,168 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+
+public class learn {
+    //构建前缀信息技巧,解决子数组问题
+    //1.构建前缀和数组,快速解决子数组范围求和问题
+    //比如给一个数组:[3,2,-5,6,2,1],求任意范围的和
+    //直接创立一个前缀和数组s,然后对于[L.R]范围内的和就是s[R + 1] - s[L]
+    class NumArray {
+        public int[] sum;
+
+        public NumArray(int[] nums) {
+            sum = new int[nums.length + 1];
+            for(int i = 1;i <= nums.length;i++){
+                sum[i] = sum[i - 1] + nums[i - 1];
+            }
+        }
+        public int sumRange(int left,int right){
+            return sum[right + 1] - sum[left];
+        }
+
+    }
+    //2.累加和为k的最长子数组
+    /*
+    思路:用map记录前缀和数组的每一位,如果有前缀和相同的位,那就取下标更小的那个
+    然后从后往前一直遍历前缀和数组,此时数为sum,要累加和为k,那么就找map中是否有sum - k,
+    对于一个数组,[....i,i + 1,....k...];如果在k位置发现map存在sum - aim值,此时aim的value值是i,说明了
+    0 ~ i的和是sum - aim,此时sum又等于0 ~ k,所以aim就是i + 1 ~ k,所以此时长度就是k - i
+    注意:必须在map中添加(0,-1)代表在没有添加任何元素时,前缀和数组是0,否则会导致有些案例有误
+     */
+    public static int compute(int[] arr,int aim){
+        Map<Integer,Integer> map = new HashMap<>();
+        map.clear();
+        map.put(0,-1);
+        int ans = 0;
+        for(int i = 0,sum = 0;i < arr.length;++i){
+            sum += arr[i];
+            if(map.containsKey(sum - aim)){
+                ans = Math.max(ans,i - map.get(sum - aim));
+            }
+            //前缀和只存最早出现的位置
+            if(!map.containsKey(sum)){
+                map.put(sum,i);
+            }
+        }
+        return ans;
+    }
+    //3.返回无序数组中累加和为给定值的子数组数量
+    public static int subarraySum(int[] nums,int aim){
+        Map<Integer,Integer> map = new HashMap<>();
+        //0这个前缀和在没有数字时已经有一次了
+        map.put(0,1);
+        int ans = 0;
+        for(int i = 0,sum = 0;i < nums.length;i++){
+            //sum是前缀和
+            sum += nums[i];
+            //有就加一,否则加0.
+            ans += map.getOrDefault(sum - aim,0);
+            map.put(sum,map.getOrDefault(sum,0) + 1);
+        }
+        return ans;
+    }
+    //4.求无序数组中,正数和负数个数相同的最长子数组长度
+    //就把正数当做1,负数当做-1,0就是0,算前缀和,有0的地方就是正负相等
+
+    //5.表现良好的最长时间段问题
+    /*
+    给一份工作时间表,上面记录了某一位员工每天的工作小时数,我们认为当员工一天工作时间大于8小时,这一天就是
+    劳累的一天,表现良好的时间段是指,劳累的天数严格大于不劳累的天数
+    请你返回表现良好时间段的最大长度
+
+    思路:本质就是找最长的子数组,满足数组中大于8的元素个数大于小于等于8的元素个数
+    大于8的转化成1,小于等于8的为-1,其实就是求子数组累加和大于等于1的数组最长是多长
+    然后求累加和,如果总的累加和是-3,那么就只需要找-4最早出现的位置,因为这个数组全是1和-1,只能一个单位增加
+    或者减少
+     */
+    public static int longestWPI(int[] hours){
+        HashMap<Integer,Integer> map = new HashMap<>();
+        map.put(0,-1);
+        int ans = 0;
+        for(int i = 0,sum = 0;i < hours.length;i++){
+            sum += hours[i] > 8 ? 1 : -1;
+            if(sum > 0){
+                ans = i + 1;
+            } else {
+                if(map.containsKey(sum - 1)){
+                    ans = Math.max(ans,i - map.get(sum - 1));
+                }
+            }
+            if(!map.containsKey(sum)){
+                map.put(sum,i);
+            }
+        }
+        return ans;
+    }
+    //6.移除最短的子数组长度,使得剩余元素的累加和能被p整除,如果要删掉整个数组,返回-1
+    //和上面的题一样,需要转化一下,每次是向map中加入累加和 % p的值
+    //在i位置的cur(前缀和 % p),如果cur >= mod,那么就找cur - mod,否则找cur + p - mod
+    public static int minSubarray(int[] nums,int p){
+        int mod = 0;
+        //用同余原理算出总和mod p的余数
+        for(int num : nums){
+            mod = (mod + num) % p;
+        }
+        if(mod == 0){
+            return 0;
+        }
+        //key:前缀和 % p的余数
+        //value:最晚出现的位置
+        Map<Integer,Integer> map = new HashMap<>();
+        map.put(0,-1);
+        int ans = Integer.MAX_VALUE;
+        for(int i = 0,cur = 0,find;i < nums.length;i++){
+            cur = (cur + nums[i]) % p;
+            find = cur >= mod ? cur - mod : cur + p - mod;
+            if(map.containsKey(find)){
+                ans = Math.min(ans,i - map.get(find));
+            }
+            map.put(cur,i);
+        }
+        return ans == nums.length ? -1 : ans;
+    }
+    //7.每个元音包含偶数次的最长字符子串
+    //给一个字符串,元音字母有aeiou,达标子串是指aeiou出现次数都是偶数,那么子串就是达标子串
+    //定义状态,对于aeiou五个字母,如果出现次数都是偶数次的话,那么都是00000,如果是奇数次,那么状态就是1
+    //那么就可以用一个整数来表示这五个字母的状态
+    //如果在i位置上的状态是10010的话,那么就要查找是否有10010这个状态在map中,因为奇数 - 奇数 = 偶数;
+    //偶数 - 偶数 = 偶数
+    public static int fingTheLongestSubstring(String s){
+        int n = s.length();
+        //因为要存aeiou五个数,最多就是11111状态,此时是31,所以开32位
+        //由于最多就是31,所以只需要32位长的数组就可以,不用开map
+        int[] map = new int[32];
+        //用-2表示之前没出现过状态,比如map[01100] = -2,表示01100这个状态之前没出现过
+        Arrays.fill(map,-2);
+        //map[0]表示00000,所以此时在-1位置,表示在一个数都没有时就有该状态
+        map[0] = -1;
+        int ans = 0;
+        for(int i = 0,status = 0,m;i < n;++i){
+            //status表示0~i字符串上aeiou的奇偶性
+            //s[i] = 当前字符
+            //情况1 : 当前字符不是元音:直接忽略
+            //情况2 : 当前字符是元音,那么就修改相应的状态
+            m = move(s.charAt(i));
+            if(m != -1){
+                status ^= 1 << m;//^1就是改变状态
+            }
+            if(map[status] != -2){
+                ans = Math.max(ans,i - map[status]);
+            } else {
+                map[status] = i;
+            }
+        }
+        return ans;
+    }
+    public static int move(char cha){
+        switch (cha){
+            case 'a' : return 0;
+            case 'e' : return 1;
+            case 'i' : return 2;
+            case 'o' : return 3;
+            case 'u' : return 4;
+            default: return -1;
+        }
+    }
+}

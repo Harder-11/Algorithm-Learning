@@ -1,0 +1,112 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //质数判断,质因子分解和质数筛
+    /*
+    判断较小的数字是否为质数
+    判断较大的数字是否为质数,了解Miller-Rabin算法
+    找出1~n范围内所有的质数,埃氏筛,欧拉筛
+     */
+
+    /*
+    题目1:判断较小的数字是不是质数
+    一个数字从2到根号n,看这些数字能不能被n整除即可,时间复杂度是O(√n)
+     */
+    public static boolean isPrime(long n){
+        if(n <= 1){
+            return false;
+        }
+        for(long i = 2;i * i <= n;i++){
+            if(n % i == 0){
+                return false;
+            }
+        }
+        return true;
+    }
+    /*
+    题目2:判断较大的数字是否为质数(Miller-Rabin测试)
+    判断n是否为质数,Miller-Rabin测试的过程:
+    1.每次选择1~n-1范围上的随机数字,或者指定一个比n小的质数,进行测试
+    2.测试过程的数学原理不用纠结,因为不好理解而且没有什么其他用
+    3.原理:费马小定理,Carmichael数,二次探测定理,乘法同余,快速幂
+    4.经过s次Miller-Rabin测试,s越大出错的概率越低,但是速度也会越慢,一般测试20次以内即可
+    时间复杂度:O(s*log(n)^3)
+
+    注意:这里在用快读时用in.nval在n很接近long类型极限时会有精度损耗,所以读取时是以字符串形式读取
+    然后转化为long类型
+     */
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        int t = Integer.valueOf(br.readLine());
+        for(int i = 0;i < t;i++){
+            BigInteger n = new BigInteger(br.readLine());
+            //isProbablePrime方法包含MillerRabin和LucasLehmer测试
+            //给定测试次数即可
+            System.out.println(n.isProbablePrime(20) ? "Yes" : "No");
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目3:给定整数n,返回1~n范围上的所有的质数
+    埃氏筛,O(n*log(logn))
+    欧拉筛,时间复杂度O(n)
+    给定整数n,返回小于n的质数的数量
+
+    埃氏筛:比如n==100,此时先默认从0~100的数全是合数,然后从2开始遍历,此时2是质数,那么就将2*2
+    2*3....2*n全部置为合数,然后来到3位置,3就一定是质数(没有被标记),然后3*3开始全部置为质数,
+    然后往后遇到被标记的都是合数,没被标记的都是质数
+    埃氏筛不是最优因为有些数字被筛了多次,比如12,2*6被筛了一次,3*4也被筛了一次
+     */
+    public static int ehrlich(int n){
+        boolean[] visit = new boolean[n + 1];
+        for(int i = 2;i * i <= n;i++){
+            if(!visit[i]){
+                for(int j = i * i;j <= n;j += i){
+                    visit[j] = true;
+                }
+            }
+        }
+        int cnt = 0;
+        for(int i = 2;i <= n;i++){
+            if(!visit[i]){
+                cnt++;
+            }
+        }
+        return cnt;
+    }
+    /*
+    欧拉筛:每个合数只被自己的最小质因子筛掉,避免重复筛
+     */
+    public static int euler(int n){
+        boolean[] visit = new boolean[n + 1];
+        int[] prime = new int[n / 2 + 1];
+        int cnt = 0;
+        for(int i = 2;i <= n;i++){
+            if(!visit[i]){
+                prime[cnt++] = i;
+            }
+            for(int j = 0;j < cnt;j++){
+                if(i * prime[j] > n){
+                    break;
+                }
+                visit[i * prime[j]] = true;
+                //如果不break会导致后面标记的数不是按照最小质因数来的了
+                if(i % prime[j] == 0){
+                    break;
+                }
+            }
+        }
+        return cnt;
+    }
+
+}

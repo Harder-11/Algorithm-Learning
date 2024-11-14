@@ -1,0 +1,138 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+public class learn {
+    //重要技巧,根据数据量猜测算法:
+    /*
+    对于不同数据量的算法:
+    n <= 11: n!(全排列)
+    n <= 25: 2^n
+    n <= 5000: n^2
+    n <= 10^5: n√n(一般是莫队算法的时间复杂度)
+    n <= 10^6: nlogn
+    n <= 10^7: n
+    n <= 10^9: logn
+     */
+    /*
+    例题1:最优的技能释放顺序,现在有一个打怪游戏,你有n个技能
+    每一个技能有一个伤害,如果怪物小于等于一定的血量,则该技能能造成双倍伤害
+    每个技能只能释放一次,已知怪物有m点血量,现在问你至少用几个技能能够消灭怪物(血量小于等于0),如果打不死就输出-1
+    技能的数目是n,怪物的血量是m
+    i号技能的伤害是x[i],i号技能触发双倍伤害的血量最小值是y[i]
+    1 <= n <= 10
+    1 <= m,x[i],y[i] <= 10^6
+    根据n的数据大小,能看出这道题可以使用全排列A(10)(10) = 10!,把所有的方法都写出来然后比较使用的技能个数
+     */
+    public static int MAXN = 11;
+    public static int[] kill = new int[MAXN];
+    public static int[] blood = new int[MAXN];
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            in.nextToken();
+            int n = (int) in.nval;
+            in.nextToken();
+            int m = (int) in.nval;
+            for(int j = 0;j < n;++j){
+                in.nextToken();
+                kill[j] = (int) in.nval;
+                in.nextToken();
+                blood[j] = (int) in.nval;
+            }
+            int ans = f(n,0,m);
+            out.println(ans == Integer.MAX_VALUE ? -1 : ans);
+        }
+    }
+    //n:技能的个数
+    //i:当前来到的第几个技能
+    //r:怪兽的剩余血量
+    public static int f(int n,int i,int r){
+        if(r <= 0) return i;
+        //说明怪兽打不死,返回整数无穷大代表决策无效
+        if(i == n) return Integer.MAX_VALUE;
+        int ans = Integer.MAX_VALUE;
+        for(int j = i;j < n;++j){
+            //参考前面全排列,r > blood[i],说明血量还很多,没到双倍线,这里swap要把kill和blood都换了
+            swap(i,j);
+            ans = Math.min(ans,f(n,i + 1,r - (r > blood[i] ? kill[i] : 2 * kill[i])));
+            swap(i,j);
+        }
+        return ans;
+    }
+    public static void swap(int x,int y){
+        int t = kill[x];
+        kill[x] = kill[y];
+        kill[y] = t;
+        t = blood[x];
+        blood[x] = blood[y];
+        blood[y] = t;
+    }
+    /*超级回文数的数目
+    如果一个正整数自身是回文数,而且它也是一个回文数的平方,那么我们称这个回文数是超级回文数,现在给定
+    两个正整数L和R,返回包含在[L,R]中超级回文数的数目
+    1 <= len(L),len(R) <= 18
+    由于数据类型太大,肯定不能枚举[L,R]中的x,那么反过来思考,枚举根号x,范围就会小很多,算x^2,看是否在[L,R]
+    上,此时枚举范围就在1~1e9,然后继续缩小范围,由于是回文数,那么可以只看这个数的前一半,比如如果x = 12321
+    那么看前面就是123,分成奇数和偶数两种情况,比如123对应奇位数就是12321,偶位数就是123321,把这个123当做种子
+    种子最大就是10^5
+     */
+    public static int suprepalindromesInRange(String left,String right){
+        long l = Long.valueOf(left);
+        long r = Long.valueOf(right);
+        //根号x,limit不可能超过根号下r
+        //种子seed:枚举量很小,最多只有10^5
+        //seed用来生成奇数长度的回文和偶数长度的回文
+        long limit = (long) Math.sqrt(r);
+        long seed = 1;
+        //num就是根号x,num^2就是落在[L,R]内
+        long num = 0;
+        int ans = 0;
+        do {
+            //生成偶数长度的回文数字,123就生成123321
+           num = evenEnlarge(seed);
+           //check方法同时验证是否回文和是否num^2在L,R上
+           if(check(num * num,l,r)){
+               ans++;
+           }
+           //生成奇数长度的回文数字,123变成12321
+           num = oddEnlarge(seed);
+           if(check(num * num,l,r)){
+               ans++;
+           }
+           seed++;
+        } while(num < limit);
+        return ans;
+    }
+    public static long evenEnlarge(long seed){
+        long ans = seed;
+        while(seed != 0){
+            ans = ans * 10 + seed % 10;
+            seed /= 10;
+        }
+        return ans;
+    }
+    public static long oddEnlarge(long seed){
+        long ans = seed / 10;
+        while(seed != 0){
+            ans = ans * 10 + seed % 10;
+            seed /= 10;
+        }
+        return ans;
+    }
+    public static boolean check(long ans,long l,long r){
+        return ans >= l && ans <= r && isPalindrome(ans);
+    }
+    public static boolean isPalindrome(long num){
+        String s = String.valueOf(num);
+        int l = 0,r = s.length() - 1;
+        while(l <= r){
+            if(s.charAt(l++) != s.charAt(r--)){
+                return false;
+            }
+        }
+        return true;
+    }
+}

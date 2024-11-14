@@ -1,0 +1,353 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+
+public class learn {
+    /*
+    二分答案法:
+    思路:是估计最终答案可能的范围,分析问题的答案和给定条件之间的单调性,大部分时候只需要用到自然智慧
+    !!!!建立一个f函数,当答案固定的情况下,判断给的的条件是否达标
+    在最终答案可能的范围上不断二分搜索,每次用f函数判断,直到二分结束,找到最适合的答案
+     */
+    /*
+    例题1:爱吃香蕉的珂珂
+    有n堆香蕉,第i堆中有piles[i]根香蕉,警卫已经离开了,将在h小时后回来,珂珂可以决定她吃香蕉的速度k,
+    每个小时,她将会选择一堆香蕉,从中吃掉k根,如果这堆香蕉少于k根,她将吃掉这堆的所有香蕉,然后这一小时
+    内不会吃更多的香蕉,珂珂喜欢慢慢吃,但仍然想在警卫回来前吃掉所有香蕉
+    返回她可以在h小时内吃掉所有香蕉的最小速度k(k为整数)
+
+    首先找到k的范围,k一定会小于等于piles中最大的数,所以可先定位k为[1,8],对于这个范围进行二分查找,
+    mid = (l + r) >> 1
+     */
+    public int minEatingSpeed(int[] piles,int h){
+        int l = 1;
+        int r = 0;
+        for(int pile : piles){
+            r = Math.max(r,pile);
+        }
+        int ans = 0;
+        int m = 0;
+        while(l <= r){
+            //不写成l + r形式是为了防止溢出
+            m = l + ((r - l) >> 1);
+            if(f(piles,m) <= h){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    //此时吃香蕉的速度就定位speed,返回吃完香蕉耗费的小时数
+    public static long f(int[] piles,int speed){
+        long ans = 0;
+        for(int pile : piles){
+            //向上取整
+            ans += (pile - 1) / speed + 1;
+        }
+        return ans;
+    }
+    /*
+    2.分割数组的最大值(画匠问题)
+    可以用动态规划+四边形优化或者二分答案
+    给定一个非负整数数组nums和一个整数m,你需要将这个数组分成m个非空的连续子数组
+    设计一个算法使得这m个子数组各自和的最大值最小
+
+    思路:当数组中所有数都是0时,那么答案就是0,并且最大值不可能超过所有数的和,假设累加和是1000,那么就在
+    [0,1000]内二分,调用f(arr,500),找到至少要分割成多少个子数组才能将所有的子数组和降到<=500,与m比较
+     */
+    public static int splitArray(int[] nums,int k){
+        long sum = 0;
+        for(int i = 0;i < nums.length;i++) {
+            sum += nums[i];
+        }
+        long ans = 0;
+        for(long l = 0,r = sum,m,cur;l <= r;){
+            m = l + ((r - l) >> 1);
+            //必须让数组的每一部分的累加和都小于等于m,划分成几个部分才够
+            cur = f(nums,m);
+            if(cur <= k){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return (int)ans;
+    }
+    //计算划分区域的和都小于m的最少方案,只需要从左往右遍历用sum记录累加和,一旦超过m,就在这里划开
+    //如果发现了有大于m的数,返回Integer.MAX_VALUE,表示这种情况不行
+    public static int f(int[] nums,long m){
+        int ans = 1;
+        int sum = 0;
+        for(int i = 0;i < nums.length;i++){
+            if(nums[i] > m){
+                return Integer.MAX_VALUE;
+            }
+            if(sum + nums[i] > m){
+                ans++;
+                sum = nums[i];
+            } else {
+                sum += nums[i];
+            }
+        }
+        return ans;
+    }
+    /*
+    3.机器人跳跃问题
+    机器人正在玩一个古老的基于DOS的游戏,游戏中有N + 1座建筑,从0~N编号,从左到右排列
+    编号为0的建筑高度为0个单位,编号为i的建筑的高度为H(i)个单位
+    起初,机器人在编号为0的建筑处,每一步,它跳到下一个(右边)建筑,假设机器人在第k个建筑,而且
+    它现在的能量为E,下一步它将跳到第k + 1个建筑,如果H(k + 1) > E,它将失去H(k + 1) - E的能量值
+    否则它将获得E - H(k + 1)的能量值,游戏目标是到达第N个建筑,在这过程中,能量值不能是负数
+    现在的问题是机器人至少以多少的能量开始游戏,才可以保证成功完成游戏?
+
+    很明显,只要现在的E比当前高度大,那么就会增加E,所以二分的r就是数组中的最大数值
+     */
+    public static int n;
+    public static int[] arr = new int[n + 1];
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            int l = 0;
+            int r = 0;
+            for(int i = 1;i <= n;i++){
+                in.nextToken();
+                arr[i] = (int) in.nval;
+                r = Math.max(r,arr[i]);
+            }
+            out.println(compute(l,r,r));
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    public static int compute(int l,int r,int max){
+        int m,ans = -1;
+        while(l <= r){
+            m = l + ((r - l) >> 1);
+            if(f(m,max)){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    //这里需要注意,这里f函数很可能数字会超long类型的存储,比如E0 = 10,数组中每个元素都是1,那么E之后的
+    //值就是19,37,73,145,是指数级别增长的
+    //所以只要当当前值大于等于max,那么就可以直接返回true了
+    public static boolean f(int energy,int max){
+        for(int i = 1;i <= n;i++){
+            if(energy <= arr[i]){
+                energy -= arr[i] - energy;
+            } else {
+                energy += energy - arr[i];
+            }
+            if(energy >= max){
+                return true;
+            }
+            if(energy < 0){
+                return false;
+            }
+        }
+        return true;
+    }
+    /*
+    4.找出第k小的数对距离
+    数对 (a,b) 由整数 a 和 b 组成，其数对距离定义为 a 和 b 的绝对差值。
+    给你一个整数数组 nums 和一个整数 k ，数对由 nums[i] 和 nums[j] 组成且满足 0 <= i < j < nums.length 。
+    返回 所有数对距离中 第 k 小的数对距离。
+
+    思路:第k小的范围的距离[0,max-min],用f函数f(nums,m)表示当差值为m时,数对有几个?
+    如果小于k对,那么差值定小了(有些差值太大的没算,差值小的永远都算进来了的),大于k时,那么差值定大了
+     */
+    public static int smallestDistancePair(int[] nums,int k){
+        int n = nums.length;
+        //这里sort方便后面配对时利用滑动窗口计算配对数
+        Arrays.sort(nums);
+        int ans = 0;
+        for(int l = 0,r = nums[n - 1] - nums[0],m,cnt;l <= r;){
+            m = l + ((r - l) >> 1);
+            cnt = f2(nums,m);
+            if(cnt >= k){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    //arr中,任意两数差值 <= limit
+    //这样的数字配对,有几对?
+    //用滑动窗口检查差值配对
+    public static int f2(int[] arr,int limit){
+        int ans = 0;
+        for(int l = 0,r = 0;l < arr.length;l++){
+            while(r + 1 < arr.length && arr[r + 1] <= arr[l] + limit){
+                r++;
+            }
+            ans += r - l;
+        }
+        return ans;
+    }
+    /*
+    5.同时运行N台电脑的最长时间
+    有n台电脑。给你整数n和一个下标从0开始的整数数组 batteries其中第i个电池可以让一台电脑运行batteries[i]分钟。
+    你想使用这些电池让全部n台电脑同时运行。
+    一开始你可以给每台电脑连接至多一个电池然后在任意整数时刻你都可以将一台电脑与它的电池断开连接并连接另一个电池
+    你可以进行这个操作任意次 。
+    新连接的电池可以是一个全新的电池,也可以是别的电脑用过的电池.断开连接和连接新的电池不会花费任何时间。
+    注意，你不能给电池充电。
+    请你返回你可以让 n 台电脑同时运行的 最长 分钟数。
+
+    思路:假设要求所有电脑能同时运行10分钟,但是所有电池能让电脑运行的时间都是<=10,此时我们称电池为碎片电池,
+    那么如果此时sum >= 电脑数量 * 分钟数,那么就满足条件(因为碎片电池的个数一定>=电脑的数目,此时有备用电池,
+    不存在某个电脑没有电池用的情况)
+    n台电脑共同运行的分钟数的范围[0,sum],因为只有一台电脑的情况,就可以运行sum的时间
+     */
+    public static long maxRunTime(int num,int[] arr){
+        int max = 0;
+        long sum = 0;
+        for(int x : arr){
+            sum += x;
+            max = Math.max(max,x);
+        }
+        //贪心算法,所有电池的最大电量是max,如果此时有sum > (long)max * num,那么本质就是
+        //sum / num > max,说明每一台手机假如平均分电量,比max还多,说明了此时满足了碎片化电池的条件
+        if(sum > (long) max * num){
+            return sum / num;
+        }
+        long ans = 0;
+        for(long l = 0,r = sum,m;l <= r;){
+            m = l + ((r - l) >> 1);
+            //满足条件就更新ans,否则不能更新
+            if(f1(arr,num,m)){
+                ans = m;
+                l = m + 1;
+            } else {
+                r = m - 1;
+            }
+        }
+        return ans;
+    }
+    //让num台电脑共同运行time分钟,看能不能做到
+    public static boolean f1(int[] arr,int num,long time){
+        //sum是碎片电池的总和
+        long sum = 0;
+        for(int x : arr){
+            //说明此时x能力的电池不是碎片电池,那么就有能力单独给一台电脑冲time时间的电,所以此时num--
+            if(x > time){
+                num--;
+            } else {
+                sum += x;
+            }
+            if(sum >= (long) num * time){
+                return true;
+            }
+        }
+        return false;
+    }
+    /*
+    6.计算等位时间
+    给定一个数组arr长度为n,表示n个服务员,每服务一个人的时间
+    给定一个正数m,表示有m个人等位,如果你是刚来的人,每个客人遵循有空位就上原则,那么你要等多久?
+    假设m << n,比如n <= 1e3,m <= 1e9,该怎么做才是最优解?
+
+    本题最重要的一点:等待是时间其实是个定值,不会因为选择服务员的不同而导致等待时间不同
+    假设有三个服务员arr是[1,3,5];
+    思路:借助小根堆,最开始向其中添加{0,1}{0,3}{0,5},此时0就是待定时间,小根堆进行待定时间排序,服务
+    第一个之后弹出{0,1},服务完后花费1时间,变成{1,1},又加入堆中,然后弹出{0,3},花费3时间,将{3,3}加入堆
+    中,同理,弹出{0,5}加入{5,5},然后弹出{1,1},返回{2,1},然后又返回{2,1},返回{3,1}
+    复杂度:O(mlogn)所以只能用来当对数器,不能当答案(m很大)
+     */
+    public static int waitingTime(int[] arr,int m){
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a,b)->a[0] - b[0]);
+        int n = arr.length;
+        for(int i = 0;i < n;i++){
+            heap.add(new int[]{0,arr[i]});
+        }
+        for(int i = 0;i < m;i++){
+            int[] cur = heap.poll();
+            cur[0] += cur[1];
+            heap.add(cur);
+        }
+        return heap.peek()[0];
+    }
+    /*
+    二分答案法(最优解)
+    答案范围:一定是在[0,min * m]范围内,因为就算只有一个效率最高的服务员,那么也只用等min * m时间
+    那么此时二分,找到m = 中间值时,此时m时间内,服务员能给多少人提供服务
+     复杂度是O(nlog(min * w)))
+     */
+    public static int waitingTime2(int[] arr,int wait) {
+        int min = Integer.MIN_VALUE;
+        for(int x : arr){
+            min = Math.min(min,x);
+        }
+        int ans = 0;
+        for(int l = 0,r = min * wait,m;l <= r;){
+            m = l + ((r - l) >> 1);
+            //前面有wait个人,所以这里是wait + 1
+            if(f1(arr,m) >= wait + 1){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    //如果每个服务员工作time,可以接待几位客人?(结束的,开始的客人都算)
+    //比如2时间服务一个客人,工作8时间,那么可以接待5个,第8小时已经可以开始接待了
+    public static int f1(int[] arr,int time){
+        int ans = 0;
+        for(int num : arr){
+            ans += time / num + 1;
+        }
+        return ans;
+    }
+    /*
+    7.怪兽的初始血量是一个整数hp,没出每一回合刀砍和毒杀的数值cuts和poisons
+    第i回合如果用刀砍,怪兽在这回合损失cuts[i]的血,不再有后续效果
+    第i回合如果用毒杀,怪兽在这回合不损失血量,但是之后每回合都损失poisons[i]的血量
+    并且你选择的所有毒杀效果,在之后的回合都会叠加,两个数组cuts,poisons,长度为n,代表你一共有n回合的行动
+    每一回合你只能选择刀砍或者毒杀,如果你在n个回合没有直接杀死怪兽,意味着你已经无法有新的行动了
+    但是如果怪兽的中毒效果的话,那么怪兽依旧会不停地扣血,直到血量耗尽的那回合死掉
+    返回至少多少回合怪兽会死掉
+    数据范围1 <= n <= 1e5,1 <= hp <= 1e9,1 <= cuts[i],poisons[i] <= 1e9;
+
+    思路:最多能有hp + 1回合怪兽必死无疑,所以范围是[1,hp + 1];
+    对于规定的怪兽死亡的回合,这样就可以很容易判断使用毒杀还是刀砍,毒杀的总伤害是(m - 当前回合)*伤害值
+     */
+    public static int fast(int[] cuts,int[] poisons,int hp){
+        int ans = Integer.MAX_VALUE;
+        for(int l = 1,r = hp + 1,m;l <= r;){
+            m = l + ((r - l) >> 1);
+            if(f(cuts,poisons,hp,m)){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    public static boolean f(int[] cuts,int[] posions,long hp,int limit){
+        int n = Math.min(cuts.length,limit);
+        for(int i = 0,j = 1;i < n;i++,j++){
+            hp -= Math.max((long) cuts[i],(long)(limit - j) * (long) posions[i]);
+            if(hp <= 0){
+                return true;
+            }
+        }
+        return false;
+    }
+}

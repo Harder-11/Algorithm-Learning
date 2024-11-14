@@ -1,0 +1,83 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const ll INF = 1e18;
+const int N = 200005;
+const int mod = 1e9 + 7;
+const double esp = 1e-6;
+
+/*
+给定一个长为n的整数序列a,值域为[1,k]
+他一共有m个询问,每个询问给定一个区间[l,r]求Σ(i=1,k)ci^2
+其中ci表示的是数字i在[l,r]中的出现次数
+1 <= n,m,k <= 5e4
+
+莫队算法:
+核心思想:离线分块,把所有的查询按照双关键字排序
+暴力处理完第一个查询,每次以常数时间复杂度拓展,处理剩余的查询
+例如第一个查询是[l,r],第二个查询为[l-3,r+4],我们就一步一步把
+l指针向左移动,每次移动把拓展的数字加入cnt数组(本题是要计数),更新答案,同理操作r指针
+
+但是怎么能够控制两个指针呢?
+把数组分为√n块,每块的大小B=√n,排序时,第一关键字为左端点l所在块编号
+l/B,第二关键字是右端点r,这种排序方式会把算法优化到O(n√n)
+*/
+
+struct Q {
+    int l,r,id;
+} q[N];
+int B,c[N],sum,a[N],ans[N];
+int n,m,k;
+
+bool cmp(Q a,Q b){
+    //这样比较,差值范围在B以内的a.l和b.l都是最后/B结果是一样的,实现了分块之后排序
+    if(a.l / B != b.l / B) return a.l < b.l;
+    return a.r < b.r;
+}
+
+//扩展第一个数
+void add(int x){
+    sum -= c[x] * c[x];
+    c[x]++;
+    sum += c[x] * c[x];
+}
+
+void del(int x){
+    sum -= c[x] * c[x];
+    c[x]--;
+    sum += c[x] * c[x];
+}
+
+void solve(){
+    cin >> n >> m >> k;
+    B = sqrt(n);
+    for(int i = 1;i <= n;i++){
+        cin >> a[i];
+    }
+    for(int i = 1;i <= m;i++){
+        cin >> q[i].l >> q[i].r;
+        q[i].id = i;
+    }
+    sort(q + 1,q + m + 1,cmp);
+    for(int i = 1,l = 1,r = 0;i <= m;i++){
+        while(l > q[i].l) add(a[--l]);
+        while(r < q[i].r) add(a[++r]);
+        while(l < q[i].l) del(a[l++]);
+        while(r > q[i].r) del(a[r--]);
+        ans[q[i].id] = sum;
+    }
+    for(int i = 1;i <= m;i++){
+        cout << ans[i] << '\n';
+    }
+}
+
+int main(){
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

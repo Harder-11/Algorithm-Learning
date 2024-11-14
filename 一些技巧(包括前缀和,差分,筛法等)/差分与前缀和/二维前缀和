@@ -1,0 +1,76 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+
+public class learn {
+   //二维前缀和,二维差分和离散化技巧
+
+    /*
+    二维前缀和:根据原始情况,生成二维浅醉和数组sum,sum[i][j]代表左上角(0,0)到右下角(i,j)这个范围
+    的累加和,sum[i][j] += sum[i][j - 1] + sum[i - 1][j] - sum[i - 1][j - 1];
+    左 + 上 - 左上 + 自己,所以通常在数组最左列和最上列添加一列和一行0,防止越界,所以sum数组开[m + 1][n + 1];
+    若要查询左上角(a,b)到右下角(c,d)范围的累加和,sum[c][d] - sum[c][b - 1] - sum[a - 1][d] + sum[a - 1][b - 1];
+
+     */
+    class NumMatrix {
+        public int [][] sum;
+        public NumMatrix(int[][] matrix) {
+            int m = matrix.length;
+            int n = matrix[0].length;
+            sum = new int[m + 1][n + 1];
+            for(int i = 0;i < m;++i){
+                for(int j = 0;j < n;++j){
+                    sum[i + 1][j + 1] = sum[i + 1][j] + sum[i][j + 1] - sum[i][j] + matrix[i][j];
+                }
+            }
+        }
+
+        public int sumRegion(int r1, int c1, int r2, int c2) {///
+            return sum[r2 + 1][c2 + 1] - sum[r2 + 1][c1] - sum[r1][c2 + 1] + sum[r1][c1];
+        }
+    }
+    //例题:边框为1的最大正方形,给你一个由若干0和1组成的二维网络grid,请你找出来边界全部由1组成的
+    //最大正方形子网络,并返回该子网络中元素的数量,如果不存在,返回0
+    //题意就是以1为正方形边框的最大面积,比如[[1,1,1],[1,0,1],[1,1,1]],返回9(面积)
+    //思路:枚举所有正方形,那么复杂度就是O(n * m * min(n,m)),求左上角(a,b)和右下角(c,d)范围内的二维
+    //前缀和,然后减去中间一块(c - a - 1) * (c - a - 1)大小的正方形的二维前缀和,
+    //如果算出来的值正好等于周长,那么就符合题意
+    public static int largest1BorderedSquare(int[][] g) {
+        int n = g.length;
+        int m = g[0].length;
+        build(n, m, g);
+        if (sum(g, 0, 0, n - 1, m - 1) == 0) {
+            return 0;
+        }
+        int ans = 1;
+        for (int a = 0; a < n; a++) {
+            for (int b = 0; b < m; b++) {
+                for (int c = a + ans, d = b + ans, k = ans + 1; c < n && d < m; c++, d++, k++) {
+                    if (sum(g, a, b, c, d) - sum(g, a + 1, b + 1, c - 1, d - 1) == (k - 1) << 2) {
+                        ans = k;
+                    }
+                }
+            }
+
+        }
+        return ans * ans;
+    }
+    //将g变成原始二维数组的前缀和数组
+    //不能补0行0列
+    public static void build(int n,int m,int[][] g){
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < m;j++){
+                g[i][j] += get(g,i,j - 1) + get(g,i - 1,j) - get(g,i - 1,j - 1);
+            }
+        }
+    }
+    //首先判断a > c?,如果a > c说明是2 * 2的正方形,此时会导致a > c这种情况的出现
+    public static int sum(int[][] g,int a,int b,int c,int d){
+        return a > c ? 0 : (g[c][d] - get(g,c,b - 1) - get(g,a - 1,d) + get(g,a - 1,b - 1));
+    }
+    //判断如果上方或者左方越界,那么就返回0,否则返回g[i][j]
+    public static int get(int[][] g,int i,int j){
+        return (i < 0 || j < 0) ? 0 : g[i][j];
+    }
+}

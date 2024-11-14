@@ -1,0 +1,120 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+
+public class learn {
+   //一维差分与等差数列差分
+    /*
+    一维差分:对于一个数组arr,假设有9个元素,有若干组操作
+    (1)2~5位置,所有数字+3,(2)1~6位置所有位置-2,(3)4~7位置所有位置+5
+    方法:在[L,R]+v时,在L位置的数+v,在[R + 1]位置-v,那么经过上述操作,此时arr为
+    [0,-2,3,0,5,0,-3,2,-5],然后计算前缀和就可以得到目标数组
+     */
+
+    //例题:航班预定统计,这里有 n 个航班，它们分别从 1 到 n 进行编号。
+    //有一份航班预订表 bookings ，表中第 i 条预订记录 bookings[i] = [firsti, lasti, seatsi]
+    // 意味着在从 firsti 到 lasti(包含 firsti和 lasti）的 每个航班 上预订了 seatsi 个座位。
+    //请你返回一个长度为 n 的数组 answer，里面的元素是每个航班预定的座位总数。
+    public static int[] corpFlightBookings(int[][] bookings,int n){
+        //cnt:差分数组
+        //开n + 2的原因:航班是1开始的,然后防止R + 1的值修改时越界,所以开n + 2;
+        int[] cnt = new int[n + 2];
+        for(int[] book : bookings){
+            cnt[book[0]] += book[2];
+            cnt[book[1] + 1] -= book[2];
+        }
+        for(int i = 1;i < cnt.length;i++){
+            cnt[i] += cnt[i - 1];
+        }
+        int[] ans = new int[n];
+        for(int i = 0;i < n;++i){
+            ans[i] = cnt[i + 1];
+        }
+        return ans;
+    }
+    //等差数列差分:一开始1-n上的数字都是0,接下来有m次操作
+    //每次操作:l~r范围上一次加上首项s,末项e,公差d的数列,最终1~n范围上的每个数字都要正确得到
+    //比如在[2,6]范围内添加首项4,末项16,d = 3,那么从2~6的数字依次加上4,7,10,13,16
+    // 过程:每个操作调用set方法,所有操作完成后arr上生成两遍前缀和,即调用build方法,arr里就是最终
+    //1~n范围上的数字
+    //对于l,r,s,e,d五个变量,arr[l] += s,arr[l + 1] += d - s,arr[r + 1] -= d + e
+    //arr[r + 2] += e,然后两次前缀和计算,就可以得到答案
+    public class Difference{
+        public int[] arr;
+        public int n;
+        void set(int l,int r,int s,int e,int d){
+            arr[l] += s;
+            arr[l + 1] += d - s;
+            arr[r + 1] -= e + d;
+            arr[r + 2] += e;
+        }
+        void build(){
+            for(int i = 1;i <= n;i++){
+                arr[i] += arr[i - 1];
+            }
+            for(int i = 1;i <= n;i++){
+                arr[i] += arr[i - 1];
+            }
+        }
+    }
+    //题目:一群人落水后,求每个位置的水位高度
+    /*
+    题目意思就是,每个人有体积v,落水的位置x,一开始所有水位都是0,
+    当有一人落水后,在落水点中心出水位变成-v,然后两边依次增加1,以中心点往两边
+    走到第一次水位是0时,继续上升到v,然后下落,最后图像类似于一个M
+    如果继续落水,那么在当前的水位下中心点-v,然后效果是叠加的
+    每个人带来的影响就是4个等差数列最远处是x - 3v和x + 3v
+     */
+    public static int OFFSET = 30001;
+    public static int MAXN = 1000001;
+    public static int[] arr = new int[OFFSET + MAXN + OFFSET];
+    public static int n,m;
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            //每个人落水都意味着四个等差数列差分操作
+            n = (int) in.nval;
+            in.nextToken();
+            m = (int) in.nval;
+            for(int i = 0,v,x;i < n;i++){
+                in.nextToken(); v = (int) in.nval;
+                in.nextToken(); x = (int) in.nval;
+                //v体积的朋友在x处落水,修改差分数组
+                fall(v,x);
+            }
+            //两次前缀和计算得到最终的水位
+            build();
+            int start = OFFSET + 1;
+            for(int i = 1;i <= m;i++){
+                out.print(arr[start++] + " ");
+            }
+            out.println();
+        }
+    }
+    public static void fall(int v,int x){
+        set(x - 3 * v + 1,x - 2 * v,1,v,1);
+        set(x - 2 * v + 1,x - v,v - 1,-v,-1);
+        set(x + 1,x + 2 * v,-v + 1,v,1);
+        set(x + 2 * v + 1,x + 3 * v - 1, v - 1,1,-1);
+    }
+    public static void set(int l,int r,int s,int e,int d){
+        //为了防止x - 3*v + 1出现负数下标,进而有很多边界讨论
+        //所以在任何位置都加上一个OFFSET,这样一来所有的下标都大于0,省去了边界讨论
+        //所有arr在初始化时准备了OFFSET + MAXN + OFFSET大小的数组
+        arr[l + OFFSET] += s;
+        arr[l + 1 + OFFSET] += d - s;
+        arr[r + 1 + OFFSET] -= e + d;
+        arr[r + 2 + OFFSET] += e;
+    }
+    public static void build(){
+        for(int i = 1;i <= m + OFFSET;i++){
+            arr[i] += arr[i - 1];
+        }
+        for(int i = 1;i <= m + OFFSET;i++){
+            arr[i] += arr[i - 1];
+        }
+    }
+}

@@ -1,0 +1,196 @@
+import java.util.*;
+public class learn {
+    //1.返回字符串全部子序列,字符串要求去重,比如字符串abc,子序列就有ab,ac,bc,a,b,c,abc
+    //递归就可以看出一棵树,要某个元素或者不要每个元素就是一个状态,一直往下走(从左往右随机拿字母(因拿和不拿))
+    public static void f1(char[] s,int i,StringBuilder path,HashSet<String> set){
+        //这里是以i的下标作为添加的标志,因为path.length()是未知的
+        if(i == s.length){
+            set.add(path.toString());
+        } else {
+            path.append(s[i]);
+            f1(s,i + 1,path,set);
+            path.deleteCharAt(path.length() - 1);//恢复现场
+            //恢复现场后再加上后面一个字符,以此类推
+            f1(s,i + 1,path,set);
+        }
+    }
+    public static String[] generatePermutation(String str){
+        char[] s = str.toCharArray();
+        HashSet<String> set = new HashSet<>();
+        f1(s,0,new StringBuilder(),set);
+        int n = set.size();
+        String[] ans = new String[n];
+        int i = 0;
+        for(String cur : set){
+            ans[i++] = cur;
+        }
+        return ans;
+    }
+    //2.返回数组数字的所有组合,但是要去重(不能有元素完全一样的数组,比如[1,2]和[2,1]一样)
+    //比如说nums = [1,2,2],输出的是[[],[1],[2],[1,2],[1,2,2],[2,2]]
+    public static List<List<Integer>> subsetsWithDup(int[] nums){
+        List<List<Integer>> ans = new ArrayList<>();
+        //先sort,方面后面找下一个不同元素来递归,否则会导致有相同的数组,同时这也实现了剪枝
+        Arrays.sort(nums);
+        f(nums,0,new int[nums.length],0,ans);
+        return ans;
+    }
+    public static void f(int[] nums,int i,int[] path,int size,List<List<Integer>> ans) {
+        //当i移动到最后一个元素时就往ans中添加path
+        if (i == nums.length) {
+            ArrayList<Integer> cur = new ArrayList<>();
+            for (int j = 0; j < size; ++j) {
+                cur.add(path[j]);
+            }
+            ans.add(cur);
+        } else {
+            //找到下一个不同元素的数所处的下标
+            int j = i + 1;
+            while (j < nums.length && nums[i] == nums[j]) {
+                j++;
+            }
+            //还没有往path里添加元素这里需要递归
+            f(nums, j, path, size, ans);
+            for (; i < j; i++) {
+                path[size++] = nums[i];
+                //每次添加元素后都递归
+                f(nums, j, path, size, ans);
+            }
+        }
+    }
+        //3.求无重复值数组的全排列(N!)
+        //比如[1,2,3]的全排列有[1,2,3][1,3,2][2,1,3][2,3,1][3,1,2][3,2,1];
+        //这里只写递归部分
+        public static void f(int[] nums,int i,List<List<Integer>> ans) {
+            //这里判断i = nums.length or nums.length - 1都可以
+            if (i == nums.length) {
+                List<Integer> cur = new ArrayList<>();
+                for (int num : nums) {
+                    cur.add(num);
+                }
+                ans.add(cur);
+            } else {
+                for (int j = i; j < nums.length; ++j) {
+                    swap(nums, i, j);
+                    //每一次循环都把j位置的数换到i位置,然后递归从i + 1开始
+                    f(nums, i + 1, ans);
+                    //恢复现场,把ij位置又换回来
+                    swap(nums, i, j);
+                }
+            }
+        }
+        public static void swap(int[] nums,int i,int j){
+            int t = nums[i];
+            nums[i] = nums[j];
+            nums[j] = t;
+        }
+        //4.(3题拓展)有重复值的数组,排序要求去重
+        public static void f2(int[] nums,int i,List<List<Integer>> ans) {
+            //这里判断i = nums.length or nums.length - 1都可以
+            if (i == nums.length) {
+                List<Integer> cur = new ArrayList<>();
+                for (int num : nums) {
+                    cur.add(num);
+                }
+                ans.add(cur);
+            } else {
+                for (int j = i; j < nums.length; ++j) {
+                    //使用一个set,当nums[j]没有来到过i位置才会去尝试
+                    HashSet<Integer> set = new HashSet<>();
+                    if(!set.contains(nums[j])){
+                        set.add(nums[j]);
+                        swap(nums,i,j);
+                        f2(nums,i + 1,ans);
+                        swap(nums,i,j);
+                    }
+                }
+            }
+        }
+        //5.用递归逆序一个栈
+    //假设一个栈从上往下是abc,bottomOut方法:每次递归都弹出栈顶元素,然后用last接收递归返回元素
+    //(这样一直递归下去就会得到栈底的元素),然后把pop出来的元素重新push回去,就会得到栈里面元素是ab
+    //然后会返回栈底的元素
+    public static void reverse(Stack<Integer> stack){
+        if(stack.isEmpty()){
+            return;
+        }
+        int num = bottomOut(stack);
+        //第一次此时num = c,stack = {a,b};
+        //第二次num = b,stack = {a};
+        //第三次num = a,stack = {};
+        //第四次,将num = a压入栈,以此类推,栈中元素就是cba了
+        reverse(stack);
+        stack.push(num);
+    }
+    public static int bottomOut(Stack<Integer> stack){
+        int ans = stack.pop();
+        if(stack.isEmpty()) return ans;
+        else {
+            int last = bottomOut(stack);
+            stack.push(ans);
+            return last;
+        }
+    }
+    //6.用递归排序一个栈
+    /*
+    分为以下几步:1)找到stack的此时需要探查深度
+    2):找到stack中需要探查深度的最大的元素
+    3):找有几个最大值的元素
+    4):处理这几个元素到最底层
+    5):找剩下元素的最大值
+    ....
+    以此类推,代码如下
+     */
+    public static void sort(Stack<Integer> stack){
+        int deep = deep(stack);
+        while(deep > 0){
+            int max = max(stack,deep);
+            int k = times(stack,deep,max);
+            down(stack,deep,max,k);
+            deep -= k;
+        }
+    }
+    public static int deep(Stack<Integer> stack){
+        if(stack.isEmpty()){
+            return 0;
+        }
+        int num = stack.pop();
+        int deep = deep(stack) + 1;
+        stack.push(num);
+        return deep;
+    }
+    public static int max(Stack<Integer> stack,int deep){
+        if(deep == 0) return Integer.MIN_VALUE;
+        int num = stack.pop();
+        int restMax = max(stack,deep - 1);
+        int max = Math.max(num,restMax);
+        stack.push(num);
+        return max;
+    }
+    public static int times(Stack<Integer> stack,int deep,int max){
+        if(deep == 0) return 0;
+        int num = stack.pop();
+        int restTimes = times(stack,deep - 1,max);
+        int times = restTimes + num == max ? 1 : 0;
+        stack.push(num);
+        return times;
+    }
+    public static void down(Stack<Integer> stack,int deep,int max,int k){
+        if(deep == 0){
+            for(int i = 0;i < k;++i){
+                stack.push(max);
+            }
+        } else {
+            int num = stack.pop();
+            down(stack,deep - 1,max,k);
+            if(num != max){
+                stack.push(num);
+            }
+        }
+
+    }
+    //7.汉诺塔问题
+    /*
+   
+     */
+}

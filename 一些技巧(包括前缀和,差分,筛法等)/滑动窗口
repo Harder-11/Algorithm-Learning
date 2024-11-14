@@ -1,0 +1,236 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.util.*;
+
+
+public class learn {
+    //滑动窗口
+    //1.类价格大于等于target的最短子数组长度
+    //给的一个含有n个正整数的数组和一个正整数target,找到累加和大于等于target的长度最小的子数组
+    //如果不存在,返回0
+    public static int minSubArrayLen(int targer,int[] nums){
+        int ans = Integer.MAX_VALUE;
+        for(int l = 0,r = 0,sum = 0;r < nums.length;r++){
+            sum += nums[r];
+            while(sum - nums[l] >= targer){
+                sum -= nums[l++];
+            }
+            if(sum >= targer){
+                ans = Math.min(ans,r - l + 1);
+            }
+        }
+        return ans == Integer.MAX_VALUE ? 0 : ans;
+    }
+    //2.无重复字符的最长子串
+    //给定一个字符串s,请你找出其中不含有重复字符的最长子串长度
+    //用一个数组记录每个字符是否出现过,如果出现过,那么此时l = 重复出现字符第一次出现下标 + 1
+    //如果没有出现过,那么往数组中r位置的字符更新其下标,每次更新最大长度
+    public int lengthOfLongestSubstring(String str) {
+        char[] s = str.toCharArray();
+        int n = s.length;
+        int[] last = new int[128];
+        Arrays.fill(last,-1);
+        int ans = 0;
+        for(int l = 0,r = 0;r < n;r++){
+            //如果last对于的s[r]下标没更新的话,那么就是-1,所以只要没更新,说明没有遇到重复的字符
+            //所以此时l不会变,当遇到重复字符时,l更新为重复字符第一次出现的下标+1
+            //也可以改成if(last[s[r]] != -1 && l <= last[s[r]]) l = last[s[r]] + 1;
+            //用if判断时必须有l <= last[s[r]]否则可能l会回退,比如遇到abba这种情况
+            //所以可以直接用max函数来确实l的值更方便
+            l = Math.max(l,last[s[r]] + 1);
+            ans = Math.max(ans,r - l + 1);
+            last[s[r]] = r;
+        }
+        return ans;
+    }
+    //3.最小覆盖子串
+    //给两个字符串,一个s,一个t,返回s中覆盖t所有字符的最小子串,通过s中b存在覆盖t所有字符的子串,则
+    //返回空字符串
+    /*
+    思路:把t中的所有字符当做债务,存在cnts数组中,先将所有的cnts[t[i]]--,表示要还的债
+    然后滑动窗口
+     */
+    public static String minWindow(String str,String tar){
+        if(str.length() < tar.length()){
+            return "";
+        }
+        char[] s = str.toCharArray();
+        char[] t = tar.toCharArray();
+        int[] cnts = new int[128];
+        for(char ch : t){
+            cnts[ch]--;
+        }
+        int len = Integer.MAX_VALUE;
+        //start来记录返回时字符串开始的位置
+        int start = 0;
+        for(int l = 0,r = 0,debt = t.length;r < s.length;r++){
+            //当遇到此时cnts[s[r]] < 0,说明此时有债务并且可以还债,那么debt--
+            //这里就算不是债务的字符也要在cnts中++,因为可以在后面滑动时判断时候可以缩小范围用
+            //如果此时cnts[s[l]] > 0,说明r指针碰到过s[l]对于的字符,所以此时l++,将cnts[s[l]]--
+            if(cnts[s[r]]++ < 0){
+                debt--;
+            }
+            if(debt == 0){
+                //如果此时刚刚好还完债,那么此时包含债务的字符在cnts中都是0,不会影响,大于0的字符都是多余的
+                while(cnts[s[l]] > 0){
+                    cnts[s[l++]]--;
+                }
+                //每当r - l + 1小于len时,就更新start和len值,方便返回时找到返回字符串的开始字符
+                if(r - l + 1 < len){
+                    len = r - l + 1;
+                    start = l;
+                }
+            }
+        }
+        return len == Integer.MAX_VALUE ? "" : str.substring(start,start + len);
+    }
+    /*
+    4.
+    在一条环路上有 n 个加油站，其中第i个加油站有汽油 gas[i] 升。
+    你有一辆油箱容量无限的的汽车，从第i个加油站开往第 i+1 个加油站需要消耗汽油 cost[i] 升。
+    你从其中的一个加油站出发，开始时油箱为空。
+    给定两个整数数组gas和cost，如果你可以按顺序绕环路行驶一周，则返回出发时加油站的编号,否则返回 -1 。
+    如果存在解，则保证它是唯一的。
+
+    用油量 - 消耗油量得到一个余量数组,当从某个元素开始前缀和所有的元素都>=0时就可以绕一圈
+    此时使用滑动窗口,遇到和小于0,l++,当窗口大小 == n时,就满足题意
+     */
+    public static int canCompleteCircuit(int[] gas,int[] cost){
+        int n = gas.length;
+        //由于l不可能超过一圈,所以用l来定循环结束的条件
+        for(int l = 0,r = 0,len = 0,sum = 0;l < n;l++){
+            //累加和>=0就尝试括大窗口
+            while(sum >= 0){
+                if(len == n){
+                    return l;
+                }
+                //%n可以解决绕圈问题
+                r = (l + (len++)) % n;
+                //这里固定的是l,r在变,所以sum += gas[r] - cost[r]
+                sum += gas[r] - cost[r];
+            }
+            len--;
+            sum -= gas[l] - cost[l];
+        }
+        return -1;
+    }
+    /*
+    5.替换子串得到平衡字符串,有一个只含有Q,W,E,R的字符串,长度为n(4的整数倍)
+    假设在该字符串四种字符都出现n / 4次,那么他就是平衡字符串,给一个这样的字符串s,请用过替换一个子串的方式,
+    使原字符串变成一个平衡字符串,你可以用和待替换字符串长度相同的任何其他字符串来完成代替
+    请返回代替子串的最小可能长度,如果原字符串就是一个平衡字符串,则返回0;
+
+    思路:滑动窗口,用一个ok方法,判断是否可以使[L,R]范围内的元素随意变后满足题意,如果可以,那么l++,
+    否则r++
+     */
+    public static int balancedString(String str){
+        int n = str.length();
+        int[] arr = new int[n];
+        int[] cnt = new int[4];
+        int req = n / 4;
+        for(int i = 0;i < n;i++){
+            char c = str.charAt(i);
+            //QWER分别代表0123
+            arr[i] = c == 'W' ? 1 : (c == 'E' ? 2 : (c == 'R' ? 3 : 0));
+            cnt[arr[i]]++;
+        }
+        int ans = n;
+        for(int l = 0,r = 0;l < n;l++){
+            //自由变化的窗口l...r,r是即将要进入窗口的值,因为每次cnt[arr[r]]--之后就立马r++,所以
+            //此时r对于的是下一个,所以更新时是r - l不需要加1
+            //其中l...r - 1表示的是[l,r)
+            //由于cnt是窗口之外的统计,那么此时要把arr[r]对应的值--
+            while(!ok(cnt,req) && r < n){
+                cnt[arr[r++]]--;
+            }
+            if(ok(cnt,req)){
+                ans = Math.min(ans,r - l);
+            }
+            cnt[arr[l]]++;
+        }
+        return ans;
+    }
+    //cnt:l..r的范围的字符不算,在自由变化的窗口之外,每一张字符的词频统计
+    //len:自由变化窗口的长度
+    //require:每一种字符要达到的数量
+    public static boolean ok(int[] cnt,int req){
+        for(int i = 0;i < 4;i++){
+            if(cnt[i] > req){
+                return false;
+            }
+        }
+        return true;
+    }
+    /*
+    6.k个不同整数的子数组
+    给定一个正整数数组nums和一个整数k,返回nums中好子数组的数目
+    如果nums中的某个子数组中不同整数的个数恰好为k,则称nums的这个连续,不一定不同的子数组为好子数组
+    例如,[1,2,3,1,2]中有三个不同的整数,1,2,3
+
+    思路定义一个函数f,可以找到数组中有多少个子数组包含的元素<=k,那么问题可以转化为f(nums,k) - f(nums,k - 1)
+     */
+    public static int MAXN = 20001;
+    public static int[] cnt = new int[MAXN];
+    public static int subarraysWithKDistinct(int[] nums,int k){
+        return numsOfMostKinds(nums,k) - numsOfMostKinds(nums,k - 1);
+    }
+    public static int numsOfMostKinds(int[] arr,int k){
+        //这句话一定不能省,因为调用函数调用了两次,否则第二次调用的时候cnt里面有元素了导致答案错误
+        Arrays.fill(cnt,0,arr.length + 1,0);
+        int ans = 0;
+        for(int l = 0,r = 0,collect = 0;r < arr.length;r++){
+            if(++cnt[arr[r]] == 1){
+                collect++;
+            }
+            //数组超了,l就一直往右,直到不超
+            while(collect > k){
+                if(--cnt[arr[l++]] == 0){
+                    collect--;
+                }
+            }
+            ans += r - l + 1;
+        }
+        return ans;
+    }
+    /*
+    7.至少有k个重复字符的最长子串
+    给你一个字符串s和一个整数k,请你找出s中的最长子串,要求该子串中的每一字符出现次数都不少于k。返回这一子串的长度。
+    如果不存在这样的子字符串，则返回 0。
+
+    思路,从require从1种字符开始,一直到26遍历,得到最大的字符串长度
+     */
+    public static int longestSubstring(String str, int k){
+        char[] s = str.toCharArray();
+        int n = s.length;
+        int[] cnt = new int[128];
+        int ans = 0;
+        //要求子串必须含有require种字符,每种字符都必须大于等于k次,求这样的子串最长是多长
+        //collect:窗口中一共收集到的种类数
+        //satisfy:窗口中达标的种类数,某种字符的达标的种类数大于等于k
+        for(int require = 1;require <= 26;require++){
+            Arrays.fill(cnt,0);
+            for(int l = 0,r = 0,collect = 0,satisfy = 0;r < n;r++){
+                cnt[s[r]]++;
+                if(cnt[s[r]] == 1){
+                    collect++;
+                }
+                if(cnt[s[r]] == k){
+                    satisfy++;
+                }
+                while(collect > require){
+                    if(cnt[s[l]] == 1){
+                        collect--;
+                    }
+                    if(cnt[s[l]] == k){
+                        satisfy--;
+                    }
+                    cnt[s[l++]]--;
+                }
+                if(satisfy == require){
+                    ans = Math.max(ans,r - l + 1);
+                }
+            }
+        }
+        return ans;
+    }
+}
