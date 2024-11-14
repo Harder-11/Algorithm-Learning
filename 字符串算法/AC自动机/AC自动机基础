@@ -1,0 +1,162 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    AC自动机
+    功能:给若干目标字符串,还有一篇文章,返回每个字符串在文章中出现了几次?
+    AC自动机就是加上了fail指针的前缀树
+    fail指针的含义:
+    AC自动机上某个节点a,表示某个字符串的前缀串s的终止结点
+    其他目标串的前缀串,要求和s的某个后缀串完全一样,并且要求长度最大,并且不能是s整体
+    满足这两点的前缀和假设为t,那么结点a的fail指针就指向t的终止结点
+    一旦匹配失败就通过fail指针绕圈找到能继续的节点,然后继续匹配
+
+    在建立fail指针时是使用bfs遍历整棵树,依次得到fail的值
+    fail指针的值是通过父节点来找到子节点的值
+
+    用一个time数组记录结点出现的次数,0结点永远是0不变,当遍历文章时,对于当前结点
+    的子节点有文章中对应字符的一条路时,直接跳转到对应的子节点,然后子节点的time值++,
+    然后子节点的fail指针一直到0结点的整条路径上的结点都time++
+    如果该节点与子节点的路径中没有文章中对应的字符,就顺着fail指针一直往上找,直到
+    找到一个与子节点的路径之间有该字符的结点,然后跳转到该节点的子节点,然后子节点time++,
+    顺着fail指针的路径time++,以此类推,最后得到的time数组就是答案
+     */
+
+    /*
+    AC自动机的优化:建立AC自动机时设置fail指针,遍历文章时,匹配失败时寻找之路都需要fail
+    指针绕圈,这样会导致复杂度很高
+    1.建立AC自动机时设置fail指针,遍历文章时匹配是被去寻找之路,都需要fail指针绕圈
+    优化方式:直接在Trie里面建立直达的结点(固定优化)
+
+    2.遍历文章时,不知道是否命中了某个目标字符串,需要fail指针绕圈,进行词频传递
+    优化方法:只让当前结点收集词频,在遍历文章结束后,再统一进行如下处理,防止绕圈
+    根据fail指针建立反图(边指向是反的),然后利用图的遍历来汇总每个结点的词频
+
+    3.遍历文章时,不知道是否命中了某个目标字符串,需要fail指针绕圈,进行及时报警
+    优化:在设置fail指针时,把命中标记往前移防止绕圈(只适用于验证文章中是否出现的某字符串)
+    比如字符串有"abcd",然后来到路程是d的结点处就出发警报,当某个结点是会触发警报的点了
+    那么此时他通过fail数组连接的前一个结点也会变成出发警报的点
+    那么就是alert[u] |= alert[fail[u]]
+     */
+    public static int MAXN = 200001;
+    public static int MAXS = 200001;
+    //记录每个字符串的终止结点的编号
+    public static int[] end = new int[MAXN];
+    public static int[][] tree = new int[MAXS][26];
+    public static int[] fail = new int[MAXS];
+    public static int cnt;
+    //收集词频
+    public static int[] times = new int[MAXS];
+    //可以作为队列或者栈,一个容器
+    //在AC自动机里面先作为队列处理Trie中的元素,然后作为栈处理反图中的元素
+    public static int[] box = new int[MAXS];
+    public static int[] head = new int[MAXS];
+    public static int[] next = new int[MAXS];
+    public static int[] to = new int[MAXS];
+    //反图,边从1号开始记录
+    public static int edge = 0;
+    //遍历fail反图,递归会爆栈,所以用非递归替代
+    public static boolean[] visited = new boolean[MAXS];
+    //AC自动机加入目标字符串
+    public static void insert(int i,String str){
+        char[] s = str.toCharArray();
+        int u = 0;
+        for(int j = 0,c;j < s.length;j++){
+            c = s[j] - 'a';
+            if(tree[u][c] == 0){
+                tree[u][c] = ++cnt;
+            }
+            u = tree[u][c];
+        }
+        end[i] = u;
+    }
+    //设置fail指针,同时设置跳转支路(直通表)
+    //做了AC自动机的固定优化
+    //使用bfs+队列的方式遍历整个数
+    public static void setFail(){
+        int l = 0,r = 0;
+        for(int i = 0;i <= 25;i++){
+            if(tree[0][i] > 0){
+                box[r++] = tree[0][i];
+            }
+        }
+        while(l < r){
+            int u = box[l++];
+            for(int i = 0;i <= 25;i++){
+                if(tree[u][i] == 0){
+                    tree[u][i] = tree[fail[u]][i];
+                } else {
+                    fail[tree[u][i]] = tree[fail[u]][i];
+                    box[r++] = tree[u][i];
+                }
+            }
+        }
+    }
+    public static void addEdge(int u,int v){
+        next[++edge] = head[u];
+        head[u] = edge;
+        to[edge] = v;
+    }
+    public static void f1(int u){
+        for(int i = head[u];i > 0;i = next[i]){
+            //类似与union的find方法
+            f1(to[i]);
+            times[u] += times[to[i]];
+        }
+    }
+    //上述的利用递归会爆栈
+    //所以此时创建栈来模拟递归
+    public static void f2(int u){
+        int r = 0;
+        box[r++] = u;
+        int cur;
+        while(r > 0){
+            cur = box[r - 1];
+            if(!visited[cur]){
+                visited[cur] = true;
+                for(int i = head[cur];i > 0;i = next[i]){
+                    box[r++] = to[i];
+                }
+            } else {
+                r--;
+                for(int i = head[cur];i > 0;i = next[i]){
+                    times[cur] += times[to[i]];
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        int n = Integer.valueOf(br.readLine());
+        //AC自动机建树
+        for(int i = 1;i <= n;i++){
+            insert(i,br.readLine());
+        }
+        setFail();
+        char[] s = br.readLine().toCharArray();
+        for(int u = 0,i = 0;i < s.length;i++){
+            u = tree[u][s[i] - 'a'];
+            times[u]++;
+        }
+        for(int i = 1;i <= cnt;i++){
+            //根据fail指针反建图,实际也是一棵树
+            //利用链式前向星建图
+            addEdge(fail[i],i);
+        }
+        f2(0);
+        for(int i = 1;i <= n;i++){
+            System.out.println(times[end[i]]);
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+
+}

@@ -1,0 +1,139 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //AC自动机alert优化(此时只是查询文章是否包含了某个字符串)
+    /*
+    例题:数数(利用AC自动机检查命中)(p3311)
+    我们称一个正整数x为幸运数字的条件为:
+    x的十进制不包括数字串集合s任意一个元素作为子串
+    例如s = {22,333,0233};233是幸运数字,2333,20233,3223不是幸运数字
+    给定n和s,计算不大于n的幸运数字个数
+    答案对1e9+7取模
+
+    思路:经典的数位dp问题 + AC自动机
+     */
+    public static int MOD = (int) 1e9 + 7;
+    public static int MAXN = 1301;
+    public static int MAXS = 2001;
+    public static char[] num;
+    public static int n;
+    public static int[][] tree = new int[MAXS][10];
+    public static int[] fail = new int[MAXS];
+    public static int cnt = 0;
+    //根据题目相关,本题命中任何目标串就直接报警
+    //所以记录每个结点是否出发警报
+    public static boolean[] alert = new boolean[MAXS];
+    public static int[] queue = new int[MAXS];
+    public static int[][][][] dp = new int[MAXN][MAXS][2][2];
+    public static void clear(){
+        for(int i = 0;i <= n;i++){
+            for(int j = 0;j <= cnt;j++){
+                dp[i][j][0][0] = -1;
+                dp[i][j][0][1] = -1;
+                dp[i][j][1][0] = -1;
+                dp[i][j][1][1] = -1;
+            }
+        }
+    }
+    public static void insert(String word){
+        char[] w = word.toCharArray();
+        int u = 0;
+        for(int j = 0,c;j < w.length;j++){
+            c = w[j] - '0';
+            if(tree[u][c] == 0){
+                tree[u][c] = ++cnt;
+            }
+            u = tree[u][c];
+        }
+        alert[u] = true;
+    }
+    public static void setFail(){
+        int l = 0,r = 0;
+        for(int i = 0;i <= 9;i++){
+            if(tree[0][i] > 0){
+                queue[r++] = tree[0][i];
+            }
+        }
+        while(l < r){
+            int u = queue[l++];
+            for(int i = 0;i <= 9;i++){
+                if(tree[u][i] == 0){
+                    tree[u][i] = tree[fail[u]][i];
+                } else {
+                    fail[tree[u][i]] = tree[fail[u]][i];
+                    queue[r++] = tree[u][i];
+                }
+            }
+        }
+    }
+    //i:来到的位置
+    //j:AC自动机来到的结点编号
+    //free:同数位dp,是不是可以随意选择
+    //has:之前有没有选过的数字,防止有全都没选的可能存在
+    //返回i出发幸运数字的个数
+    public static int f1(int i,int j,int free,int has){
+        if(alert[j]){
+            return 0;
+        }
+        if(i == n){
+            return has;
+        }
+        if(dp[i][j][free][has] != -1){
+            return dp[i][j][free][has];
+        }
+        int ans = 0;
+        int cur = num[i] - '0';
+        if(has == 0){
+            if(free == 0){
+                ans = (ans + f1(i + 1,0,1,0)) % MOD;
+                for(int pick = 1;pick < cur;pick++){
+                    ans = (ans + f1(i + 1,tree[j][pick],1,1)) % MOD;
+                }
+                ans = (ans + f1(i + 1,tree[j][cur],0,1));
+            } else {
+                ans = (ans + f1(i + 1,0,1,0)) % MOD;
+                for(int pick = 1;pick <= 9;pick++){
+                    ans = (ans + f1(i + 1,tree[j][pick],1,1)) % MOD;
+                }
+            }
+        } else {
+            if(free == 0){
+                for(int pick = 0;pick < cur;pick++){
+                    ans = (ans + f1(i + 1,tree[j][pick],1,1)) % MOD;
+                }
+                ans = (ans + f1(i + 1,tree[j][cur],0,1)) % MOD;
+            } else {
+                for(int pick = 0;pick <= 9;pick++){
+                    ans = (ans + f1(i + 1,tree[j][pick],1,1)) % MOD;
+                }
+            }
+        }
+        dp[i][j][free][has] = ans;
+        return ans;
+    }
+
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        num = br.readLine().toCharArray();
+        n = num.length;
+        int m = Integer.valueOf(br.readLine());
+        for(int i = 1;i <= m;i++){
+            insert(br.readLine());
+        }
+        setFail();
+        clear();
+        System.out.println(f1(0,0,0,0));
+        out.flush();
+        out.close();
+        br.close();
+
+    }
+}

@@ -1,0 +1,94 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //KMP算法
+    /*
+    KMP算法:
+    s1字符串是否包含s2字符串,如果包含返回s1中包含s2的最左开头位置,不包含返回-1
+    暴力方法就是s1的每个位置都做开头,然后去匹配s2整体,时间复杂度O(n*m)
+    KMP算法的时间复杂度可以优化到O(n+m)(不回溯)
+
+    首先创建next数组:对s2求的数组,意义是不含当前,前面的字符串的前缀和后缀最大匹配长度
+    (不能含整体,因为整体肯定相等,要不然无意义)next数组0位置的值是-1
+    比如说字符串s1是"a a b a a b s a a b a a a",此时求s1的next数组
+    0下标是-1(硬性规定)
+    1下标看前面的,字符串是"a",此时只有一个元素,是一个整体不能算,所以是0
+    2下标看前面的字符串是"aa",所以前缀是"a"和后缀是"a"此时能匹配上,长度是1,所以next[2]是1
+    3下标看前面的字符串是"aab",此时长度是1,前缀是"a",后缀是"b",不等,长度是2也不等,所以是0
+    以此类推,求出next是[-1,0,1,0,1,2,3,0,1,2,3,4,5]
+
+    过程:
+    比如匹配字符串s1:a a b a a b c a a b a a b a...
+           字符串s2:a a b a a b c a a b a a b t...
+    此时求得s2的next数组是[-1,0,1,0,1,2,3,0,1,2,3,4,5,6]
+    此时开始匹配,当来到最后一个字符时,发现匹配不上,然后查next表,此时next表是6
+    那么此时按以下图来匹配
+    s1:a a b a a b c a a b a a b a.....
+    s2:              a a b a a b c.....
+                                 ↑此处开始匹配
+    然后又发现不匹配,然后查next表是3,又重新匹配
+    s1:a a b a a b c a a b a a b a...
+    s2:                    a a b a...
+                                 ↑此处开始匹配
+    因为next数组的特性,是求的前缀和后缀一样的最大长度,所以在发现不匹配的字符时
+    如果next是值是i,那么s1从n-i~n-1范围的所有值都和s2的i前面的值全部匹配
+
+    那么为什么要s1要跳跃这么多再重新匹配呢?在跳跃的区间内会有能匹配上s2的开头的情况吗?
+    以第一次没有匹配上为例,next[n]=i
+    那么假设有这样的开头(假设为p)在0~n-i范围内,那么此时从这个p到n(没匹配上的位置)这段长度
+    和s2从0开始到后面某个点(假设为v)完全一致,又因为此时从p到n-1和s2的p~n-1位置是完全匹配的
+    (因为到n才不匹配),那么此时对于s2的n位置,p~n-1和0~p的字符串是完全一样的,那么此时的next
+    值一定比i更大(因为此时的p点在0~n-i范围内,此时的next时是n-p),产生矛盾,所以不存在这样的情况
+     */
+    //快速生成next数组
+    //第0和第1项是固定的-1和0
+    //往后每一项,都是基于之前的next值来求当前的next值
+    //对于当前i位置的值,就看next[i-1]的值,然后看s2[i-1]是不是等于s2[[next[i-1]]]
+    //如果一样,那么next[i]=next[i-1]+1
+    //也可能是跳多次,比如a b a t a b a s a b a t a b a t,现在要求后面一位的next值
+    //最后一个t的next值是7,然后s2[7]是3,对应的是s,再在s跳到3位置,此时是t,而此时与最初的原字符
+    //一样,所以此时添加的一位的next值就是3+1=4
+    public static int[] nextArray(char[] s,int m){
+        if(m == 1){
+            return new int[]{-1};
+        }
+        int[] next = new int[m];
+        next[0] = -1;
+        next[1] = 0;
+        int i = 2,cn = 0;
+        while(i < m){
+            if(s[i - 1] == s[cn]){
+                next[i++] = ++cn;
+            } else if(cn > 0){
+                cn = next[cn];
+            } else {
+                next[i++] = 0;
+            }
+        }
+        return next;
+    }
+    public static int kmp(char[] s1,char[] s2){
+        int n = s1.length;
+        int m = s2.length;
+        int x = 0,y = 0;
+        int[] next = nextArray(s2,m);
+        while(x < n && y < n){
+            if(s1[x] == s2[y]){
+                x++;
+                y++;
+            } else if(y == 0){
+                //一直都没有匹配上使得y回溯到s2开头了,y不能继续往前跳了,此时x++
+                x++;
+            } else {
+                y = next[y];
+            }
+        }
+        //当y来到越界位置时说明匹配完了,那么返回x-y,否则就是没匹配好,返回-1
+        return y == m ? x - y : -1;
+    }
+}

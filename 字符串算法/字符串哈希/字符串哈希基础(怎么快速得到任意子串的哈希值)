@@ -1,0 +1,38 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    怎么快速得到任意字符串的哈希值
+    (1)选择一个质数做进制数,base
+    (2)得到base的各种次方,在自然溢出下的结果,用pow数组记录
+    (3)得到每个位置的hash[i],hash[i]=hash[i-1]*base+s[i]-'a'+1
+    (4)子串s[l...r]的哈希值=hash[r]-(hash[l-1]*base^(r-l+1))
+    这个求哈希的结论可以通过把每个Hash值列出来得到,并且显然
+     */
+    public static int MAXN = 100005;
+    public static int base = 499;
+    public static long[] pow = new long[MAXN];
+    public static long[] hash = new long[MAXN];
+    public static void build(char[] s,int n){
+        pow[0] = 1;
+        for(int i = 1;i < n;i++){
+            pow[i] = pow[i - 1] * base;
+        }
+        hash[0] = s[0] - 'a' + 1;
+        for(int i = 1;i < n;i++){
+            hash[i] = hash[i - 1] * base + s[i] - 'a' + 1;
+        }
+    }
+    public static long hash(int l,int r){
+        long ans = hash[r];
+        if(l > 0){
+            ans -= hash[l - 1] * pow[r - l + 1];
+        }
+        return ans;
+    }
+}

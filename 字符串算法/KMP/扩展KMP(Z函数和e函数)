@@ -1,0 +1,100 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    扩展KMP(Z函数)
+    扩展KMP是求某一个字符串从i位置出发,和字符串本身最长的公共前缀
+    比如字符串s="aaabaac",此时z[0]=7,z[1]就是求字符串"aabaac"和s是最大公共前缀
+    所以此时z[1]=2
+    扩展KMP的过程,当来到当前出发点i,如果利用z,r,c来进扩展过程的加速?和Manacher算法极度相似
+    (1)i没有被r包住,那么i位出发点直接扩展
+    (2)i被r包住,但是加上前点i-c的扩展长度,对应在大扩展区域以内,那么直接确定z[i]=z[i-c]
+    (3)i被r包住,但是加上前点i-c的扩展长度,对应在大扩展区域以外,直接确定z[i]=r-i
+    (4)i被r包住,但是加上前点i-c的扩展长度,对应在大扩展区域的边界,那么从r之外的位置进行扩展
+
+    对于e函数,针对两个字符串之间的最长公共前缀
+    e[i]代表字符串s1从i开始和s2从0开始的最长公共前缀,要先求出s2的z数组
+    对于中心点c,来到当前点i,如果此时i+z[i-c]<r,那么此时e[i]=z[i-c]
+    如果此时i+z[i-c]>r,那么就是r-i,如果相等就继续延伸
+     */
+    public static int MAXN = 20000001;
+    public static int[] z = new int[MAXN];
+    public static int[] e = new int[MAXN];
+    public static void zArray(char[] s,int n){
+        z[0] = n;
+        for(int i = 1,c = 1,r = 1,len;i < n;i++){
+            len = r > i ? Math.min(r - i,z[i - c]) : 0;
+            //这里实际就是为len == 0准备的,s从0开始和往后推len的位置的字符看是否相等
+            //如果相等,那么len++,如果len != 0,那么r > i,到直接确定的条件时会直接跳出while
+            while(i + len < n && s[i + len] == s[len]){
+                len++;
+            }
+            if(i + len > r){
+                r = i + len;
+                c = i;
+            }
+            z[i] = len;
+        }
+    }
+    public static void eArray(char[] a,char[] b,int n,int m){
+        for(int i = 0,c = 0,r = 0,len;i < n;i++){
+            len = r > i ? Math.min(r - i,z[i - c]) : 0;
+            while(i + len < n && len < m && a[i + len] == b[len]){
+                len++;
+            }
+            if(i + len > r){
+                r = i + len;
+                c = i;
+            }
+            e[i] = len;
+        }
+    }
+    public static long eor(int[] arr,int n){
+        long ans = 0;
+        for(int i = 0;i < n;i++){
+            ans ^= (long)(i + 1) * (arr[i] + 1);
+        }
+        return ans;
+    }
+    public static void main(String[] args) throws IOException{
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        char[] a = in.readLine().toCharArray();
+        char[] b = in.readLine().toCharArray();
+        zArray(b,b.length);
+        eArray(a,b,a.length,b.length);
+        System.out.println(eor(z,b.length));
+        System.out.println(eor(e,a.length));
+        out.flush();
+        out.close();
+        in.close();
+    }
+    /*
+    例题:将单词恢复初始状态所需的最短时间II
+    给你一个下标从 0 开始的字符串 word 和一个整数 k 。
+    在每一秒，你必须执行以下操作：
+    移除 word 的前 k 个字符。
+    在 word 的末尾添加 k 个任意字符。
+    注意 添加的字符不必和移除的字符相同。但是，必须在每一秒钟都执行 两种 操作。
+    返回将 word 恢复到其 初始 状态所需的 最短 时间（该时间必须大于零）。
+
+    求出z数组,然后依次尝试z[k*i](i=1,2,3....)如果所有尝试都没有i+z[i]==n
+    ,那么就是(n+k-1)/k
+     */
+    public int minimumTimeToInitialState(String word, int k) {
+        char[] s = word.toCharArray();
+        int n = s.length;
+        zArray(s,n);
+        for(int i = k;i < n;i += k){
+            if(i + z[i] == n){
+                return i / k;
+            }
+        }
+        return (n + k - 1) / k;
+    }
+}

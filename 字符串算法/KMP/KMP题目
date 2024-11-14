@@ -1,0 +1,294 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    题目1:最短循环节的长度(p4391)
+    给定一个字符串s,它一定是由某个循环节不断自我连接形成的,题目保证最少重复两次
+    但是最后一个循环节不一定完整,现在想知道s的最短循环节是多长?
+
+    思路:求next数组,答案就是长度n-next[n]
+    比如字符串是abcabcabca,此时求到最后一个a后面一个位置的next值为7,所以答案就是n-next[n]
+     */
+    public static int MAXN = 1000001;
+    public static int[] next = new int[MAXN];
+    public static int n;
+    public static char[] s;
+    public static int compute(){
+        nextArray();
+        return n - next[n];
+    }
+    public static void nextArray(){
+        next[0] = -1;
+        next[1] = 0;
+        int i = 2,cn = 0;
+        while(i <= n){
+            if(s[i - 1] == s[cn]){
+                next[i++] = ++cn;
+            } else if(cn > 0) {
+                cn = next[cn];
+            } else {
+                next[i++] = 0;
+            }
+        }
+    }
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        n = Integer.valueOf(br.readLine());
+        s = br.readLine().toCharArray();
+        System.out.println(compute());
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目2:不停删除之后剩下的字符串(p4824)
+    给定一个字符串s1,如果其中含有s2的字符串,就删除最左边出现的那个
+    删除之后s1剩下的字符串重新拼接在一起,再删除最左边的那个,如果周而复始,返回剩下的字符串
+
+    思路:用栈 + KMP
+    创建两个栈,分别存s1的下标和s2的下标
+    在栈中装s1中的字符以及其对于的在s2中的下标,如果没有就是-1,如果不匹配就参考next数组
+    将s2的指针往前跳;如果s2的指针越界了,说明此时有一个完整的s2字符串在s1中出现
+    此时栈弹出s2.length()次,弹出之后,查询s2的哪一个字符是看栈顶元素对应的在s2中的下标
+    以此类推,直到s1指针越界
+    在这个过程中,s1的指针永远不回退
+     */
+    public static char[] s1,s2;
+    public static int MAXM = 1000001;
+    public static int[] next1 = new int[MAXM];
+    public static int[] stack1 = new int[MAXM];
+    public static int[] stack2 = new int[MAXM];
+    public static int size;
+    public static void nextArray(int m){
+        next1[0] = -1;
+        next1[1] = 0;
+        int i = 2,cn = 0;
+        while(i < m){
+            if(s2[cn] == s2[i - 1]){
+                next1[i++] = ++cn;
+            } else if(cn > 0){
+                cn = next1[cn];
+            } else {
+                next1[i++] = 0;
+            }
+        }
+    }
+
+    public static void compute1(){
+        size = 0;
+        int n = s1.length;
+        int m = s2.length;
+        nextArray(m);
+        int x = 0,y = 0;
+        while(x < n){
+            if(s1[x] == s2[y]){
+                stack1[size] = x;
+                stack2[size] = y;
+                size++;
+                x++;
+                y++;
+            } else if(y == 0){
+                stack1[size] = x;
+                stack2[size] = -1;
+                size++;
+                x++;
+            } else {
+                y = next1[y];
+            }
+            if(y == m){
+                size -= m;
+                y = size > 0 ? (stack2[size - 1] + 1) : 0;
+            }
+        }
+    }
+    public static void main1(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        s1 = br.readLine().toCharArray();
+        s2 = br.readLine().toCharArray();
+        compute1();
+        for(int i = 0;i < size;i++){
+            System.out.print(s1[stack1[i]]);
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目3:二叉树中的链表
+    给你一棵以 root 为根的二叉树和一个 head 为第一个节点的链表。
+    如果在二叉树中，存在一条一直向下的路径，
+    且每个点的数值恰好一一对应以 head 为首的链表中每个节点的值，那么请你返回 True
+    否则返回 False 。
+    一直向下的路径的意思是：从树中某个节点开始，一直连续向下的路径。
+     */
+    public static class ListNode{
+        public int val;
+        public ListNode next;
+    }
+    public static class TreeNode{
+        public TreeNode left;
+        public TreeNode right;
+        public int val;
+    }
+    public static int[] nextArray(int[] s,int m){
+        if(m == 1){
+            return new int[]{-1};
+        }
+        int[] next = new int[m];
+        next[0] = -1;
+        next[1] = 0;
+        int i = 2,cn = 0;
+        while(i < m){
+            if(s[i - 1] == s[cn]){
+                next[i++] = ++cn;
+            } else if(cn > 0){
+                cn = next[cn];
+            } else {
+                next[i++] = 0;
+            }
+        }
+        return next;
+    }
+    //链表对比的位置来到i
+    //二叉树来到cur结点
+    //利用链表的next数组加速匹配
+    //返回是否能把链表整体匹配出来
+    public static boolean find(int[] s2,int[] next,TreeNode cur,int i){
+        if(i == s2.length){
+            return true;
+        }
+        if(cur == null){
+            return false;
+        }
+        while(i >= 0 && cur.val != s2[i]){
+            i = next[i];
+        }
+        return find(s2,next,cur.left,i + 1) || find(s2,next,cur.right,i + 1);
+    }
+    public boolean isSubPath(ListNode head, TreeNode root) {
+        int m = 0;
+        ListNode tmp = head;
+        while(tmp != null){
+            m++;
+            tmp = tmp.next;
+        }
+        int[] s2 = new int[m];
+        m = 0;
+        while(head != null){
+            s2[m++] = head.val;
+            head = head.next;
+        }
+        int[] next = nextArray(s2,m);
+        return find(s2,next,root,0);
+    }
+    /*
+    题目4:找到所有好字符串
+    给你两个长度为 n 的字符串 s1 和 s2 ，以及一个字符串 evil 。请你返回 好字符串 的数目。
+    好字符串的定义为:它的长度为n,字典序大于等于s1,字典序小于等于s2,且不包含evil为子字符串。
+    由于答案可能很大，请你返回答案对 10^9 + 7 取余的结果。
+
+    将条件拆开,f(<=s1) = a,f(<=s2) = b,如果s1也满足条件,那么答案就是b-a+1
+    然后字典序要小于等于字符串,就是标准的数位dp的做法,只不过比较的是字母而不是数字
+    对于字符串的匹配:
+    生成evil字符串的next数组,然后和选出来的字符串进行匹配,当不匹配时指针就一直往前跳,
+    直到匹配位置,然后获取到当前next数组指针的下标,然后从此时下标+1的长度继续匹配
+    如果一直往前跳到了0下标都没有匹配上,那么此时就当做-1,以后从evil的0位置重新开始匹配
+     */
+    public static int MOD = (int) 1e9 + 7;
+    public static int MAXN1 = 501;
+    public static int MAXM1 = 51;
+    public static int[][][] dp = new int[MAXN1][MAXM1][2];
+    public static int[] nxt = new int[MAXM1];
+    public static void clear(int n,int m){
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < m;j++){
+                dp[i][j][0] = -1;
+                dp[i][j][1] = -1;
+            }
+        }
+    }
+    public static void nextArray(char[] e,int m){
+        nxt[0] = -1;
+        nxt[1] = 0;
+        int i = 2,cn = 0;
+        while(i < m){
+            if(e[i - 1] == e[cn]){
+                nxt[i++] = ++cn;
+            } else if(cn > 0){
+                cn = nxt[cn];
+            } else {
+                nxt[i++] = 0;
+            }
+        }
+    }
+    public static int kmp(char[] s,char[] e,int n,int m){
+        int x = 0,y = 0;
+        while(x < n && y < m){
+            if(s[x] == e[y]){
+                x++;
+                y++;
+            } else if(y == 0){
+                x++;
+            } else {
+                y = nxt[y];
+            }
+        }
+        return y == m ? x - y : -1;
+    }
+    public static int jump(char cur,char[] e,int j){
+        while(j >= 0 && cur != e[j]){
+            j = nxt[j];
+        }
+        return j;
+    }
+    public static int f(char[] s,char[] e,int n,int m,int i,int j,int free){
+        //j是匹配evil的决定,如果到m了,说明已经完全匹配完了,那么就不符合题意
+        if(j == m){
+            return 0;
+        }
+        if(i == n){
+            return 1;
+        }
+        if(dp[i][j][free] != -1){
+            return dp[i][j][free];
+        }
+        char cur = s[i];
+        int ans = 0;
+        if(free == 0){
+            for(char pick = 'a';pick < cur;pick++){
+                ans = (ans + f(s,e,n,m,i + 1,jump(pick,e,j) + 1,1)) % MOD;
+            }
+            ans = (ans + f(s,e,n,m,i + 1,jump(cur,e,j) + 1,0)) % MOD;
+        } else {
+            for(char pick = 'a';pick <= 'z';pick++){
+                ans = (ans + f(s,e,n,m,i + 1,jump(pick,e,j) + 1, 1)) % MOD;
+            }
+        }
+        dp[i][j][free] = ans;
+        return ans;
+    }
+    public static int findGoodStrings(int n, String str1, String str2, String evil) {
+        char[] s1 = str1.toCharArray();
+        char[] s2 = str2.toCharArray();
+        char[] e = evil.toCharArray();
+        int m = e.length;
+        nextArray(e,m);
+        clear(n,m);
+        int ans = f(s2,e,n,m,0,0,0);
+        clear(n,m);
+        ans = (ans - f(s1,e,n,m,0,0,0) + MOD) % MOD;
+        if(kmp(s1,e,n,m) == -1){
+            ans = (ans + 1) % MOD;
+        }
+        return ans;
+    }
+}

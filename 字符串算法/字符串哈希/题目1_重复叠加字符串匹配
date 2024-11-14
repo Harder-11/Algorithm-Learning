@@ -1,0 +1,67 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    题目1:重复叠加字符串匹配
+    给定两个字符串 a 和 b，寻找重复叠加字符串 a 的最小次数，
+    使得字符串 b 成为叠加后的字符串 a 的子串，如果不存在则返回 -1。
+    注意：字符串 "abc" 重复叠加 0 次是 ""
+    重复叠加 1 次是 "abc"，重复叠加 2 次是 "abcabc"。
+
+    思路:如果a长度 < b长度,如果a要叠加k次长度>=b串,如果k+1次还搞定不了
+    那么就不可能了
+     */
+    public static int MAXN = 30001;
+    public static char[] s = new char[MAXN];
+    public static int base = 499;
+    public static long[] pow = new long[MAXN];
+    public static long[] hash = new long[MAXN];
+    public static void build(int n){
+        pow[0] = 1;
+        for(int i = 1;i < n;i++){
+            pow[i] = pow[i - 1] * base;
+        }
+        hash[0] = s[0] - 'a' + 1;
+        for(int i = 1;i < n;i++){
+            hash[i] = hash[i - 1] * base + s[i] - 'a' + 1;
+        }
+    }
+    public static long hash(int l,int r){
+        long ans = hash[r];
+        if(l > 0){
+            ans -= hash[l - 1] * pow[r - l + 1];
+        }
+        return ans;
+    }
+    public int repeatedStringMatch(String str1, String str2) {
+        char[] s1 = str1.toCharArray();
+        char[] s2 = str2.toCharArray();
+        int n = s1.length;
+        int m = s2.length;
+        int k = (m + n - 1) / n;
+        int len = 0;
+        for(int a = 0;a <= k;a++){
+            for(int b = 0;b < n;b++){
+                s[len++] = s1[b];
+            }
+        }
+        build(len);
+        long h2 = s2[0] - 'a' + 1;
+        for(int i = 1;i < m;i++){
+            h2 = h2 * base + s2[i] - 'a' + 1;
+        }
+        //最后看循环是r右边界到没到最后一个拼接的串中
+        //如果没到就是k,否则就是k+1
+        for(int l = 0,r = m - 1;r < len;r++,l++){
+            if(hash(l,r) == h2){
+                return r < n * k ? k : k + 1;
+            }
+        }
+        return -1;
+    }
+}

@@ -1,0 +1,73 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //Manacher算法和扩展KMP
+    /*
+    Manacher算法求解字符串的最长回文子串长度是最基本用法,其中要重点理解回文半径数组
+    回文半径和真实回文半径的对应,真实长度 = p[i](回文半径) - 1
+    扩展回文串结尾下标和真实回文串终止位置的对应,真实回文串终止位置 = 扩展回文串结尾下标/2
+
+    理解回文半径数组,理解回文覆盖最右边界r(到不了的位置),理解回文中心c
+    Manacher算法的加速过程,当来到中心点i,如果利用p,r,c来进行回文扩展
+    a.i没有被r包住,那么以i为中心直接扩展
+    b.i被r包住,对称点2*c-i的回文半径在大回文区域以内,直接确定p[i]=p[2*c-i]
+    因为是完全对称的,然后2*c-i的回文半径已经求过了,所以直接用
+    c.i被r包住,对称点2*c-i的回文半径(回文区域)在大回文区域以外,直接确定p[i]=r-i
+    此时的回文半径就是最右边界r-当前的中心点,可以用反证法证明,如果此时i的回文半径
+    会>r,那么此时i和i的对称点由于是完全对称,那么此时>r的部分也满足回文中心c
+    的回文串,但是与实际情况不符合,所以此时i的回文半径就是r-i
+    d.i被r包住,对称点2*c-i的回文半径,撞线大回文区域的边界,从r之外的位置进行扩展
+    此时就其实是上述b和c条件的总和,可能变得更长,也可能没有变长,所以进行扩展
+    时间复杂度O(n)
+    !!!!巧妙使用while兼顾以上四种情况,代码中无需四种情况的判断
+
+    思路:为了同时解决及长度和偶长度的字符串,那么在每个字符中间和左右都加上'#'字符
+    此时长度一定是奇数(2n+1),比如字符串"abaaba",扩展串是"#a#b#a#a#b#a#",对于此时拓展串
+    "#a#b#a#",直径是7,半径是4(半径是算上中心字符+拓展出去的字符数目)
+     */
+    public static int MAXN = 11000001;
+    public static char[] ss = new char[MAXN << 1];
+    public static int[] p = new int[MAXN << 1];
+    public static int n;
+    //Manacher核心代码,一个简短的while循环处理了4种情况!!!
+    public static int manacher(String str){
+        manacherss(str.toCharArray());
+        int max = 0;
+        for(int i = 0,c = 0,r = 0,len;i < n;i++){
+            //r>i说明包住了,那么至少的回文区域就是b,c两种情况的最小值,否则就从1开始展开
+            len = r > i ? Math.min(p[2 * c - i],r - i) : 1;
+            while(i + len < n && i - len >= 0 && ss[i + len] == ss[i - len]){
+                len++;
+            }
+            //看此时len + i能不能刷新右边界,然后此时c和r都更新
+            if(i + len > r){
+                r = i + len;
+                c = i;
+            }
+            max = Math.max(max,len);
+            p[i] = len;
+        }
+        return max - 1;
+    }
+    //扩展字符串
+    public static void manacherss(char[] a){
+        n = a.length * 2 + 1;
+        for(int i = 0,j = 0;i < n;i++){
+            ss[i] = (i & 1) == 0 ? '#' : a[j++];
+        }
+    }
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        System.out.println(manacher(in.readLine()));
+        out.flush();
+        out.close();
+        in.close();
+    }
+}

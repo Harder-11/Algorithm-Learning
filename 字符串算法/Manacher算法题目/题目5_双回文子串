@@ -1,0 +1,86 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    题目5:最长双回文子串(p4555)
+    顺序和逆序读起来完全一样的串叫回文串
+    输入长度为n的串s,求s的最长双回文子串,即可将T分为两部分X,Y(X,Y长度都>=1)求X和Y都是回文串
+    比如aabb可以分为aa,bb,就是双回文子串
+
+    思路:Manacher算法得到p数组,然后以每个#作为划分点,然后看左右两边最长的回文串长度之和是多少
+    预处理就是求每个#的left和right数组,表示每个#左边延伸的最长的回文串和往右边延伸的最长的
+    回文串,难点就在于怎么生成left和right数组
+    比如字符串是aabcbffeffks,拓展之后得到#a#a#b#c#f#f#e#f#f#k#s#
+    现在处理left数组,从左到右遍历,left都只填偶数下标,每次看当前的字符往右最多影响到哪个下标
+    的#字符,比如拓展串到0位置此时影响不了右边的#,所以left[0]=0,然后来到1位置,此时a查看p表
+    可以影响到2位置的#,此时left[2]=2-1=1(影响到的#下标-遍历来到的下标),然后来到2下标
+    此时可以影响到4位置的#,所以left[4]=4-2=2,以此类推,right同理
+
+    为什么影响到的#的下标 - 遍历来到的下标就可以求到#左侧最长的回文串?
+    因为此时遍历到的地方就相当于c(回文中心),然后往左右延伸都是len-1,并且这个回文两头一定是#
+    那么一共有2*len-1个字符,其中有len个字符都是#,所以剩下的回文串长度就是len-1
+    所以就等于影响到的#的下标 - 遍历来到的下标
+     */
+    public static int MAXN = 100002;
+    public static char[] ss = new char[MAXN << 1];
+    public static int[] p = new int[MAXN << 1];
+    public static int[] left = new int[MAXN << 1];
+    public static int[] right = new int[MAXN << 1];
+    public static int n;
+    public static int compute(String s){
+        manacher(s);
+        for(int i = 0,j = 0;i < n;i++){
+            while(i + p[i] > j){
+                left[j] = j - i;
+                j += 2;
+            }
+        }
+        for(int i = n - 1,j = n - 1;i >= 0;i--){
+            while(i - p[i] < j){
+                right[j] = i - j;
+                j -= 2;
+            }
+        }
+        int ans = 0;
+        for(int i = 2;i <= n - 3;i++){
+            ans = Math.max(ans,left[i] + right[i]);
+        }
+        return ans;
+    }
+    public static void manacher(String s){
+        manacherss(s.toCharArray());
+        for(int i = 0,r = 0,c = 0,len;i < n;i++){
+            len = r > i ? Math.min(r - i,p[2 * c - i]) : 1;
+            while(i + len < n && i - len >= 0 && ss[i + len] == ss[i - len]){
+                len++;
+            }
+            if(r < len + i){
+                r = len + i;
+                c = i;
+            }
+            p[i] = len;
+        }
+    }
+    public static void manacherss(char[] a){
+        n = a.length * 2 + 1;
+        for(int i = 0,j = 0;i < n;i++){
+            ss[i] = (i & 1) == 0 ? '#' : a[j++];
+        }
+    }
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        System.out.println(compute(br.readLine()));
+        out.flush();
+        out.close();
+        br.close();
+
+    }
+}

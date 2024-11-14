@@ -1,0 +1,60 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    题目3:不重叠回文子串的最多数目
+    给你一个字符串s和一个正整数k 。
+    从字符串 s 中选出一组满足下述条件且 不重叠 的子字符串：
+    每个子字符串的长度至少为k 。
+    每个子字符串是一个回文串 。
+    返回最优方案中能选择的子字符串的最大数目。
+    子字符串是字符串中一个连续的字符序列
+    */
+    public static int MAXN = 2001;
+    public static char[] ss = new char[MAXN << 1];
+    public static int[] p = new int[MAXN << 1];
+    public static int n;
+    public static void manacherss(char[] a){
+        n = a.length * 2 + 1;
+        for(int i = 0,j = 0;i < n;i++){
+            ss[i] = (i & 1) == 0 ? '#' : a[j++];
+        }
+    }
+    //find方法:从next位置出发,只要找到一个>=k回文子串的位置,就返回当前的位置
+    //拓展串ss从l位置开始往右找回文,且ss[l]一定是'#'
+    //表示找到了距离l最近且长度>=k的回文串
+    //没有命中就返回最右下标+1
+    //如果不存在l右边长度有>=k的回文串了,返回-1
+    public static int find(int l,int k){
+        for(int i = l,c = l,r = l,len;i < n;i++){
+            len = r > i ? Math.min(r - i,p[2 * c - i]) : 1;
+            while(i + len < n && i - len >= l && ss[i + len] == ss[i - len]){
+                if(++len > k){
+                    //上述也可以写成len++,即每次要保证len++,并且和k比大小
+                    //保证返回的是'#'
+                    return i + k + (ss[i + k] != '#' ? 1 : 0);
+                }
+            }
+            if(i + len > r){
+                r = i + len;
+                c = i;
+            }
+            p[i] = len;
+        }
+        return -1;
+    }
+    public int maxPalindromes(String str, int k) {
+        manacherss(str.toCharArray());
+        int ans = 0;
+        int next = 0;
+        while((next = find(next,k)) != -1){
+            ans++;
+        }
+        return ans;
+    }
+}

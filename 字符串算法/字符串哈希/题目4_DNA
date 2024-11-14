@@ -1,0 +1,106 @@
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    题目4:DNA(p3763)
+    给定长为n的源串s,以及长度为m的模式串p,还有一个正数k
+    s'和s匹配的定义是:s'和s长度相同且最多有k个位置字符不同
+    要求查找源串中有多少个子串和模式串匹配
+    本题k = 3,并且串只有A,C,T,G这四个字母
+
+    思路:对于s源串在i位置往下数c个数和s'串往下数c个数,求得两段字符串各自的哈希值
+    如果哈希值一样,那么说明两段字符串完全一样,肯定是成立的;如果不一样,那么就二分
+    看两段字符串左侧c/2个字符的哈希值,看是否一样,如果一样,说明不一样的位置在右侧
+    一直持续下去,找到第一个不同的位置,假设此时s串不一样的位置在j,s'串的位置在k
+    那么此时找j+1到c和k+1往后二分,找到第二个不一样的位置,以此类推只需要最多找3次
+    如果找到的数量<=3,那么就是满足条件,如果>3,那就不满足
+     */
+    public static int MAXN = 100001;
+    public static int base = 499;
+    public static long[] pow = new long[MAXN];
+    public static long[] hashs = new long[MAXN];
+    public static long[] hashp = new long[MAXN];
+    public static void build(char[] s,int n,char[] p,int m){
+        pow[0] = 1;
+        for(int i = 1;i < n;i++){
+            pow[i] = pow[i - 1] * base;
+        }
+        hashs[0] = s[0] - 'a' + 1;
+        for(int j = 1;j < n;j++){
+            hashs[j] = hashs[j - 1] * base + s[j] - 'a' + 1;
+        }
+        hashp[0] = p[0] - 'a' + 1;
+        for(int j = 1;j < m;j++){
+            hashp[j] = hashp[j - 1] * base + p[j] - 'a' + 1;
+        }
+    }
+    public static long hash(long[] hash,int l,int r){
+        long ans = hash[r];
+        if(l > 0){
+            ans -= hash[l - 1] * pow[r - l + 1];
+        }
+        return ans;
+    }
+
+    public static int compute(char[] s,char[] p,int k){
+        int n = s.length;
+        int m = p.length;
+        if(n < m){
+            return 0;
+        }
+        build(s,n,p,m);
+        int ans = 0;
+        for(int i = 0;i <= n - m;i++){
+            //s串对应的范围是i到i+m-1,p是从0出发
+            if(check(i,i + m - 1,0,k)){
+                ans++;
+            }
+        }
+        return ans;
+    }
+    public static boolean same(int l1,int l2,int len){
+        return hash(hashs,l1,l1 + len - 1) == hash(hashp,l2,l2 + len - 1);
+    }
+    public static boolean check(int l1,int r1,int l2,int k){
+        int diff = 0;
+        while(l1 <= r1 && diff <= k){
+            int l = 1,r = r1 - l1 + 1;
+            int m,len = 0;
+            while(l <= r){
+                m = (l + r) >> 1;
+                if(same(l1,l2,m)){
+                    len = m;
+                    l = m + 1;
+                } else {
+                    r = m - 1;
+                }
+            }
+            if(l1 + len <= r1){
+                diff++;
+            }
+            l1 += len + 1;
+            l2 += len + 1;
+        }
+        return diff <= k;
+    }
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        int n = Integer.valueOf(br.readLine());
+        for(int i = 0;i < n;i++){
+            String s = br.readLine();
+            String p = br.readLine();
+            System.out.println(compute(s.toCharArray(),p.toCharArray(),3));
+        }
+        out.flush();
+        out.close();
+        br.close();
+
+    }
+}
