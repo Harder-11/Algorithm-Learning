@@ -1,0 +1,82 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    轮廓线dp
+    前置知识:把状态s的第j位的状态设为0,其他位置不变:s = s & (~(1 << j))
+     */
+
+    /*
+    题目1:种草的方法数(p1879)
+    给定一个n*m的二维网格grid
+    网格里只有0、1两种值，0表示该田地不能种草，1表示该田地可以种草
+    种草的时候，任何两个种了草的田地不能相邻，相邻包括上、下、左、右四个方向
+    你可以随意决定种多少草，只要不破坏上面的规则即可
+    返回种草的方法数，答案对100000000取模
+     */
+    /*
+    对于轮廓线dp,定义函数f(i,j,s)表示来到当前的i行j列,轮廓线状态是s
+    具体来说就是i-1行的(j...m-1)列的状况用s(j...m-1)位来表示
+    i行(0...j-1)列的决策用s(0...j-1)位来表示,返回后续有效的方法数
+    此时时间复杂度是O(n*m*2^m)
+    此时利用空间压缩,将三维表拆成二维表,
+     */
+    public static int MAXN = 12;
+    public static int MAXM = 12;
+    public static int MOD = 100000000;
+    public static int[][] grid = new int[MAXN][MAXM];
+    public static int[][] dp = new int[MAXM + 1][1 << MAXM];
+    public static int n,m,maxs;
+    public static int compute(){
+        Arrays.fill(dp[0],0,maxs,1);
+        for(int i = n - 1;i >= 0;i--){
+            //当j==m时,此时递归方法要往下一层走,就是调用i+1,所以在列=m和列=0的情况是一样的
+            for(int s = 0;s < maxs;s++){
+                dp[m][s] = dp[0][s];
+            }
+            for(int j = m - 1;j >= 0;j--){
+                for(int s = 0;s < maxs;s++){
+                    dp[j][s] = dp[j + 1][set(s,j,0)];
+                    if(grid[i][j] == 1 && (j == 0 || get(s,j - 1) == 0) && get(s,j) == 0){
+                        dp[j][s] = (dp[j][s] + dp[j + 1][set(s,j,1)]) % MOD;
+                    }
+                }
+            }
+        }
+        return dp[0][0];
+    }
+    public static int get(int s,int j){
+        return (s >> j) & 1;
+    }
+    public static int set(int s,int j,int v){
+        return v == 0 ? (s & (~(1 << j))) : (s | (1 << j));
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        in.nextToken();
+        m = (int) in.nval;
+        maxs = 1 << m;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                in.nextToken();
+                grid[i][j] = (int) in.nval;
+            }
+        }
+        out.println(compute());
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

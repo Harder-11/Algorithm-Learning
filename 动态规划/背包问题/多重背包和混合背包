@@ -1,0 +1,354 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    多重背包和混合背包
+    多重背包:每一种物品给定物品的限制,进行可能性的展开
+    多重背包的枚举优化:二进制分组优化(最常用),单调队列优化(复杂度最好)
+    混合背包:多种背包模型的组合与转化
+     */
+    /*
+    多重背包不进行枚举优化(模版题)(p1776,普及+/提高)
+    宝物筛选
+    一共有n种货物,背包容量为t
+    每种货物的价值v[i],重量w[i]和数量c[i]都给出
+    请返回选择货物不超过背包容量的情况下,能得到的最大价值
+
+    思路:dp[i][j]:1~i号货物自由选择,每种货物的个数都不超过限制,容量也不超过j的情况下,获得的最大价值
+    对于每一种货物都进行枚举
+    (1)dp[i-1][j] (2)dp[i-1][j-w[i]]+v[i] (3)dp[i-1][j-w[i]*2]+2*v[i]....枚举所有可能的个数不能超过c[i]
+    关于二进制分组:比如说有一种商品有13个,每个价值3,重量5,那么可以进行分组
+    每一组的货品数目从1一直倍增
+    改变而得的A号货物:1个,价值3,重量5
+    B号货物:2个,价值6,重量10
+    C号货物:4个,价值12,重量20
+    D号货物,将剩下的全部集合起来,6个,价值18,重量30,这样处理就将枚举从O(N)-->O(logN)
+    这样可以满足对于i号货物任意要多少数量的都可以通过ABCD四种情况来呈现,这样处理后就变成01背包
+     */
+    public static int[] c = new int[101];
+    public static int[] w = new int[101];
+    public static int[] v = new int[101];
+    public static int[] dp = new int[40001];
+    public static int n,t;
+    //严格位置依赖的动态规划
+    //时间复杂度O(n*t*每种商品的平均个数)
+    public static int compute1(){
+        int[][] dp = new int[n + 1][t + 1];
+        for(int i = 1;i <= n;i++){
+            for(int j = 0;j <= t;j++){
+                dp[i][j] = dp[i - 1][j];
+                for(int k = 1;k <= c[i] && w[i] * k <= j;k++){
+                    dp[i][j] = Math.max(dp[i][j],dp[i - 1][j - k * w[i]] + k * v[i]);
+                }
+            }
+        }
+        return dp[n][t];
+    }
+    //空间压缩,但是仍然超时,因为没有优化枚举
+    public static int compute2(){
+        for(int i = 1;i <= n;i++){
+            for(int j = t;j >= 0;j--){
+                for(int k = 1;k <= c[i] && w[i] * k <= j;k++){
+                    dp[j] = Math.max(dp[j],dp[j - k * w[i]] + k * v[i]);
+                }
+            }
+        }
+        return dp[t];
+    }
+    public static void main(String[] args)throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while (in.nextToken() != StreamTokenizer.TT_EOF) {
+            n = (int) in.nval;
+            in.nextToken();
+            t = (int) in.nval;
+            for(int i = 0;i < n;i++){
+                in.nextToken(); v[i] = (int) in.nval;
+                in.nextToken(); w[i] = (int) in.nval;
+                in.nextToken(); c[i] = (int) in.nval;
+            }
+            System.out.println(compute1());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    //二进制分组背包
+    //把每一种货物根据个数进行分组,生成衍生商品
+    //衍生出来的每一种商品,价值放入v,重量放入w
+    public static int[] w1 = new int[1001];
+    public static int[] v1 = new int[1001];
+    public static int[] dp1 = new int[40001];
+    public static int n1,t1,m1;
+    public static int compute(){
+        Arrays.fill(dp1,0,t1 + 1,0);
+        for(int i = 1;i <= m1;i++){
+            for(int j = t1;j >= 0;j--){
+                dp1[j] = Math.max(dp1[j],dp1[j - w3[i]] + v1[i]);
+            }
+        }
+        return dp1[t1];
+    }
+
+    public static void main1(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while (in.nextToken() != StreamTokenizer.TT_EOF) {
+            n1 = (int) in.nval;
+            in.nextToken();
+            t1 = (int) in.nval;
+            m1 = 0;
+            for(int i = 1,value,weight,cnt;i <= n1;i++){
+                in.nextToken(); value = (int) in.nval;
+                in.nextToken(); weight = (int) in.nval;
+                in.nextToken(); cnt = (int) in.nval;
+                //二进制分组,复杂度虽然不如单调队列版本,但是好写,比赛的复杂度也达标
+                for(int k = 1;k <= cnt;k <<= 1){
+                    v1[++m1] = k * value;
+                    w3[m1] = k * weight;
+                    cnt -= k;
+                }
+                if(cnt > 0){
+                    v1[++m1] = cnt * value;
+                    w3[m1] = cnt * weight;
+                }
+            }
+            System.out.println(compute());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目3:观赏樱花(P1833,普及/提高-)
+    给定一个背包的容量t,一共有n种货物,并且给的每种货物的信息
+    花费(cost),价值(val),数量(cnt),容量是按时间算出来的,从初识时间->结束时间的分钟数
+    如果cnt == 0,代表这种货物可以无限选择
+    如果cnt > 0,那么cnt代表这种货物的数量
+    挑选货物的总容量在不超过t的情况下,返回能得到的最大价值
+    背包容量不超过1000,每一种货物的花费都>0
+
+    思路:完全背包转化为多重背包,再把多重背包通过二进制分组转化为01背包
+    cnt == 0时,就把他当做10000个个数(足够大)就行
+     */
+    public static int[] v2 = new int[100001];
+    public static int[] w2 = new int[100001];
+    public static int[] dp2 = new int[1001];
+    public static int hour1,minute1,hour2,minute2;
+    public static int t2,n2,m2;
+    public static int compute3(){
+        Arrays.fill(dp2,0,t2 + 1,0);
+        for(int i = 1;i <= m2;i++){
+            for(int j = t2;j >= w2[i];j--){
+                dp2[j] = Math.max(dp2[j],dp2[j - w2[i]] + v2[i]);
+            }
+        }
+        return dp2[t2];
+    }
+    public static void main2(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        in.parseNumbers();
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while (in.nextToken() != StreamTokenizer.TT_EOF) {
+            hour1 = (int) in.nval;
+            in.nextToken();
+            in.nextToken();
+            minute1 = (int) in.nval;
+            in.nextToken();
+            hour2 = (int) in.nval;
+            in.nextToken();
+            in.nextToken();
+            minute2 = (int) in.nval;
+            if(minute1 > minute2){
+                hour2--;
+                minute2 += 60;
+            }
+            t2 = (hour2 - hour1) * 60 + minute2 - minute1;
+            in.nextToken();
+            n2 = (int) in.nval;
+            m2 = 0;
+            for(int i = 0,cost,val,cnt;i < n2;i++){
+                in.nextToken();
+                cost = (int) in.nval;
+                in.nextToken();
+                val = (int) in.nval;
+                in.nextToken();
+                cnt = (int) in.nval;
+                if(cnt == 0){
+                    cnt = 1001;
+                }
+                for(int k = 1;k <= cnt;k <<= 1){
+                    v2[++m2] = k * val;
+                    w2[m2] = k * cost;
+                    cnt -= k;
+                }
+                if(cnt > 0){
+                    v2[++m2] = cnt * val;
+                    w2[m2] = cnt * cost;
+                }
+            }
+            System.out.println(compute3());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    利用单调队列来优化多重背包问题
+    对于每个物品的数目根据余数分组
+    假设此时物品重量为3,价值为5,个数为4
+    那么对于dp[i][0,3,6,9,12,15...]都只依赖于dp[i-1][0,3,6,9....]
+    因为在转移方程里面dp[i][j]=dp[i-1][j-k*cost[i]]+k*val[i]
+    在j这一维的转移里都是由前面cost[i]整数倍转移过来的
+    那么对于dp表每一层,都是从0开始,然后求3,6,9...然后求1,4,7....然后求2,5,8...
+    假设列数是 5...8...11...14...17...20
+    行数是i-1     a    b    c    d    e
+         i
+         现在想求第i行的20列的格子,那么转移就是max(a+20,b+15,c+10,d+5,e+0)
+         在a前面的格子由于超过了物品的个数,所以不能取到
+         然后得到dp[i][20]之后来到dp[i][23],此时将a位置从队列弹出不要,然后在bcde四个里面求
+         最大值,以此类推,同时对于每个格子的转移方程 +val[i]可以转化为
+         dp[i][j]=j/cost[i]*val[i] + dp[i-1][j-k*cost[i]]-(j-k*cost[i])/cost[i]*val[i]
+         比如dp[i][20]=dp[i-1][8]+4*5
+         可以转化为dp[i][20]=dp[i-1][8]-8/3*5+20/3*5;此时往队列中存储时不会随着l和r的移动而发生
+         改变
+     */
+    public static int[] w3 = new int[1001];
+    public static int[] v3 = new int[1001];
+    public static int[] c3 = new int[1001];
+    public static int[] dp3 = new int[40001];
+    public static int[] queue = new int[40001];
+    public static int n3,t3,m3,l,r;
+    //当前来到i号货,需要j位置的指标,返回指标值
+    public static int value1(int[][] dp,int i,int j){
+        return dp[i - 1][j] - j / w3[i] * v3[i];
+    }
+    public static int compute4(){
+        int[][] dp = new int[n + 1][t + 1];
+        for(int i = 1;i <= n;i++){
+            //比如商品个数是3,那么余数可能是0,1,2
+            //但是如果背包的总量都小于此时商品个数了,那么最大就是背包的容量
+            for(int mod = 0;mod <= Math.min(t3,w3[i] - 1);mod++){
+                l = r = 0;
+                for(int j = mod;j <= t3;j += w3[i]){
+                    //要保证队列l处的值最大
+                    while(l < r && value1(dp,i,queue[r - 1]) <= value1(dp,i,j)){
+                        r--;
+                    }
+                    queue[r++] = j;
+                    //此时要淘汰最左侧的指标,当前格子-(商品个数+1)*重量
+                    //比如上方例子,当来到20位置,此时5号位置就过期了,那么l++
+                    if(queue[l] == j - w3[i] * (c3[i] + 1)){
+                        l++;
+                    }
+                    dp[i][j] = value1(dp,i,queue[l]) + j / w3[i] * v3[i];
+                }
+            }
+        }
+        return dp[n3][t3];
+    }
+    public static void main3(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while (in.nextToken() != StreamTokenizer.TT_EOF) {
+            n3 = (int) in.nval;
+            in.nextToken();
+            t3 = (int) in.nval;
+            m3 = 0;
+            for(int i = 1,value,weight,cnt;i <= n3;i++){
+                in.nextToken(); value = (int) in.nval;
+                in.nextToken(); weight = (int) in.nval;
+                in.nextToken(); cnt = (int) in.nval;
+                //二进制分组,复杂度虽然不如单调队列版本,但是好写,比赛的复杂度也达标
+                for(int k = 1;k <= cnt;k <<= 1){
+                    v3[++m3] = k * value;
+                    w3[m3] = k * weight;
+                    cnt -= k;
+                }
+                if(cnt > 0){
+                    v3[++m3] = cnt * value;
+                    w3[m3] = cnt * weight;
+                }
+            }
+            System.out.println(compute4());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    混合背包 + 多重背包普通窗口优化
+    能成功找零的钱数种类
+    每一种货币都给定面值val[i],和拥有的数量cnt[i]
+    想知道目前拥有的货币,在钱数为1,2,3...m时,能找零成功的钱数有多少
+    也就是说当前数的范围是1~m,返回这个范围上有多少可以找零成功的钱数
+    比如只有3元的货币,数量是5张,m = 10,在1~10范围上,只有钱数是3,6,9是可以找零,那么返回3,表示有3种情况
+
+    思路:定义dp[i][j](boolean):从1~i号货币,找零j钱数能不能找开,对于第i号的货币,仍然是选与不选两种
+    (1)dp[i-1][j] (2)dp[i-1][j-val[i]]
+    只写函数,不写main主体
+     */
+    public static int compute(boolean[] dp,int n,int m,int[] cnt,int[] val){
+        Arrays.fill(dp,1,m + 1,false);
+        //找钱是0元肯定可以
+        dp[0] = true;
+        for(int i = 1;i <= n;i++){
+            //当cnt[i]==1,只有一个货物,说明是01背包
+            if(cnt[i] == 1){
+                for(int j = m;j >= val[i];j--){
+                    if(dp[j - val[i]]){
+                        dp[j] = true;
+                    }
+                }
+            } else if(val[i] * cnt[i] > m){
+                //完全背包的空间压缩是从左到右更新,因为i没有变,是本行
+                for(int j = val[i];j <= m;j++){
+                    if(dp[j - val[i]]){
+                        dp[j] = true;
+                    }
+                }
+            } else {
+                //多重背包的空间压缩
+                //根据余数分组,每一组从右往左更新
+                //对于每一行,创建一个大小为cnt[i]+1大小的窗口,如果窗口里面只要有一个是true,那么此时
+                //dp就更新为true,然后窗口左移,此时用变量TrueCnt来表示窗口true的个数
+                for(int mod = 0;mod < val[i];mod++){
+                    int trueCnt = 0;
+                    for(int j = m - mod,size = 0;j >= 0 && size <= cnt[i];j -= val[i],size++){
+                        trueCnt += dp[j] ? 1 : 0;
+                    }
+                    for(int j = m - mod,l = j - val[i] * (cnt[i] + 1);j >= 1;j -= val[i],i -= val[i]){
+                        if(dp[j]){
+                            trueCnt--;
+                        } else {
+                            if(trueCnt != 0){
+                                dp[j] = true;
+                            }
+                        }
+                        if(l >= 0){
+                            trueCnt += dp[l] ? 1 : 0;
+                        }
+                    }
+                }
+            }
+        }
+        int ans = 0;
+        for(int i = 1;i <= m;i++){
+            if(dp[i]){
+                ans++;
+            }
+        }
+        return ans;
+    }
+}
+
+
+
+

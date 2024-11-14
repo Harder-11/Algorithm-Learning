@@ -1,0 +1,175 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    状压dp
+    设计一个整型可变参数status,利用status的位信息来表示:
+    某个样本是否还能使用,然后利用这个信息进行尝试
+    写出尝试的递归函数-->记忆化搜索-->严格位置依赖的动态规划--->空间压缩等优化
+    如果有k个样本,那么表示这些样本的状态是2^k
+    所以可变参数status的范围:0~2^k-1
+    所以状压dp能解决的样本数量基本在n<=20,如果样本数量过大,状压dp会超时,那么可以使用双向广搜
+     */
+
+    /*
+    题目1:我能赢吗(二维博弈论dp)
+    在 "100 game" 这个游戏中，两名玩家轮流选择从 1 到 10 的任意整数
+    累计整数和，先使得累计整数和 达到或超过  100 的玩家，即为胜者。
+    如果我们将游戏规则改为 “玩家 不能 重复使用整数” 呢？
+    例如，两个玩家可以轮流从公共整数池中抽取从1到15的整数(不放回),直到累计整数和 >= 100。
+    给定两个整数 n （整数池中可选择的最大数）和 m（累计和）
+    若先出手的玩家能稳赢则返回 true ，否则返回 false 。假设两位玩家游戏时都表现 最佳 。
+     */
+
+    //递归函数:
+    public static boolean canIWin(int n, int m) {
+        if(m == 0){
+            return true;
+        }
+        if(n * (n + 1) / 2 < m){
+            //1~n数字全加起来<m,那么不会有赢家,所以都不会获胜
+            return false;
+        }
+        int[] dp = new int[1 << (n + 1)];
+        return f(n,(1 << (n + 1)) - 1,m,dp);
+    }
+    //status:现在还有哪些数字能挑,此时用32-int的数位1代表能挑,0代表已经选过
+    //本题rest参数是status决定的,所以只需要对status做缓存表
+    //dp[status] == 0,代表没算过
+    //dp[status] == 1,算过,答案是true
+    //dp[status] == -1算过,答案是false
+    //f函数返回当前的先手能不能赢,能赢返回true,不能返回false
+    public static boolean f(int n,int status,int rest,int[] dp){
+        if(rest <= 0){
+            return false;
+        }
+        if(dp[status] != 0){
+            return dp[status] == 1;
+        }
+        boolean ans = false;
+        for(int i = 1;i <= n;i++){
+            //这里的f是对手的选择,如果是false那么说明自己赢了,那么ans=true
+            if((status & (1 << i)) != 0 && !f(n,(status ^ (1 << i)),rest - i,dp)){
+                ans = true;
+                break;
+            }
+        }
+        dp[status] = ans ? 1 : -1;
+        return ans;
+    }
+    /*
+    题目2:火柴拼正方形
+    你将得到一个整数数组 matchsticks ，其中 matchsticks[i] 是第 i 个火柴棒的长度。
+    你要用 所有的火柴棍 拼成一个正方形。
+    你 不能折断 任何一根火柴棒，但你可以把它们连在一起，而且每根火柴棒必须 使用一次 。
+    如果你能使这个正方形，则返回 true ，否则返回 false 。
+     */
+    public static boolean makesquare(int[] nums) {
+        int sum = 0;
+        for(int num : nums){
+            sum += num;
+        }
+        if(sum % 4 != 0){
+            return false;
+        }
+        int n = nums.length;
+        int[] dp = new int[1 << n];
+        return f(nums,sum / 4,(1 << n) - 1,0,4,dp);
+    }
+    //limit:每条边规定的长度
+    //rest:剩余要处理的边的数目,初始是4条边
+    //dp[status]==0:没有处理过,dp[status]==1:处理过,且答案是true,dp[status]==-1:处理过,答案是false
+    public static boolean f(int[] nums,int limit,int status,int cur,int rest,int[] dp){
+        if(rest == 0){
+            //火柴不能有剩余,所以是返回status == 0
+            return status == 0;
+        }
+        if(dp[status] != 0){
+            return dp[status] == 1;
+        }
+        boolean ans = false;
+        for(int i = 0;i < nums.length;i++){
+            if((status & (1 << i)) != 0 && cur + nums[i] <= limit){
+                if(cur + nums[i] == limit){
+                    ans = f(nums,limit,status ^ (1 << i),0,rest - 1,dp);
+                } else {
+                    ans = f(nums,limit,status ^ (1 << i),cur + nums[i],rest,dp);
+                }
+                if(ans){
+                    break;
+                }
+            }
+        }
+        dp[status] = ans ? 1 : -1;
+        return ans;
+    }
+    /*
+    题目3:售货员的难题--TSP问题(p1171)
+    某乡有n个村庄(1<=n<=20),有一个售货员,他要到各个村庄去售货
+    各村庄之间的路径s(1<=s<=1000)是已知的,且A村到B村的路程和B村到A村的路大多不同(有向带权图)
+    为了提高效率,他从村庄出发到每个村庄一次,然后返回商店所在的村,假设商店所在的村是1,他不知道选择
+    什么样的路线才能走的路程最短,请你帮他选择一条最短的路
+    输入:村庄数n和各村之间的路程(均是整数)
+    第一行:第i+1行第j个数代表村庄i到j的单向路径的路程(邻接矩阵)
+
+    思路:对于f函数f(status,i),status表示走过哪些存在,1代表走过了,i代表现在在哪个村庄
+    那么每次都选择max(f(往1走),f(往2走)...f(往n走))
+
+     //由于这道题在洛谷卡Java的空间,MAXN开19会有RE,MAXN开20直接爆MLE,所以我们想办法降低空间
+     */
+    public static int MAXN = 19;
+    public static int[][] graph = new int[MAXN][MAXN];
+    public static int[][] dp = new int[1 << MAXN][MAXN];
+    public static int n;
+    public static void build(){
+        for(int s = 0;s < (1 << n);s++){
+            for(int i = 0;i < n;i++){
+                dp[s][i] = -1;
+            }
+        }
+    }
+    public static int compute(){
+        return f(1,0);
+    }
+    public static int f(int s,int i){
+        if(s == (1 << n) - 1){
+            return graph[i][0];
+        }
+        if(dp[s][i] != -1){
+            return dp[s][i];
+        }
+        int ans = Integer.MAX_VALUE;
+        for(int j = 0;j < n;j++){
+            if((s & (1 << j)) == 0){
+                ans = Math.min(ans,graph[i][j] + f(s | (1 << j),j));
+            }
+        }
+        dp[s][i] = ans;
+        return ans;
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            build();
+            for(int i = 0;i < n;i++){
+                for(int j = 0;j < n;j++){
+                    in.nextToken();
+                    graph[i][j] = (int) in.nval;
+                }
+            }
+            out.println(compute());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+

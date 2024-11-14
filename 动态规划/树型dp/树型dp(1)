@@ -1,0 +1,281 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    树型dp
+    头结点没有父亲,其他结点只有一个父亲的有向无环图,直观理解是发散状
+    在树上,从头结点出发到任意结点的路径是唯一的,不管二叉树还是多叉树
+    树型dp在树上做动态规划,依赖关系比一般动态规划简单
+    因为绝大多数都是父依赖子
+
+    树型dp套路:
+    (1)分析父树得到答案需要子树的哪些信息
+    (2)把子树信息的全集定义成递归返回值
+    (3)通过递归让子树返回全集信息
+    (4)整合子树的全集信息得到父树的信息并返回
+     */
+    /*
+    题目1:最大BST子树
+    给定一个二叉树，找到其中最大的二叉搜索树（BST）子树，并返回该子树的大小。
+    其中，最大指的是子树节点数最多的。二叉搜索树（BST）中的所有节点都具备以下属性：
+    左子树的值小于其父（根）节点的值。
+    右子树的值大于其父（根）节点的值。
+    注意：子树必须包含其所有后代。
+
+    思路:以x为头结点的最大二叉搜索树有以下可能性:
+    (1)不包括x,所以ans=max(左树的最大二叉搜索树,右树的最大二叉搜索树)
+    (2)包括x,那么此时整棵树都是二叉搜索树,就传参 左树是二叉搜索树 && 右树是二叉搜索树
+    此时最大二叉搜索树的大小就是 左树大小 + 右树大小 + 1(根节点)
+    此时需要的信息:树上的max BSTsize(int),isBST(boolean),和左树的最大值max(int),右树的最小值(min)
+     */
+    public class TreeNode {
+      int val;
+      TreeNode left;
+      TreeNode right;
+      TreeNode() {}
+      TreeNode(int val) { this.val = val; }
+      TreeNode(int val, TreeNode left, TreeNode right) {
+          this.val = val;
+          this.left = left;
+          this.right = right;
+      }
+    }
+    public static int largestBSTSubtree(TreeNode root) {
+        return f(root).maxBstSize;
+    }
+    public static class Info {
+        public long max;
+        public long min;
+        public boolean isBst;
+        public int maxBstSize;
+
+        public Info(long a, long b, boolean c, int d) {
+            max = a;
+            min = b;
+            isBst = c;
+            maxBstSize = d;
+        }
+    }
+    public static Info f(TreeNode x){
+        if(x == null){
+            return new Info(Long.MIN_VALUE,Long.MAX_VALUE,true,0);
+        }
+        Info infol = f(x.left);
+        Info infor = f(x.right);
+        long max = Math.max(x.val,Math.max(infol.max,infor.max));
+        long min = Math.min(x.val,Math.min(infol.min,infor.min));
+        boolean isBst = infol.isBst && infor.isBst && infol.max < x.val && x.val <
+                infor.min;
+        int maxBSTSize;
+        if(isBst){
+            maxBSTSize = infol.maxBstSize + infor.maxBstSize + 1;
+        } else {
+            maxBSTSize = Math.max(infol.maxBstSize,infor.maxBstSize);
+        }
+        return new Info(max,min,isBst,maxBSTSize);
+    }
+    /*
+    题目2:二叉搜索子树的最大键值和
+    给你一棵以 root 为根的 二叉树 ，请你返回 任意 二叉搜索子树的最大键值和。
+    和上一题极为相似,有两种情况
+    (1)如果不选根节点,那么就是max(左的最大,右的最大)
+    (2)如果要根节点,那么就是左 + 右 + 根
+    那么要建立两个信息,isBST,那么就是 isBSTleft && isBSTright && 左边max < 根节点
+    && 右边min > 根节点
+     */
+    public static class Info1 {
+        public int max;
+        public int min;
+        public int sum;
+        public boolean isBst;
+        public int maxBstSum;
+        public Info1(int a,int b,int c,boolean d,int e){
+            max = a;
+            min = b;
+            sum = c;
+            isBst = d;
+            maxBstSum = e;
+        }
+    }
+    public static Info1 f1(TreeNode x){
+        if(x == null){
+            return new Info1(Integer.MIN_VALUE,Integer.MAX_VALUE,0,true,0);
+        }
+        Info1 infol = f1(x.left);
+        Info1 infor = f1(x.right);
+        int max = Math.max(x.val,Math.max(infol.max,infor.max));
+        int min = Math.min(x.val,Math.min(infol.min,infor.min));
+        int sum = infol.sum + infor.sum + x.val;
+        boolean isBst = infol.isBst && infor.isBst && infol.max < x.val && infor.min > x.val;
+        int maxBstSum = Math.max(infol.maxBstSum,infor.maxBstSum);
+        if(isBst){
+            maxBstSum = Math.max(maxBstSum,sum);
+        }
+        return new Info1(max,min,sum,isBst,maxBstSum);
+    }
+    public int maxSumBST(TreeNode root) {
+        return f1(root).maxBstSum;
+    }
+    /*
+    题目3:二叉树的直径
+    给你一棵二叉树的根节点，返回该树的 直径 。
+    二叉树的 直径 是指树中任意两个节点之间最长路径的 长度 。
+    这条路径可能经过也可能不经过根节点 root 。
+    两节点之间路径的 长度 由它们之间边数表示。
+
+    思路:以x为头结点的树的直径,有以下可能性
+    (1)不要x:max(左树最大路径,右树最大路径)
+    (2)要x:左树高度+右树高度
+    那么需要的信息是:左树和右树的直径,左树和右树的高度
+     */
+    public int diameterOfBinaryTree(TreeNode root) {
+        return f2(root).diameter;
+    }
+    public static class Info2{
+        public int diameter;
+        public int height;
+        public Info2(int a,int b){
+            diameter = a;
+            height = b;
+        }
+    }
+    public static Info2 f2(TreeNode x){
+        if(x == null){
+            return new Info2(0,0);
+        }
+        Info2 leftInfo = f2(x.left);
+        Info2 rightInfo = f2(x.right);
+        int height = Math.max(leftInfo.height,rightInfo.height) + 1;
+        int diameter = Math.max(leftInfo.diameter,rightInfo.diameter);
+        diameter = Math.max(diameter,leftInfo.height + rightInfo.height);
+        return new Info2(diameter,height);
+    }
+    /*
+    题目4:在二叉树中分配硬币
+    给你一个有 n 个结点的二叉树的根结点 root
+    其中树中每个结点 node 都对应有 node.val 枚硬币。整棵树上一共有 n 枚硬币。
+    在一次移动中,我们可以选择两个相邻的结点,然后将一枚硬币从其中一个结点移动到另一个结点。
+    移动可以是从父结点到子结点，或者从子结点移动到父结点。
+    返回使每个结点上 只有 一枚硬币所需的 最少 移动次数
+
+    思路:以x为头结点的整棵树,让硬币均匀分配要走几步,那么总步数=左树的步数+右树的步数
+    +abs(左边结点数-左边硬币数)+abs(右边结点数-右边硬币数)
+    所以需要的信息:移动步数,结点数,硬币数
+     */
+    public static class Info3{
+        public int cnt;
+        public int sum;
+        public int move;
+        public Info3(int a,int b,int c){
+            cnt = a;
+            sum = b;
+            move = c;
+        }
+    }
+    public static Info3 f3(TreeNode x){
+        if(x == null){
+            return new Info3(0,0,0);
+        }
+        Info3 infol = f3(x.left);
+        Info3 infor = f3(x.right);
+        int cnts = infol.cnt + infor.cnt + 1;
+        int sums = infol.sum + infor.sum + x.val;
+        int moves = infol.move + infor.move + Math.abs(infol.cnt - infol.sum)
+                + Math.abs(infor.cnt - infor.sum);
+        return new Info3(cnts,sums,moves);
+    }
+
+    public int distributeCoins(TreeNode root) {
+        return f3(root).move;
+    }
+    /*
+    题目5:没有上司的舞会(p1352)(与打家劫舍树型dp基本一样)
+    某大学有n个职员,编号为1...n,他们之间有从属关系
+    也就是说他们的关系就像一棵以校长为根的树，父结点就是子结点的直接上司。
+    现在有个周年庆宴会，宴会每邀请来一个职员都会增加一定的快乐指数ri
+    但是呢,如果某个职员的直接上司来参加舞会了,那么这个职员就无论如何也不肯来参加舞会了。
+    所以，请你编程计算，邀请哪些职员可以使快乐指数最大，求最大的快乐指数。
+    输入格式:第一行一个整数n
+    第2到第n+1行,每行一个整数,第i+1行的整数代表i号职员的快乐指数ri
+    第n+2行到第2n行,每行输入一堆整数l,k,代表k是l的直接上司
+
+    思路:可能性如下:
+    x为头
+    a.x不来,那么+max(a来,a不来)+max(b来,b不来)
+    b.x来,那么就是x.val+a节点为头结点但是a不来 + b节点为头结点但是b不来 +.....
+     */
+    public static int MAXN = 6001;
+    public static int[] nums = new int[MAXN];
+    //由于输入时的顺序是乱的,那么用boolean类型的每次将子节点置为false,最后剩下的
+    //是true的结点就是根节点
+    public static boolean[] boss = new boolean[MAXN];
+    public static int[] head = new int[MAXN];
+    public static int[] next = new int[MAXN];
+    public static int[] to = new int[MAXN];
+    public static int cnt;
+    //动态规划表
+    public static int[] no = new int[MAXN];
+    public static int[] yes = new int[MAXN];
+    public static int n,h;
+    public static void build(int n){
+        Arrays.fill(boss,1,n + 1,true);
+        Arrays.fill(head,1,n + 1,0);
+        cnt = 1;
+    }
+    public static void addEdge(int u,int v){
+        next[cnt] = head[u];
+        to[cnt] = v;
+        head[u] = cnt++;
+    }
+    public static void f(int u){
+        no[u] = 0;
+        yes[u] = nums[u];
+        for(int ei = head[u];ei != 0;ei = next[ei]){
+            int v = to[ei];
+            f(v);
+            //不选当前结点,那么就是是选或者不选下一个结点
+            //选当前结点,那么就不选下一个结点
+            no[u] += Math.max(no[v],yes[v]);
+            yes[u] += no[v];
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            build(n);
+            for(int i = 1;i <= n;i++){
+                in.nextToken();
+                nums[i] = (int) in.nval;
+            }
+            for(int i = 1,low,high;i < n;i++){
+                in.nextToken();
+                low = (int) in.nval;
+                in.nextToken();
+                high = (int) in.nval;
+                addEdge(high,low);
+                boss[low] = false;
+            }
+            for(int i = 1;i <= n;i++){
+                if(boss[i]){
+                    h = i;
+                    break;
+                }
+            }
+            f(h);
+            System.out.println(Math.max(no[h],yes[h]));
+        }
+        out.flush();
+        out.close();
+        br.close();
+
+    }
+}
+
+

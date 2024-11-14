@@ -1,0 +1,271 @@
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //见识更多二维动态规划题目
+    //不再从递归入手,直接从动态规划的定义来入手,实现更多的二维动态规划问题
+
+    /*
+    题目1:不同的子序列
+    给你两个字符串 s和t,统计并返回在s的子序列t出现的个数,结果需要对 10^9 + 7 取模。
+
+    思路:直接写转移方程,dp[i][j]指的是对于字符串s,取前i个字符的子序列 = t字符串前缀取
+    前j个字符的子字符串,那么dp[n][m]就是答案
+    对于s前i个字符的字符串的子序列,又分为两种,选最后一个字符或者不选最后一个字符
+    (1)不要s[i - 1],s[i - 2] = t[j - 1]--->dp[i - 1][j] = dp[i][j];
+    (2)要s[i - 1],说明了s[i - 1] == t[j - 1],所以s和t都往前面移动一个
+    s[i - 2] += t[j - 2]--->dp[i][j] += dp[i - 1][j - 1]
+    初始化dp表时,dp[0][0] = 1,因为此时s,t串都是空字符串,此时刚好相等,就是这一种情况
+    dp[0][j] = 0,dp[i][0] = 1(s字符串一个也不取这一种情况)
+     */
+    public static int numDistinct(String str, String target) {
+        char[] s = str.toCharArray();
+        char[] t = target.toCharArray();
+        int n = s.length;
+        int m = t.length;
+        int[][] dp = new int[n + 1][m + 1];
+        for(int i = 0;i <= n;i++){
+            dp[i][0] = 1;
+        }
+        for(int i = 1;i <= n;i++){
+            for(int j = 1;j <= m;j++){
+                dp[i][j] = dp[i - 1][j];
+                if(s[i - 1] == t[j - 1]){
+                    dp[i][j] += dp[i - 1][j - 1];
+                }
+            }
+        }
+        return dp[n][m];
+    }
+    //空间压缩,由于格子是依赖于左上角和上方的值,那么还是用一个变量一直记录左上方的值
+    public static int numDistinct1(String str,String target){
+        char[] s = str.toCharArray();
+        char[] t = target.toCharArray();
+        int n = s.length;
+        int m = t.length;
+        int[] dp = new int[m + 1];
+        dp[0] = 1;
+        for(int i = 1;i <= n;i++){
+            //从后往前更新dp,此时的dp[j - 1]才代表左上的元素
+            //由于对于不选s[i]这种情况,二维情况是dp[i][j] = dp[i - 1][j];
+            //实际就是把上一行的直接抄到下一行,所以对于状态压缩,就不用处理了
+            for(int j = m;j >= 1;j--){
+                if(s[i - 1] == t[j - 1]){
+                    dp[j] += dp[j - 1];
+                }
+            }
+        }
+        return dp[m];
+    }
+    /*
+    题目2:编辑距离
+    给你两个单词 word1 和 word2， 请返回将 word1 转换成 word2 所使用的最小代价
+    你可以对一个单词进行如下三种操作：
+    插入一个字符,代价为a
+    删除一个字符,代价为b
+    替换一个字符,代价为c
+    本题是每次代价都是1
+
+    思路:对于dp[i][j],s1取i个组成的字符串,想变成s2中取j个组成的字符串,需要的最少代价
+    那么dp[n][m]就是答案
+    (1)s1[i-1]的最后一个字符参与变换
+    a.s1[i-1]变成s2[j-1];当s1[i-1]==s2[j-1]那么没有代价,那就是s1[0...i-2]-->s2[0...j-2];
+    当s1[i-1]!=s2[j-1],那么就是替换,代价是c,dp[i-1][j-1]+c
+    b.s1[i-1]参与,但是不去变成s2[j-1],将s1[0...i-1]->s2[0...j-2],然后单独插入最后一个元素
+    此时就是dp[i][j-1]+a
+    (2)s1[i-1]不参与变化,那么dp[i-1][j]+b(删除[s1[i-1]]);
+     */
+    public static int minDistance(String word1, String word2) {
+        return editDistance1(word1,word2,1,1,1);
+    }
+    public static int editDistance1(String str1,String str2,int a,int b,int c){
+        char[] s1 = str1.toCharArray();
+        char[] s2 = str2.toCharArray();
+        int n = s1.length;
+        int m = s2.length;
+        int[][] dp = new int[n + 1][m + 1];
+        //target是空字符串,那么只能删除
+        for(int i = 1;i <= n;i++){
+            dp[i][0] = i * b;
+        }
+        //str是空字符串,那么只能插入
+        for(int j = 1;j <= m;j++){
+            dp[0][j] = j * a;
+        }
+        for(int i = 1;i <= n;i++){
+            for(int j = 1;j <= m;j++) {
+                int p1 = Integer.MAX_VALUE;
+                if (s1[i - 1] == s2[j - 1]) {
+                    p1 = dp[i - 1][j - 1];
+                }
+                int p2 = Integer.MAX_VALUE;
+                if (s1[i - 1] != s2[j - 1]) {
+                    p2 = dp[i - 1][j - 1] + c;
+                }
+                int p3 = dp[i][j - 1] + a;
+                int p4 = dp[i - 1][j] + b;
+                dp[i][j] = Math.min(Math.min(p1,p2),Math.min(p3,p4));
+            }
+        }
+        return dp[n][m];
+    }
+    //优化二维dp
+    public static int editDistance2(String str1,String str2,int a,int b,int c){
+        char[] s1 = str1.toCharArray();
+        char[] s2 = str2.toCharArray();
+        int n = s1.length;
+        int m = s2.length;
+        int[][] dp = new int[n][m];
+        for(int i = 1;i <= n;i++){
+            dp[i][0] = i * b;
+        }
+        for(int j = 1;j <= m;j++){
+            dp[0][j] = a * j;
+        }
+        for(int i = 1;i <= n;i++){
+            for(int j = 1;j <= m;j++){
+                if(s1[i - 1] == s2[j - 1]){
+                    dp[i][j] = dp[i - 1][j - 1];
+                } else {
+                    dp[i][j] = Math.min(Math.min(dp[i - 1][j] + b,dp[i - 1][j] + a),dp[i - 1][j - 1] + c);
+                }
+            }
+        }
+        return dp[n][m];
+    }
+    //空间压缩,每个格子收到左上角和左边,上边的格子共同约束
+    public static int editDistance3(String str1,String str2,int a,int b,int c){
+        char[] s1 = str1.toCharArray();
+        char[] s2 = str2.toCharArray();
+        int n = s1.length;
+        int m = s2.length;
+        int[] dp = new int[m + 1];
+        for(int i = 1;i <= m;i++){
+            dp[i] = i * a;
+        }
+        for(int i = 1,backUp,leftUp;i <= n;i++){
+            leftUp = (i - 1) * b;
+            dp[0] = i * b;
+            for(int j = 1;j <= m;j++){
+                backUp = dp[j];
+                if(s1[i - 1] == s2[j - 1]){
+                    dp[j] = leftUp;
+                } else {
+                    dp[j] = Math.min(Math.min(dp[j] + b,dp[j - 1] + a),leftUp + c);
+                }
+            }
+        }
+        return dp[m];
+    }
+    /*
+    题目3:交错字符串
+    给定三个字符串s1,s2,s3,验证s3是不是由s1和s2交错组成
+    s = s1 + s2 + ... + sn
+    t = t1 + t2 + ... + tm
+    |n - m| <= 1
+    交错 是 s1 + t1 + s2 + t2 + s3 + t3 + ... 或者 t1 + s1 + t2 + s2 + t3 + s3 + ...
+    注意：a + b 意味着字符串 a 和 b 连接。
+
+    思路:对于dp[i][j],s1取前i字符结合上s2取前j字符能不能交错组成出s3的前i+j个的子串
+    又分两种情况,
+    如果s1[i-1]==s3[i+j-1],对应转移就是s1取i-1个字符和s2取j个字符,那么此时就是dp[i-1][j]
+    第二种,如果s2[j-1]=s3[i+j-1],那么此时s1保留整体,所以此时是dp[i][j-1];
+    这两种情况,只要有一种情况成立,那么dp[i][j]就是true,否则就是false
+    这道题的空间压缩很简单,和最小路径和一样,所以略去
+     */
+    public boolean isInterleave(String str1, String str2, String str3) {
+        if(str1.length() + str2.length() != str3.length()){
+            return false;
+        }
+        char[] s1 = str1.toCharArray();
+        char[] s2 = str2.toCharArray();
+        char[] s3 = str3.toCharArray();
+        int n = s1.length;
+        int m = s2.length;
+        boolean[][] dp = new boolean[n + 1][m + 1];
+        //边界情况,s1为空是,s2就和s3匹配,匹配到哪一位不同后面就都是false
+        //s2是空就让s1和s3匹配
+        for(int i = 1;i <= n;i++){
+            if(s1[i - 1] != s3[i - 1]){
+                break;
+            }
+            dp[i][0] = true;
+        }
+        for(int j = 1;j <= m;j++){
+            if(s2[j - 1] != s3[j - 1]){
+                break;
+            }
+            dp[0][j] = true;
+        }
+        dp[0][0] = true;
+        for(int i = 1;i <= n;i++){
+            for(int j = 1;j <= m;j++){
+                dp[i][j] = (s1[i - 1] == s3[i + j - 1] && dp[i - 1][j])
+                        ||(s2[j - 1] == s3[i + j - 1] && dp[i][j - 1]);
+            }
+        }
+        return dp[n][m];
+    }
+    /*
+    题目4:有效涂色问题
+    给定n,m两个参数
+    一共有n个格子,每个格子可以涂上一种颜色,颜色在m种里选,当涂满n个格子,且m种颜色都用了
+    叫做一种有效方法,求一共有多少种有效的涂色方式
+    1 <= n,m <= 5000,对结果取余1e9+7之后返回
+
+    思路:dp[i][j]:前i个格子已经涂满了j种颜色,有以下的可能性
+    (1)前i-1个格子已经涂满了j种颜色,那么就是dp[i-1][j]*j
+    (2)前i-1个格子有j-1种颜色,那么就是dp[i-1][j-1]*(m-j+1)
+     */
+    public static int ways(int n,int m){
+        int mod = (int)1e9 + 7;
+        int[][] dp = new int[n + 1][m + 1];
+        //n个格子凑齐一种颜色,那么就m种(一共有m种颜色,随便挑一种颜色,所以是m)
+        for(int i = 1;i <= n;i++){
+            dp[i][1] = m;
+        }
+        for(int i = 2;i <= n;i++){
+            for(int j = 2;j <= m;j++){
+                dp[i][j] = (int)(((long)dp[i - 1][j] * j) % mod);
+                dp[i][j] = (int)(((long)dp[i - 1][j - 1] * (m - j + 1) + dp[i][j]) % mod);
+            }
+        }
+        return dp[n][m];
+    }
+    /*
+    题目5:删除至少几个字符可以变成另一个字符串的子串
+    给定两个字符串s1和s2,返回s1至少删除多少字符可以变成s2的子串
+
+    思路:dp[i][j]:s1取前i个前缀串,想要变成s2前j个字符串的任意后缀串,至少删掉的字符个数
+    比如s1是abcd,s2是xyzabc,那么此时删掉d就可以,所以最后答案就是最后一行中的最小值
+    就是s1取整个字符串和s2任意前k个字符串的任意后缀串
+    那么又分为以下情况
+    (1)s1[i-1]!=s2[j-1],所以此时s1[i-1]必须删去,所以是dp[i][j]=dp[i-1][j]+1
+    (2)s1[i-1]==s2[j-1],此时就一定保留,就是dp[i][j]=dp[i-1][j-1];
+     */
+    public static int minDelete(String str1,String str2){
+        char[] s1 = str1.toCharArray();
+        char[] s2 = str2.toCharArray();
+        int n = s1.length;
+        int m = s2.length;
+        int[][] dp = new int[n + 1][m + 1];
+        for(int i = 1;i <= m;i++){
+            dp[i][0] = i;
+            for(int j = 1;j <= n;j++){
+                if(s1[i - 1] != s2[j - 1]){
+                    dp[i][j] = dp[i - 1][j] + 1;
+                } else {
+                    dp[i][j] = dp[i - 1][j - 1];
+                }
+            }
+        }
+        int ans = Integer.MAX_VALUE;
+        for(int j = 0;j <= m;j++){
+            ans = Math.min(ans,dp[n][j]);
+        }
+        return ans;
+    }
+}

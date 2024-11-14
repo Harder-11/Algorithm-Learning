@@ -1,0 +1,317 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    题目1:每个人戴不同帽子的方案数
+    总共有 n 个人和 40 种不同的帽子，帽子编号从 1 到 40 。
+    给你一个整数列表的列表 hats ，其中 hats[i] 是第 i 个人所有喜欢帽子的列表。
+    请你给每个人安排一顶他喜欢的帽子，确保每个人戴的帽子跟别人都不一样，并返回方案数。
+    由于答案可能很大，请返回它对 10^9 + 7 取余后的结果。
+    1<=n<=10,1<=hat[i][j]<=40
+    由于帽子的数量很多,那么此时拿人满没满足作为状态
+    将答案转为颜色能够满足哪些人,对于每个种颜色,能不能满足0,1,2,...k号人用数位来表示
+    比如有0[1,3],1[2,3],2[1,2],那么初始设置0号颜色就是000,1号颜色是101,2号颜色就是110,
+    3号颜色就是011
+     */
+    public static int MOD = (int) 1e9 + 7;
+    public int numberWays(List<List<Integer>> arr) {
+        //帽子颜色的最大值
+        int m = 0;
+        for(List<Integer> person : arr){
+            for(int hat : person){
+                m = Math.max(m,hat);
+            }
+        }
+        int n = arr.size();
+        int[] hats = new int[m + 1];
+        for(int pi = 0;pi < n;pi++){
+            for(int hat : arr.get(pi)){
+                hats[hat] |= 1 << pi;
+            }
+        }
+        int[][] dp = new int[m + 1][1 << n];
+        for(int i = 0;i <= m;i++){
+            Arrays.fill(dp[i],-1);
+        }
+        return f(hats,m,n,1,0,dp);
+    }
+    //m:帽子颜色的最大值,1~m
+    //n:人的数量,0~n-1
+    //i:来到的什么颜色的帽子
+    //s:人满足的状态,没满足状态就是0,满足状态就是1
+    public static int f(int[] hats,int m,int n,int i,int s,int[][] dp){
+        if(s == (1 << n) - 1){
+            return 1;
+        }
+        //颜色用完了,还有人没满足
+        if(i == m + 1){
+            return 0;
+        }
+        if(dp[i][s] != -1){
+            return dp[i][s];
+        }
+        //来到i颜色的帽子,不选
+        int ans = f(hats,m,n,i + 1,s,dp);
+        int cur = hats[i];
+        //枚举每个人,(cur & (1 << p)) != 0,说明p号人喜欢这种颜色,并且此时这个人没选过
+        //这种颜色
+        //这里可用Brian Kernighan算法优化,每次提取出最右侧的1,cur&-cur
+       for(int p = 0;p < n;p++){
+            if ((cur & (1 << p)) != 0 && (s & (1 << p)) == 0) {
+                ans = (ans + f(hats,m,n,i + 1,s | (1 << p),dp)) % MOD;
+            }
+        }
+        dp[i][s] = ans;
+        return ans;
+    }
+    /*
+    题目2:最优账单平衡
+    给你一个表示交易的数组 transactions ，其中 transactions[i] = [fromi, toi, amounti]
+    表示 ID = fromi 的人给 ID = toi 的人共计 amounti $ 。
+    请你计算并返回还清所有债务的最小交易笔数。
+
+    思路:这道题可以通过transaction数组得到每个人的欠债情况,得到一个欠债数组,有正有负,就变成了这样一个
+    数组中通过转账的方式让数组中的元素全部变成0,问最少转账几次?此时划分出来的集合数目越多,转账的次数越少
+    一个元素中有k个元素一定要转k-1笔帐
+
+    那么此时定义一个f,代表划分的集合尽可能多,集合的累加和是0
+    此时枚举每一个数字拿出来的情况下,剩下的元素能组成0集合有多少个,最后+1,因为欠债数组的累加和必定是1
+     */
+    public static int MAXN = 13;
+    //去除所有的0,然后存入debt数组中
+    public static int[] debts(int[][] transactions){
+        int[] help = new int[MAXN];
+        for(int[] tran : transactions){
+            help[tran[0]] -= tran[2];
+            help[tran[1]] += tran[2];
+        }
+        int n = 0;
+        for(int num : help){
+            if(num != 0){
+                n++;
+            }
+        }
+        int[] debt = new int[n];
+        int index = 0;
+        for(int num : help){
+            if(num != 0){
+                debt[index++] = num;
+            }
+        }
+        return debt;
+    }
+    public static int f(int[] debt,int set,int sum,int n,int[] dp){
+        if(dp[set] != -1){
+            return dp[set];
+        }
+        int ans = 0;
+        //set&(set-1)!=0表示集合中不止一个元素,如果只有一个元素,-1之后最高位变0,后面全是1,&之后就是0
+        if((set & (set - 1)) != 0){
+            //当sum==0,那么此时已经满足条件,取出一个元素看后续的元素是否有子集合为0的,然后+本身一个
+            if(sum == 0){
+                for(int i = 0;i < n;i++){
+                    if((set & (1 << i)) != 0){
+                        ans = f(debt,set ^ (1 << i),sum - debt[i],n,dp) + 1;
+                        break;
+                    }
+                }
+            } else {
+                for(int i = 0;i < n;i++){
+                    if((set & (1 << i)) != 0){
+                        ans = Math.max(ans,f(debt,set ^ (1 << i),sum - debt[i],n,dp));
+                    }
+                }
+            }
+        }
+        dp[set] = ans;
+        return ans;
+    }
+    public int minTransfers(int[][] transactions) {
+        //加工出欠债表
+        int[] debt = debts(transactions);
+        int n = debt.length;
+        int[] dp = new int[1 << n];
+        Arrays.fill(dp,-1);
+        return n - f(debt,(1 << n) - 1,0,n,dp);
+    }
+    /*
+    题目3:好子集的数目
+    给你一个整数数组 nums 。如果 nums 的一个子集中，
+    所有元素的乘积可以表示为一个或多个 互不相同的质数 的乘积，那么我们称它为 好子集 。
+    比方说，如果 nums = [1, 2, 3, 4] ：
+    [2, 3] ，[1, 2, 3] 和 [1, 3] 是 好 子集，乘积分别为 6 = 2*3 ，6 = 2*3 和 3 = 3 。
+    [1, 4] 和 [4] 不是 好 子集，因为乘积分别为 4 = 2*2 和 4 = 2*2 。
+    请你返回 nums 中不同的 好 子集的数目对 10^9 + 7 取余 的结果。
+    nums 中的 子集 是通过删除 nums 中一些（可能一个都不删除，也可能全部都删除）
+    元素后剩余元素组成的数组。如果两个子集删除的下标不同，那么它们被视为不同的子集。
+    1<=nums[i]<=30
+    思路:1~30的质数29 23 19 17 13 11 7 5 3 2
+              位置9  8  7  6  5  4  3 2 1 0
+    比如1~6范围内,2有4个,3有2个,4有6个,5有3个,6有2个,10个1那么此时范围内的质数有2,3,5,此时用数位表示质数
+    对于5,3,2,有001,010,011,100,101,110,111这些情况,对于元素1,可以随便挑选那么直接就是2^10种选择
+    对于001情况选1个2,那么就是4*2^10,对于010情况,选一个3,就是2*2^10,对于011情况,那么就是可以选1个6,或者1个2,1个3
+    总情况数就是2*2^10+4*2*2^10
+    定义一个函数f(i,s)表示在1~i数字中要使其中元素乘积的质因子满足s
+    比如f(14,s),s是101111(对应13,11,7,5,3,2),那么以下情况:
+    (1)不要14,那么就是f(13,s)
+    (2)要14,那么此时就是f(13,s')*14的个数,此时s为100110,2和7质因子不要了
+     */
+    //打表,对于不能选的数字就是0,然后可以选的数字把质因子表示出来
+    public static int[] own = { 0b0000000000, // 0
+            0b0000000000, // 1
+            0b0000000001, // 2
+            0b0000000010, // 3
+            0b0000000000, // 4
+            0b0000000100, // 5
+            0b0000000011, // 6
+            0b0000001000, // 7
+            0b0000000000, // 8
+            0b0000000000, // 9
+            0b0000000101, // 10
+            0b0000010000, // 11
+            0b0000000000, // 12
+            0b0000100000, // 13
+            0b0000001001, // 14
+            0b0000000110, // 15
+            0b0000000000, // 16
+            0b0001000000, // 17
+            0b0000000000, // 18
+            0b0010000000, // 19
+            0b0000000000, // 20
+            0b0000001010, // 21
+            0b0000010001, // 22
+            0b0100000000, // 23
+            0b0000000000, // 24
+            0b0000000000, // 25
+            0b0000100001, // 26
+            0b0000000000, // 27
+            0b0000000000, // 28
+            0b1000000000, // 29
+            0b0000000111 // 30
+    };
+    public static int f(int i,int s,int[] cnt,int[][] dp){
+        if(dp[i][s] != -1){
+            return dp[i][s];
+        }
+        int ans = 0;
+        if(i == 1){
+            if(s == 0){
+                ans = 1;
+                //算1的数量,答案就是2^k
+                for(int j = 0;j < cnt[1];j++){
+                    ans = (ans << 1) % MOD;
+                }
+            }
+        } else {
+            ans = f(i - 1,s,cnt,dp);
+            int cur = own[i];
+            int times = cnt[i];
+            //cur!=0说明此时数字可以选,times>0说明有这个数字,(s&cur)==cur说明了此时可以选所有的质因子
+            if(cur != 0 && times != 0 && (s & cur) == cur){
+                ans = (int)(((long)f(i - 1,s ^ cur,cnt,dp) * times + ans) % MOD);
+            }
+        }
+        dp[i][s] = ans;
+        return ans;
+    }
+    public int numberOfGoodSubsets(int[] nums) {
+        int n = nums.length;
+        int[] cnt = new int[31];
+        for(int i = 0;i < n;i++){
+            cnt[nums[i]]++;
+        }
+        int[][] dp = new int[31][1 << 10];
+        for(int i = 0;i <= 30;i++){
+            Arrays.fill(dp[i],-1);
+        }
+        int ans = 0;
+        for(int s = 1;s < (1 << 10);s++){
+            ans = (ans + f(30,s,cnt,dp)) % MOD;
+        }
+        return ans;
+    }
+    /*
+    题目4:分配重复整数
+    给你一个长度为 n 的整数数组 nums ，这个数组中至多有 50 个不同的值。
+    同时你有 m 个顾客的订单 quantity ，其中，整数 quantity[i] 是第 i 位顾客订单的数目。
+    请你判断是否能将 nums 中的整数分配给这些顾客，且满足：
+    第 i 位顾客 恰好 有 quantity[i] 个整数。
+    第 i 位顾客拿到的整数都是 相同的 。
+    每位顾客都满足上述两个要求。
+    如果你可以分配 nums 中的整数满足上面的要求，那么请返回 true ，否则返回 false 。
+
+    遍历整个status,比如说是1001100的所有子集状态,那么就是
+    for(int j = status;j > 0;j = (j - 1) & status)
+
+    首先,纠正贪心思想,贪心:将每个数的词频统计出来,然后由小到大排序,然后把订单数由小到大排序,
+    然后利用两个指针看能否满足订单,当quantity指针滑到最后而词频还没用完时就是true
+    但是有可能出现nums[1,1,2,2,1],quantity[2,2,1],这样使用双指针就不正确
+
+    定义一个bool类型的函数f(s,i)表示,从i往后的数字能不能满足所有的订单
+    s用数位来表示满足或者没有满足,1表示没有满足,0表示已经满足了,当来到i号数字,然后此时就看
+    s的所有子集,看哪个子集能被i的个数满足
+     */
+    public boolean canDistribute(int[] nums, int[] quantity) {
+        Arrays.sort(nums);
+        int n = 1;
+        for(int i = 1;i < nums.length;i++){
+            if(nums[i - 1] != nums[i]){
+                n++;
+            }
+        }
+        int[] cnt = new int[n];
+        int c = 1;
+        for(int i = 1,j = 0;i < nums.length;i++){
+            if(nums[i - 1] != nums[i]){
+                cnt[j++] = c;
+                c = 1;
+            } else {
+                c++;
+            }
+        }
+        cnt[n - 1] = c;
+        int m = quantity.length;
+        int[] sum = new int[1 << m];
+        //将每个状态对应的订单个数收集起来
+        //遍历整个h,然后h|j=当前顾客的订单数+已经记录的订单数
+        for(int i = 0,v,h;i < quantity.length;i++){
+            v = quantity[i];
+            h = 1 << i;
+            for(int j = 0;j < h;j++){
+                sum[h | j] = sum[j] + v;
+            }
+        }
+        int[][] dp = new int[1 << m][n];
+        return f(cnt,sum,(1 << m) - 1,0,dp);
+    }
+    public static boolean f(int[] cnt,int[] sum,int status,int index,int[][] dp){
+        if(status == 0){
+            return true;
+        }
+        if(index == cnt.length){
+            return false;
+        }
+        if(dp[status][index] != 0){
+            return dp[status][index] == 1;
+        }
+        boolean ans = false;
+        int c = cnt[index];
+        for(int j = status;j > 0;j = (j - 1) & status){
+            if(sum[j] <= c && f(cnt,sum,status ^ j,index + 1,dp)) {
+                ans = true;
+                break;
+            }
+        }
+        if(!ans){
+            ans = f(cnt,sum,status,index + 1,dp);
+        }
+        dp[status][index] = ans ? 1 : -1;
+        return ans;
+    }
+}
+
+
+

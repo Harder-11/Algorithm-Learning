@@ -1,0 +1,395 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    动态规划中得到具体决策方案的技巧
+    比如给你重量和价格,背包容量是V,一共有n个商品,问在不超过背包容量的前提下,得到的价格最多是多少?
+    但是是让你返回选择的物品的下标序列
+    那么定义dp[i][j]:0~i范围内的货物,背包容量不超过j的前提下,最大价值是多少?先生成一张dp表
+    然后从最右下的格子向上遍历,就能看在最大容量的前提下选了哪些商品,如果上方的格子和最右下的
+    格子值不同,那么就转移到dp[n-1][v-value[n-1]]格子,然后以此类推
+    能这样做的原因:如果最右下的格子和最右下格子上方的格子值一样,那么说明选最后一个商品和没选得到
+    的最大价值是一样的,那么最后一个商品就没用,如果不一样,那么就说明选最后一个商品让最大价值增加
+     */
+
+    /*
+    题目1:最长公共子序列的其中一个结果
+    给定两个字符串str1和str2
+    输出两个字符串的最长公共子序列,如果最长公共子序列为空,则输出-1
+
+    dp[i][j]:str1前缀长度为i,str2前缀长度为j此时最长的公共子序列
+    在填好dp表之后,从右下角往左上找,如果上方的格子和左方的格子都比本身小,那么就取左上的格子
+    然后此时s1或者s2对应的该处的字符就是公共子序列的字符,如果上方和左方有一方的数值和本身一样
+    那么就往这方走
+     */
+    public static int[][] dp = new int[5001][5001];
+    public static char[] ans = new char[5001];
+
+    public static char[] s1;
+    public static char[] s2;
+    public static int n,m,k;
+    public static void lcs(){
+        dp();
+        k = dp[n][m];
+        if(k > 0){
+            for(int len = k,i = n,j = m;len > 0;){
+                if(s1[i - 1] == s2[j - 1]){
+                    ans[--len] = s1[i - 1];
+                    i--;
+                    j--;
+                } else {
+                    if(dp[i - 1][j] >= dp[i][j - 1]){
+                        i--;
+                    } else {
+                        j--;
+                    }
+                }
+            }
+        }
+    }
+    public static void dp(){
+        for(int i = 1;i <= n;i++){
+            for(int j = 1;j <= m;j++){
+                if(s1[i - 1] == s2[i - 1]){
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j],dp[i][j - 1]);
+                }
+            }
+        }
+    }
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        s1 = br.readLine().toCharArray();
+        s2 = br.readLine().toCharArray();
+        n = s1.length;
+        m = s2.length;
+        lcs();
+        if(k == 0){
+            out.println(-1);
+        } else {
+            for(int i = 0;i < k;i++){
+                out.print(ans[i]);
+            }
+            out.println();
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目2:最小的必要团队
+    作为项目经理，你规划了一份需求的技能清单 req_skills
+    并打算从备选人员名单 people 中选出些人组成一个「必要团队」
+    （ 编号为 i 的备选人员 people[i] 含有一份该备选人员掌握的技能列表）。
+    所谓「必要团队」，就是在这个团队中，对于所需求的技能列表 req_skills 中列出的每项技能
+    团队中至少有一名成员已经掌握。可以用每个人的编号来表示团队中的成员：
+    例如，团队 team = [0, 1, 3] 表示掌握技能分别为 people[0]，people[1]，和 people[3] 的备选人员。
+    请你返回 任一 规模最小的必要团队，团队成员用人员编号表示。
+    你可以按 任意顺序 返回答案，题目数据保证答案存在。
+
+    利用一个32-int来表示会的技能
+     */
+    //arr:存储所有人所掌握的技能
+    //m:人的数量
+    //n:必要技能的数量
+    //i:当前来到的第几号人
+    //s:满足了的必要技能
+    public static int f(int[] arr,int m,int n,int i,int s,int[][] dp){
+        if(s == (1 << n) - 1){
+            return 0;
+        }
+        //i来到了m,那么说明没有凑齐,那么就返回最大值代表无效
+        if(i == m){
+            return Integer.MAX_VALUE;
+        }
+        if(dp[i][s] != -1){
+            return dp[i][s];
+        }
+        int p1 = f(arr,m,n,i + 1,s,dp);
+        int p2 = Integer.MAX_VALUE;
+        int next2 = f(arr,m,n,i + 1,s | arr[i],dp);
+        if(next2 != Integer.MAX_VALUE){
+            p2 = 1 + next2;
+        }
+        int ans = Math.min(p1,p2);
+        dp[i][s] = ans;
+        return ans;
+    }
+    public static int[] smallestSufficientTeam(String[] skills, List<List<String>> people) {
+        int n = skills.length;
+        int m = people.size();
+        HashMap<String,Integer> map = new HashMap<>();
+        int cnt = 0;
+        for(String s : skills){
+            //把所有的技能编号存入map
+            map.put(s,cnt++);
+        }
+        int[] arr = new int[m];
+        for(int i = 0,status;i < m;i++){
+            status = 0;
+            for(String skill : people.get(i)){
+                if(map.containsKey(skill)){
+                    status |= 1 << map.get(skill);
+                }
+            }
+            arr[i] = status;
+        }
+        int[][] dp = new int[m][1 << n];
+        for(int i = 0;i < m;i++){
+            Arrays.fill(dp[i],-1);
+        }
+        int size = f(arr,m,n,0,0,dp);
+        int[] ans = new int[size];
+        for(int j = 0,i = 0,s = 0;s != (1 << n) - 1;i++){
+            //来到最后一行或者当前行和后一行的元素不一样,说明此时状态选择该员工后会导致状态不同
+            //所以此时将下标加入ans中,然后s状态更新
+            if(i + 1 == m || dp[i][s] != dp[i + 1][s]){
+                ans[j++] = i;
+                s |= arr[i];
+            }
+        }
+        return ans;
+    }
+    /*
+    题目3:最长递增子序列字典序最小的结果
+    给定数组arr,设长度为n,输出arr的最长递增自学列
+    注意,每个数字看做单独的字符,比如120认为比36的字典序大,保证从左到右每个数字尽量小
+
+    思路:从右往左填充dp数组,能形成的最长递增子序列的长度,利用ends数组进行二分
+    此时dp数组中填充了从右往左每个数,以它结尾最长递增子序列的长度,然后遍历ans数组
+    此时知道了最长递增子序列的最长长度为k,然后此时从左到右填ans数组,参考dp数组,
+    比如数组是[4,5,6,1,2,3,5,4,6]那么此时dp数组就是[3,2,1,5,4,3,2,2,1];
+    那么处理ans数组时就先把ans全部置为Integer.MAX_VALUE,然后找到第一个要填的数就是
+    dp[i] = k,然后依次找后面的数
+     */
+    public static int MAXN = 100001;
+    public static int[] nums = new int[MAXN];
+    public static int[] dp1 = new int[MAXN];
+    public static int[] ends = new int[MAXN];
+    public static int[] ans1 = new int[MAXN];
+    public static int n1,k1;
+    public static void lis(){
+        k1 = dp1();
+        Arrays.fill(ans1,0,k1,Integer.MAX_VALUE);
+        for(int i = 0;i < n1;i++){
+            //先填最小的数
+            if(dp1[i] == k1){
+                ans1[0] = nums[i];
+            } else {
+                if(ans1[k1 - dp1[i] - 1] < nums[i]){
+                    ans1[k1 - dp1[i]] = nums[i];
+                }
+            }
+        }
+    }
+    //每次找<=num最左的位置,且ends数组的有效去是从大到小的
+    public static int dp1(){
+        int len = 0;
+        for(int i = n1 - 1,find;i >= 0;i--){
+            find = bs(len,nums[i]);
+            if(find == -1){
+                ends[len++] = nums[i];
+                dp1[i] = len;
+            } else {
+                ends[find] = nums[i];
+                //注意,这里不能换成len,因为find是找的最左侧的值
+                dp1[i] = find + 1;
+            }
+        }
+        return len;
+    }
+    public static int bs(int len,int num){
+        int l = 0,r = len - 1,ans = -1,m;
+        while(l <= r){
+            m = (l + r) >> 1;
+            if(ends[m] <= num){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    public static void main1(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n1 = (int) in.nval;
+            for(int i = 0;i < n1;i++){
+                in.nextToken();
+                nums[i] = (int) in.nval;
+            }
+            lis();
+            for(int i = 0;i < k1;i++){
+                out.print(ans1[i] + " ");
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目4:潜水的最大时间和方案(p1759)
+    一共有n个工具,每个工具有自己的重量a,阻力b,提升的停留时间c
+    由于背包有限,所以只能背重量不超过m的工具
+    由于力气有限,所以只能背重量不超过v的工具
+    希望能在水下停留的时间最久,返回最久停留时间和下标字典序最小的选择工具的方案
+    注意这道题的字典序设定是构成的字符串字典序最小,比如下标方案"1""120" 比下标"1""2"的字典序小
+
+    思路:dp[i][j][k]:0~i的货物自由选,重量不超过j,阻力不超过k,最大价值是多少?
+    那么就是dp[i-1][j][k]和dp[i-1][j-a[i]][k-b[i]]+c[i]
+    对于路径,设计一个path[i][j][k](String[][][])
+    对于path也有两种情况,path[i-1][j][k]和path[i-1][j-a[i]][k-b[i]]+" "+"i"
+    注意,本题只能用空间压缩,否则会MLE
+     */
+    public static int MAXN = 101;
+    public static int MAXM = 201;
+    public static int[] a = new int[MAXN];
+    public static int[] b = new int[MAXN];
+    public static int[] c = new int[MAXN];
+    public static int[][][] dp = new int[MAXM][MAXM][MAXM];
+    public static String[][][] path = new String[MAXM][MAXM][MAXM];
+    public static int m,v,n;
+    public static void build(){
+        for(int i = 1;i <= n;i++){
+            for(int j = 0;j <= m;j++){
+                for(int k = 0;k <= v;k++){
+                    dp[i][j][k] = 0;
+                    path[i][j][k] = null;
+                }
+            }
+        }
+    }
+    public static void compute(){
+        String p2;
+        for(int i = 1;i <= n;i++){
+            for(int j = 0;j <= m;j++){
+                for(int k = 0;k <= v;k++){
+                    dp[i][j][k] = dp[i - 1][j][k];
+                    path[i][j][k] = path[i - 1][j][k];
+                    if(j >= a[i] && k >= b[i]){
+                        if(path[i - 1][j - a[i]][k - b[i]] == null){
+                            //还没选过,那么就是i的String
+                            p2 = String.valueOf(i);
+                        } else {
+                            p2 = path[i - 1][j - a[i]][k - b[i]] + " " + String.valueOf(i);
+                        }
+                        if(dp[i][j][k] < dp[i - 1][j - a[i]][k - b[i]] + c[i]){
+                            dp[i][j][k] = dp[i - 1][j - a[i]][k - b[i]] + c[i];
+                            path[i][j][k] = p2;
+                        } else if(dp[i][j][k] == dp[i - 1][j - a[i]][k - b[i]] + c[i]){
+                            if(p2.compareTo(path[i][j][k]) < 0){
+                                path[i][j][k] = p2;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            m = (int) in.nval;
+            in.nextToken();
+            v = (int) in.nval;
+            in.nextToken();
+            n = (int) in.nval;
+            build();
+            for(int i = 1;i <= n;i++){
+                in.nextToken();
+                a[i] = (int) in.nval;
+                in.nextToken();
+                b[i] = (int) in.nval;
+                in.nextToken();
+                c[i] = (int) in.nval;
+            }
+            compute();
+            out.println(dp[n][m][v]);
+            out.println(path[n][m][v]);
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    //空间压缩版本!!
+
+    
+        public static int MAXN = 101;
+        public static int MAXM = 201;
+        public static int[] a = new int[MAXN];
+        public static int[] b = new int[MAXN];
+        public static int[] c = new int[MAXN];
+        public static int[][] dp = new int[MAXM][MAXM];
+        public static String[][] path = new String[MAXM][MAXM];
+        public static int m,v,n;
+        public static void build(){
+            for(int i = 0;i <= m;i++){
+                for(int j = 0;j <= v;j++){
+                    dp[i][j] = 0;
+                    path[i][j] = null;
+                }
+            }
+        }
+        public static void compute(){
+            String p2;
+            for(int i = 1;i <= n;i++){
+                for(int j = m;j >= a[i];j--){
+                    for(int k = v;k >= b[i];k--){
+                        if(path[j - a[i]][k - b[i]] == null){
+                            p2 = String.valueOf(i);
+                        } else {
+                            p2 = path[j - a[i]][k - b[i]] + " " + String.valueOf(i);
+                        }
+                        if(dp[j][k] < dp[j - a[i]][k - b[i]] + c[i]){
+                            dp[j][k] = dp[j - a[i]][k - b[i]] + c[i];
+                            path[j][k] = p2;
+                        } else if(dp[j][k] == dp[j - a[i]][k - b[i]] + c[i]){
+                            if(p2.compareTo(path[j][k]) < 0){
+                                path[j][k] = p2;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void main(String[] args) throws IOException{
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            StreamTokenizer in = new StreamTokenizer(br);
+            PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+            while(in.nextToken() != StreamTokenizer.TT_EOF){
+                m = (int) in.nval;
+                in.nextToken();
+                v = (int) in.nval;
+                in.nextToken();
+                n = (int) in.nval;
+                build();
+                for(int i = 1;i <= n;i++){
+                    in.nextToken();
+                    a[i] = (int) in.nval;
+                    in.nextToken();
+                    b[i] = (int) in.nval;
+                    in.nextToken();
+                    c[i] = (int) in.nval;
+                }
+                compute();
+                out.println(dp[m][v]);
+                out.println(path[m][v]);
+            }
+            out.flush();
+            out.close();
+            br.close();
+        }
+    }

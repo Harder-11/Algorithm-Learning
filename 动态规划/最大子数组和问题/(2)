@@ -1,0 +1,267 @@
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    题目1:乘积最大子数组
+    给你一个整数数组 nums ，请你找出数组中乘积最大的非空连续子数组
+    (该子数组中至少包含一个数字)，并返回该子数组所对应的乘积。
+    测试用例的答案是一个 32-位 整数。
+
+    思路:对于i位置,往左走多远可以得到最大的累乘积,又分为两种情况
+    (1)不选左边的 dp[i]
+    (2)选上左边的并且需要i-1位置最大乘积 (max)(i-1)*dp[i]
+    (3)需要i-1位置最小乘积得到最大的累乘积(负数)(min)(i-1)*dp[i]
+    那么就创建两个数组min和max
+     */
+    public int maxProduct(int[] nums) {
+        int ans = nums[0];
+        for(int i = 1,min = nums[0],max = nums[0],curmin,curmax;i < nums.length;i++){
+            curmin = Math.min(nums[i],Math.min(min * nums[i],max * nums[i]));
+            curmax = Math.max(nums[i],Math.max(min * nums[i],max * nums[i]));
+            min = curmin;
+            max = curmax;
+            ans = Math.max(ans,max);
+        }
+        return ans;
+    }
+    /*
+    题目2:子序列累加和必须被7整除的最大累加和
+    给定一个非负数组nums,可以任意选择数字组成子序列,但是子序列的累加和必须被7整除
+
+    思路:dp[i][j]:nums前i个数中,形成子序列的累加和 %7==j,这样的子序列,累加和
+    最大是多少?答案就是dp[n][0]
+    比如说是dp[4][4],在下标是3位置是22,那么dp[4][4]可能由两部分转移而来,
+    有可能是dp[3][4],也有可能是dp[3][3]+nums[3],因为22除以7余1;那么之前的状态
+    肯定就是余4-1=3,所以说dp[3][3],此时的情况是cur<=j,之前的余数就是j-cur
+    如果是cur>j,那么就是同余,此时就是(j-cur+7)
+    所以综上所述:
+    (1)cur<=j,dp[i][j] = Math.max(dp[i-1][j],nums[i-1]+dp[j-cur])
+    (2)cur>j,dp[i][j] = Math.max(dp[i-1][j],nums[i-1]+dp[j-cur+7])
+     */
+    public int subarraySumDividedBySeven(int[] nums){
+        int n = nums.length;
+        //i代表的是前i个数
+        //dp[i][j]==-1表示不存在这样的子序列
+        //dp[0][j]代表一个数都没选但是有余数,那么肯定不存在
+        int[][] dp = new int[n + 1][7];
+        dp[0][0] = 0;
+        for(int j = 1;j < 7;j++){
+            dp[0][j] = -1;
+        }
+        for(int i = 1,cur,need;i <= n;i++){
+            cur = nums[i - 1] % 7;
+            for(int j = 0;j < 7;j++){
+                dp[i][j] = dp[i - 1][j];
+                need = cur <= j ? j - cur : j - cur + 7;
+                if(dp[i - 1][need] != -1){
+                    dp[i][j] = Math.max(dp[i][j],dp[i - 1][need] + nums[i - 1]);
+                }
+            }
+        }
+        return dp[n][0];
+    }
+    /*
+    题目3:魔法卷轴
+    给定一个数组nums,其中可能有正,负,0
+    每个魔法卷轴可以把nums中连续的一段全变成0
+    你希望数组整体的累加和尽可能大
+    卷轴适不适用,使用多少随意,但一个只有两个魔法卷轴
+    请返回数组尽可能大的累加和
+
+    思路:有3种情况
+    (1)不用卷轴,数组整体一路加下去
+    (2)只用一次卷轴,那么dp[i]:0到i范围内整体的最大累加和
+    a.要i位置的数,那么dp[i]=dp[i-1]+nums[i]
+    b.不要i位置的数(把i位置的数刷成0),
+     */
+    public int magic(int[] nums){
+        int n = nums.length;
+        if(n == 0){
+            return 0;
+        }
+        //情况1:不用卷轴
+        int p1 = 0;
+        for(int num : nums){
+            p1 += num;
+        }
+        //prefix[i]:在0~i范围上一定要用一次卷轴的情况下,0~i范围上整体最大累加和多少
+        //prefix[i] = Math.max(prefix[i - 1] + nums[i],maxPresum)
+        //如果不选i位置的数,由于每个数都要选, 那么prefix[i]就是前缀和的最大值,否则就是prefix[i-1]+nums[i]
+        int[] prefix = new int[n];
+        //prefix[0]:0~0范围上用一次卷轴,那么prefix[0]=0
+        //每一步的前缀和
+        int sum = nums[0];
+        //maxPresum:之前所有前缀和的最大值,maxPresum在一个数都没有的情况下已经是前缀和为0
+        int maxPresum = Math.max(0,nums[0]);
+        for(int i = 1;i < n;i++){
+            prefix[i] = Math.max(prefix[i - 1] + nums[i],maxPresum);
+            sum += nums[i];
+            maxPresum = Math.max(maxPresum,sum);
+        }
+        //情况2:必须使用一次卷轴
+        int p2 = prefix[n - 1];
+        //suffix[i]:i~n-1范围上一定要用一次卷轴的情况下,i~n-1范围上最大的累加和是多少
+        int[] suffix = new int[n];
+        sum = nums[n - 1];
+        maxPresum = Math.max(0,sum);
+        for(int i = n - 2;i >= 0;i--){
+            suffix[i] = Math.max(nums[i] + suffix[i + 1],maxPresum);
+            sum += nums[i];
+            maxPresum = Math.max(maxPresum,sum);
+        }
+        //情况3:必须使用两次卷轴
+        int p3 = Integer.MIN_VALUE;
+        for(int i = 1;i < n;i++){
+            p3 = Math.max(p3,prefix[i] + suffix[i]);
+        }
+        return Math.max(p1,Math.max(p2,p3));
+    }
+    /*
+    三个无重复子数组的最大和
+    给你一个整数数组 nums 和一个整数 k 找出三个长度为 k,互不重叠
+    且全部数字和（3 * k 项）最大的子数组，并返回这三个子数组。
+    以下标的数组形式返回结果，数组中的每一项分别指示每个子数组的起始位置（下标从 0 开始）。
+    如果有多个结果，返回字典序最小的一个。
+
+    思路:sum[i]:以i开头长度为k的累加和是多少
+    prefix[i]:在0...i范围上长为k的子数组中,拥有最大累加和的子数组,开头位置在哪里
+    suffix[i]:从i...n-1范围上的长为k的子数组中,拥有最大累加和的子数组,开头位置在哪里
+    那么就可以用两个变量来隔断数组,i和j,长度为k,那么从0~i-1范围,i~j范围j+1~n-1范围分别找到
+    长度为k累加和最大的子数组
+     */
+    public int[] maxSumOfThreeSubarrays(int[] nums, int k) {
+        int n = nums.length;
+        int[] sums = new int[n];
+        for(int l = 0,r = 0,sum = 0;r < n;r++){
+            sum += nums[r];
+            if(r - l + 1 == k){
+                sums[l] = sum;
+                sum -= nums[l];
+                l++;
+            }
+        }
+        int[] prefix = new int[n];
+        //prefix[0]:无意义,prefix[0-k]=0-k,这样会出现负数下标
+        for(int l = 1,r = k;r < n;l++,r++){
+            //r往前数k个到l,和是sums[l]
+            //prefix[r-1]代表此时是从l-1开始的情况
+            //prefix[i]:在0...i范围上长为k的子数组中,拥有最大累加和的子数组,开头位置在哪里
+            //所以prefix[r-1]的值就是<=l-1,当此时sums[l]>sums[(l-1)及其之前的最大值]
+            //那么就更换prefix[r]=l,否则的话prefix[r]=prefix[r-1]
+            if(sums[l] > sums[prefix[r - 1]]){
+                prefix[r] = l;
+            } else {
+                prefix[r] = prefix[r - 1];
+            }
+        }
+        int[] suffix = new int[n];
+        suffix[n - k] = n - k;
+        for(int l = n - k - 1;l >= 0;l--){
+            //这里>=的原因是从后往前变量,为了使字典序最小
+            if(sums[l] >= sums[suffix[l + 1]]){
+                suffix[l] = l;
+            } else {
+                suffix[l] = suffix[l + 1];
+            }
+        }
+        int a = 0,b = 0,c = 0,max = 0;
+        for(int p,s,i = k,j = 2 * k - 1,sum;j < n - k;i++,j++){
+            p = prefix[i - 1];
+            s = suffix[j + 1];
+            sum = sums[p] + sums[i] + sums[s];
+            if(sum > max){
+                max = sum;
+                a = p;
+                b = i;
+                c = s;
+            }
+        }
+        return new int[]{a,b,c};
+    }
+    /*
+    题目5:可以翻转一次的情况下子数组的最大累加和
+    给定一个数组nums,现在允许你随意选择数组连续一段进行翻转,也是子数组的逆序的调整
+    比如翻转1,2,3,4,5,6的2~4范围,得到的是1,2,5,4,3,6,返回必须随意翻转一次之后
+    子数组的最大累加和
+
+    思路:原数组翻转后得到新数组,有以下情况
+    如果新数组的答案区域是翻转区域的子集,那么不可能是这种情况(翻转无意义)
+    必须有明确划分界限的翻转才是有意义的
+    合理的翻转操作得到正确答案又有两种情况,一直是新数组的头部是翻转到后面与尾部相接
+    第二种是新数组的尾部翻转到前面与头部相接,但实际上这两种情况是一样的,可以相互转化
+    每来到一个i位置,就假设是原数组中保留的开头,往右延伸有最大的累加和,还要考虑之前的
+    元素如何翻转可以得到整体的最大累加和,对于从0~i-1部分的,每个k位置往左延伸的最大累加和
+    最大的那一个就换到i位置组成新数组的子数组的最大累加和
+     */
+    public static int maxSumReverse(int[] nums){
+        //start[i]:所有以i开头的子数组中最大累加和为多少
+        int n = nums.length;
+        int[] start = new int[n];
+        start[n - 1] = nums[n - 1];
+        for(int i = n - 2;i >= 0;i--){
+            start[i] = Math.max(nums[i],nums[i] + start[i + 1]);
+        }
+        //对于0位置就不存在翻转问题,单独讨论
+        int ans = start[0];
+        //end:子数组必须以i结尾,其中的最大累加和
+        int end = nums[0];
+        //maxEnd:0~i范围内,子数组必须以0结尾,其中的最大累加和
+        //子数组必须以1结尾,其中的最大累加和
+        //.........
+        //子数组必须以i-1结尾,其中的最大累加和
+        //所有情况中,最大的那个累加和就是maxEnd
+        int maxEnd = nums[0];
+        for(int i = 1;i < n;i++){
+            //ans就是从i开始往右延伸的最大累加和 + 前面旋转得到的以k结尾的最大累加和
+            ans = Math.max(ans,maxEnd + start[i]);
+            //end就是动态规划求解
+            end = Math.max(nums[i],nums[i] + end);
+            //每次更新前面最大的那个累加和的值
+            maxEnd = Math.max(maxEnd,end);
+        }
+        ans = Math.max(ans,maxEnd);
+        return ans;
+    }
+    /*
+    题目6:删掉一个数字后,长度为k的子数组的最大累加和
+    给定一个数组nums,求必须删除一个数字后的新数组中,长度为k的子数组的最大累加和
+    删除的数字是任意的
+
+    思路:等同于在原数组中找长度为k+1长度的子数组的累加和,然后减去这个数组中的最小值
+    维持k+1窗口大小的数组的最小值使用单调队列
+     */
+    public static int lenKmaxSum(int[] nums,int k){
+        int n = nums.length;
+        if(n <= k) return 0;
+        int[] window = new int[n];
+        int l = 0,r = 0;
+        //窗口累加和
+        long sum = 0;
+        int ans = Integer.MIN_VALUE;
+        for(int i = 0;i < n;i++){
+            //单调队列:i位置进入单调队列
+            //为了保证队列中最左端是最小值,所以当nums[window[r-1]]>=nums[i]时就一直r--
+            //吐出小于window[r-1]位置的数字
+            while(l < r && nums[window[r - 1]] >= nums[i]){
+                r--;
+            }
+            window[r++] = i;
+            sum += nums[i];
+            //此时窗口形成
+            if(i >= k){
+                ans = Math.max(ans,(int)(sum - nums[window[l]]));
+                //单调队列左侧位置过期,从队列中弹出,l++
+                if(window[l] == i - k){
+                    l++;
+                }
+                sum -= nums[i - k];
+            }
+        }
+        return ans;
+    }
+}
+

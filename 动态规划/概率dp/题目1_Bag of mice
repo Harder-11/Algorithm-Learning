@@ -1,0 +1,59 @@
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+概率dp,利用动态规划的思想去解决概率,期望问题
+题目1:Bag Of Mice(CF148D)
+袋子里面有w只白鼠和b只黑鼠,A和B轮流从袋子里抓,谁先抓到白鼠谁赢
+A每次随机抓一只,B每次随机抓完一只之后会有另外一只随机老鼠跑出来
+如果两个人都没有抓到白色则B赢,A先抓,问A赢的概率
+
+输入:一行两个数w和b,输出A赢的概率,误差在1e-9以内
+
+思路:状态f[i][j]:表示当前袋有i只白鼠,j只黑鼠时,A获胜的概率
+起点是f[0][i] = 0,f[i][0] = 1
+终点是f[w][b]
+转移:
+1.先手拿到白鼠:f[i][j] += i / (i + j)
+2.先手拿黑鼠,后手白鼠:f[i][j] += 0(直接输了,这种情况不处理)
+3.先手黑鼠,后手黑鼠,跑白鼠 f[i][j] += j / (i + j) * (j - 1) / (i + j - 1) * 
+i / (i + j - 2) * f[i - 1][j - 2]
+4...跑的黑鼠 f[i][j] += j / (i + j) * (j - 1) / (i + j - 1) * 
+(j - 2) / (i + j - 2) * f[i][j - 3]
+*/
+
+int w,b;
+double dp[1010][1010];
+
+void solve(){
+    memset(dp,0,sizeof dp);
+    int w,b;
+    cin >> w >> b;
+    for(int i = 1;i <= b;i++) dp[0][i] = 0;
+    for(int i = 1;i <= w;i++) dp[i][0] = 1;
+    for(int i = 1;i <= w;i++){
+        for(int j = 1;j <= b;j++){
+            dp[i][j] += (double) i / (i + j);
+            if(i >= 1 && j >= 2){
+                dp[i][j] += (double) j / (i + j) * (j - 1) / (i + j - 1) * i / (i + j - 2) * dp[i - 1][j - 2];
+            }
+            if(j >= 3){
+                dp[i][j] += (double) j / (i + j) * (j - 1) / (i + j - 1) * (j - 2) / (i + j - 2) * dp[i][j - 3];
+            }
+        }
+    }
+    printf("%.9lf\n",dp[w][b]);
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

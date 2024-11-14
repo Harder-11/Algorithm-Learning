@@ -1,0 +1,324 @@
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+import java.util.stream.Stream;
+
+
+public class Learn {
+    /*
+    分组背包和完全背包
+    分组背包:多个物品分组,每组只能取1件,每一组物品可能性展开就行
+    完全背包:与01背包的区别仅在于每种商品可以选取无数次,时间复杂度是O(物品数量 * 背包容量)
+     */
+
+    /*
+    分组背包
+    给定一个正数m表示背包的容量,有n个货物可供挑选
+    每个货物有自己的体积(容量消耗),价值(获得收益),组号(分组),同一个组的物品只能挑选一件
+    所有挑选的体积总和不能超过背包容量,怎么挑选才能使货物到达的价值最大,返回最大的价值
+    对于dp[i][j]:[1...i]组上,每组只能选1件商品,注意:i代表组,不是商品!容量不超过j的情况下
+    的最大价值,分为两种情况
+    (1):不要i组商品dp[i-1][j]
+    (2):要i组商品,然后将i组商品的每一件全部尝试
+    dp[i-1][j-cost[i]]+val[i]
+     */
+    public static int MAXN = 1001;
+    public static int MAXM = 1001;
+    //arr[i][0]:i号物品的体积
+    //arr[i][1]:i号物品的价值
+    //arr[i][2]:i号物品的组号
+    public static int[][] arr = new int[MAXN][3];
+    public static int[] dp = new int[MAXM];
+    public static int m,n;
+    public static int compute(){
+        int team = 1;
+        for(int i = 2;i <= n;i++){
+            if(arr[i - 1][2] != arr[i][2]){
+                team++;
+            }
+        }
+        int[][] dp = new int[team + 1][m + 1];
+        for(int start = 1,end = 2,i = 1;start <= n;i++){
+            while(end <= n && arr[end][2] == arr[start][2]){
+                end++;
+            }
+            for(int j = 0;j <= m;j++){
+                dp[i][j] = dp[i - 1][j];
+                for(int k = start;k < end;k++){
+                    if(j - arr[k][0] >= 0){
+                        dp[i][j] = Math.max(dp[i][j],dp[i - 1][j - arr[k][0]] + arr[k][1]);
+                    }
+                }
+            }
+            start = end++;
+        }
+        return dp[team][m];
+    }
+    //状态压缩:每个格子都是收到上分和左上的格子约束,所以j从右往左遍历
+    public static int compute1(){
+        Arrays.fill(dp,0,m + 1,0);
+        for(int start = 1,end = 2;start <= n;){
+            while(end <= n && arr[end][2] == arr[start][2]){
+                end++;
+            }
+            for(int j = m;j >= 0;j--){
+                for(int k = start;k < end;k++){
+                    if(j >= arr[k][0]){
+                        dp[j] = Math.max(dp[j],dp[j - arr[k][0]] + arr[k][1]);
+                    }
+                }
+            }
+            start = end++;
+        }
+        return dp[m];
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            m = (int) in.nval;
+            in.nextToken();
+            n = (int) in.nval;
+            for(int i = 1;i <= n;i++){
+                in.nextToken();
+                arr[i][0] = (int) in.nval;
+                in.nextToken();
+                arr[i][1] = (int) in.nval;
+                in.nextToken();
+                arr[i][2] = (int) in.nval;
+            }
+            Arrays.sort(arr,1,n + 1,(a,b)->a[2] - b[2]);
+            System.out.println(compute());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目2:从栈中取出k个硬币的最大的面值和
+    一张桌子上总共有n硬币栈 。每个栈有正整数个带面值的硬币。
+    每一次操作中，你可以从任意一个栈的顶部取出1个硬币，从栈中移除它，并放入你的钱包里。
+    给你一个列表 piles ，其中 piles[i] 是一个整数数组，
+    分别表示第 i 个栈里从顶到底的硬币面值。同时给你一个正整数k
+    返回在恰好进行k次操作的前提下，你钱包里硬币面值之和最大为多少 。
+
+    对于每个栈,有n个硬币就有n种方案,选当前或者不选,所以是典型的分组背包
+    对于每个栈,可以预处理前缀和,这样选取第i个硬币得到的价值实际就是preSum[i]的值
+     */
+    public int maxValueOfCoins(List<List<Integer>> piles, int m) {
+        int n = piles.size();
+        int[][] dp = new int[n + 1][m + 1];
+        //i从1组开始,所以dp是n+1,但是piles下标是0开始,所以要i-1
+        for(int i = 1;i <= n;i++){
+            List<Integer> team = piles.get(i - 1);
+            int t = Math.min(team.size(),m);
+            int[] preSum = new int[t + 1];
+            for(int j = 0,sum = 0;j < t;j++){
+                sum += team.get(j);
+                preSum[j + 1] = sum;
+            }
+            for(int j = 0;j <= m;j++){
+                dp[i][j] = dp[i - 1][j];
+                for(int k = 1;k <= Math.min(t,j);k++){
+                    dp[i][j] = Math.max(dp[i][j],dp[i - 1][j - k] + preSum[k]);
+                }
+            }
+        }
+        return dp[n][m];
+    }
+    /*
+    完全背包
+    完全背包是每种商品可以选择无数次
+    给定一个正数t代表背包的容量,有m种货物,每种货物可以选无数次,每种货物都有体积costs[i]
+    和values[i],返回在不超过总容量的情况下,怎么挑选货物能到达的价值最大
+    dp[i][j]代表了第1...i号商品,每种商品可以无限拿,容量不超过j,最大价值
+    (1)dp[i-1][j]
+    (2)dp[i][j-costs[i]]+vals[i],注意这里是dp[i]!!!!!,不是i-1,因为可以随便拿
+     */
+
+    /*
+    题目3:正则表达式匹配
+    给你一个字符串 s 和一个字符规律 p，请你来实现一个支持 '.' 和 '*' 的正则表达式匹配。
+    s中不包含"."和"*" 但是p中包含
+    '.' 匹配任意单个字符
+    '*' 匹配零个或多个前面的那一个元素,当匹配0个时,会将前面的字符一同抹去
+    所谓匹配，是要涵盖 整个 字符串 s 的，而不是部分字符串
+
+    思路:从递归入手一步步写转移方程
+     */
+    public boolean isMatch1(String str, String pat) {
+        char[] s = str.toCharArray();
+        char[] p = pat.toCharArray();
+        return f1(s,p,0,0);
+    }
+    //s[i....]能不能被p[j....]完全匹配出来
+    public static boolean f1(char[] s,char[] p,int i,int j){
+        if(i == s.length){
+            //s没了
+            if(j == p.length){
+                //如果此时p刚好也没了,那么返回true
+                return true;
+            } else {
+                //如果p[j+1]是*,那么p[j..j+1]可以消掉,然后看p[j+2...]能不能消掉
+                //对于s只剩空串,p剩下有字符的情况,比如说p剩下"a*b*c*",依然可以靠*将abc消去
+                //那么此时就是看p[j+1]是不是为*,然后再递归j+2看j+3以此类推
+                return j + 1 < p.length && p[j + 1] == '*' && f1(s,p,i,j + 2);
+            }
+        } else if(j == p.length){
+            //s还剩下字符,但是p没了
+            return false;
+        } else {
+            //s,p都有后缀,j=p.length-1说明后面没有字符了,自然也就没有*
+            if(j + 1 == p.length || p[j + 1] != '*'){
+                //如果p[j+1]不是*,那么当前的字符必须能匹配(s[i]==p[j]||p[j]=='?')
+                //同时后续也能匹配上
+                return (s[i] == p[j] || p[j] == '.') && f1(s,p,i + 1,j + 1);
+            } else {
+                //如果p[j+1]是*,那么就是完全背包
+                //选择1:当前p[j...j+1]是x*,如果不让它搞定s[i](消去),那么继续f(s,p,i,j+2)
+                //选择2:当前p[j...j+1]是x*,如果可以搞定s[i],那么继续f(s,p,i+1,j)
+                //因为p中有*,可以无限地等于前一个字符,那么就是完全背包,j不+1
+                boolean p1 = f1(s,p,i,j + 2);
+                boolean p2 = (s[i] == p[j] || p[j] == '.') && f1(s,p,i + 1,j);
+                return p1 || p2;
+            }
+        }
+    }
+    //改为记忆化搜索
+    public static boolean isMatch2(String str,String pat){
+        char[] s = str.toCharArray();
+        char[] p = pat.toCharArray();
+        int n = s.length;
+        int m = s.length;
+        //dp[i][j] == 0,表示没算过, == 1表示算过,答案是true, == 2表示算过,答案为false
+        int[][] dp = new int[n + 1][m + 1];
+        return f2(s,p,0,0,dp);
+    }
+    public static boolean f2(char[] s,char[] p,int i,int j,int[][] dp){
+        if(dp[i][j] != 0){
+            return dp[i][j] == 1;
+        }
+        boolean ans;
+        if(i == s.length){
+            if(j == p.length){
+                return true;
+            } else {
+                ans = j + 1 < p.length && p[j + 1] == '*' && f2(s,p,i,j + 2,dp);
+            }
+        } else if(j == p.length){
+            ans = false;
+        } else {
+            if(j + 1 == p.length || p[j + 1] != '*'){
+                ans = (s[i] == p[j] || p[j] == '.') && f2(s,p,i + 1,j + 1,dp);
+            } else {
+                ans = f2(s,p,i,j + 2,dp) || ((s[i] == p[j] || p[j] == '.') && f2(s,p,i,j + 2,dp));
+            }
+        }
+        dp[i][j] = ans ? 1 : 2;
+        return ans;
+    }
+    //严格位置依赖的动态规划
+    public static boolean isMatch3(String str,String pat){
+        char[] s = str.toCharArray();
+        char[] p = pat.toCharArray();
+        int n = s.length;
+        int m = p.length;
+        boolean[][] dp = new boolean[n + 1][m + 1];
+        dp[n][m] = true;
+        for(int j = m - 1;j >= 0;j--){
+            dp[n][j] = j + 1 < m && p[j + 1] == '*' && dp[n][j + 2];
+        }
+        for(int i = n - 1;i >= 0;i--){
+            for(int j = m - 1;j >= 0;j--){
+                if(j + 1 == m || p[j + 1] != '*'){
+                    dp[i][j] = (s[i] == p[j] || p[j] == '.') && dp[i + 1][j + 1];
+                } else {
+                    dp[i][j] = dp[i][j + 2] || ((s[i] == p[j] || p[j] == '.') && dp[i + 1][j]);
+                }
+            }
+        }
+        return dp[0][0];
+    }
+    /*
+    题目5:购买足够干草的最小花费
+    有n个提供干草的公司,每个公司都有两个信息
+    cost[i]代表购买一次产品需要花的钱,val[i]代表购买一次产品所获得的干草数量
+    每个公司的产品都可以买任意次,你一定要至少购买h数量的干草,返回最少要花多少钱
+
+    有两种思路:
+    (1)dp[i][j]:在1...i公司里买,买的干草严格为j的情况下,最少要花多少钱
+    (2)dp[i][j]:在1...i公司里买,花钱不超过j的情况下,最多买的干草,但是这种方法很可能MLE,因为有可能干草很贵
+     那么就是dp[i][j]=dp[i-1][j],dp[i][j-cost[i]]+val[i]
+     又由于这道题是要大于等于干草数量,与之前的背包不同(之前都是严格小于背包的体积),所以此时要在答案处向下继续寻找
+     每次往后寻找所有公司干草数量的最大值就可以得到答案(因为可能出现只有一家公司,这家公式干草数目是3,但是要7份的情况)
+     */
+    public static int[] cost = new int[5001];
+    public static int[] val = new int[55001];
+    public static int n1,h1,m1,maxv;
+    public static int compute2(){
+        int[][] dp = new int[n1 + 1][m1 + 1];
+        //花钱不超过0,但是在1...i公司里面买,所以是无效解,用Integer.MAX_VALUE表示,如果后面碰到无效解也跳过
+        Arrays.fill(dp[0],1,m1 + 1,Integer.MAX_VALUE);
+        for(int i = 1;i <= n1;i++){
+            for(int j = 0;j <= m1;j++){
+                dp[i][j] = dp[i - 1][j];
+                if(j - val[i] >= 0 && dp[i][j - val[i]] != Integer.MAX_VALUE){
+                    dp[i][j] = Math.min(dp[i][j],dp[i][j - val[i]] + cost[i]);
+                }
+            }
+        }
+        int ans = Integer.MAX_VALUE;
+        for(int j = h1;j <= m1;j++){
+            ans = Math.min(ans,dp[n1][j]);
+        }
+        return ans;
+    }
+    //状态压缩:
+    public static int compute4(){
+        int[] dp = new int[55001];
+        Arrays.fill(dp,1,m1 + 1,Integer.MAX_VALUE);
+        for(int i = 1;i <= n1;i++) {
+            for (int j = val[i]; j <= m1; j++) {
+                if(dp[j - val[i]] != Integer.MAX_VALUE) {
+                    dp[j] = Math.min(dp[j], dp[j - val[i]] + cost[i]);
+                }
+            }
+        }
+        int ans = Integer.MAX_VALUE;
+        for(int j = h1;j <= m1;j++){
+            ans = Math.min(ans,dp[j]);
+        }
+        return ans;
+    }
+
+    public static void main1(String[] args)throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF) {
+            n1 = (int) in.nval;
+            in.nextToken();
+            h1 = (int) in.nval;
+            maxv = 0;
+            for (int i = 1; i <= n1; i++) {
+                in.nextToken();
+                val[i] = (int) in.nval;
+                maxv = Math.max(maxv, val[i]);
+                in.nextToken();
+                cost[i] = (int) in.nval;
+            }
+            m1 = h1 + maxv;
+            System.out.println(compute2());
+            out.flush();
+            out.close();
+            br.close();
+        }
+
+    }
+}
+
+
+

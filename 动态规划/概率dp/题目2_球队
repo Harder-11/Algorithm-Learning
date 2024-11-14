@@ -1,0 +1,65 @@
+#include <stdio.h>
+#include <string.h>
+const int INF = 0x3f3f3f3f;
+const int N = 200005;
+const int mod = 1e9 + 7;
+
+/*
+有2^n支球队比赛,每次和相邻的球队踢,两两淘汰,给定任意两只球队相互踢赢的概率(以矩阵状态给出)
+求最后哪只球队最可能夺冠
+
+思路:计算出每个球队获胜的概率,取max即可
+状态:f[i][j]:在第i轮中,第j队获胜的概率
+起点:f[0][i] = 1
+答案:对所有个f[n][i]求max
+转移:f[i][j] += f[i - 1][j] * f[i - 1][k] * p[j][k]
+如果在第i轮,j和k进行比赛,说明第i - 1轮两队都获胜了,那么就是f[i - 1][j] * f[i - 1][k]
+枚举在第i轮,j队可以和哪些队相遇,即找出第i - 1轮胜出的临近球队
+第一轮:(0,1) ^ 1 == (1,0); (2,3) ^ 1 == (3,2)...
+第二轮:((0,1) >> 1) ^ 1 == ((2,3) >> 1);((4,5) >> 1) ^ 1== ((6,7) >> 1);
+第三轮:((0,1,2,3) >> 2) ^ 1 == ((4,5,6,7) >> 2)
+所以if(((j >> (i - 1)) ^ 1 == (k >> (i - 1)))
+*/
+
+double p[130][130];
+double dp[8][130];
+void solve(){
+    int n;
+    while(scanf("%d",&n),n != -1){
+        int m = 1 << n;
+        for(int i = 0;i < m;i++){
+            for(int j = 0;j < m;j++){
+                scanf("%lf",&p[i][j]);
+            }
+        }
+        memset(dp,0,sizeof dp);
+        for(int i = 0;i < m;i++) dp[0][i] = 1;
+        for(int i = 1;i <= n;i++){
+            for(int j = 0;j < m;j++){
+                for(int k = 0;k < m;k++){
+                    if(((j >> (i - 1)) ^ 1) == (k >> (i - 1))){
+                        dp[i][j] += dp[i - 1][j] * dp[i - 1][k] * p[j][k];
+                    }
+                }
+            }
+        }
+        int ans;
+        double mx = 0;
+        for(int i = 0;i < m;i++){
+            if(dp[n][i] > mx){
+                ans = i;
+                mx = dp[n][i];
+            }
+        }
+        printf("%d\n",ans + 1);
+    }
+}
+
+int main(){
+    int t = 1;
+    //cin >> t;
+    while(t--){
+        solve();
+    }
+    return 0;
+} 

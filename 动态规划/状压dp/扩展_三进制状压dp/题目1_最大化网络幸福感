@@ -1,0 +1,113 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    三进制状压dp,利用三进制可以节省位数
+    怎么求到3进制下n的从右到左每一位的数呢?
+    第0位就是n/1%3,第一位就是n/3%3,第二位是n/9%3.....
+     */
+
+    /*
+    题目1:最大化网络幸福感
+    给你四个整数 m、n、introvertsCount 和 extrovertsCount 。
+    有一个 m x n 网格，和两种类型的人：内向的人和外向的人。
+    总共有 introvertsCount 个内向的人和 extrovertsCount 个外向的人。
+    请你决定网格中应当居住多少人，并为每个人分配一个网格单元。
+    注意，不必 让所有人都生活在网格中。
+    每个人的 幸福感 计算如下：
+    内向的人 开始 时有 120 个幸福感，但每存在一个邻居（内向的或外向的）他都会失去30个幸福感。
+    外向的人 开始 时有 40 个幸福感，每存在一个邻居（内向的或外向的）他都会得到20个幸福感。
+    邻居是指居住在一个人所在单元的上、下、左、右四个直接相邻的单元中的其他人。
+    网格幸福感 是每个人幸福感的 总和 。 返回 最大可能的网格幸福感 。
+
+    思路:定义函数f(i,j,s,a,b):来到i行j列,轮廓线状态是s,内向的人有a个,外向的人有b个
+    那么此时每个格子都有三种状态:没有安排人,安排的内向的人,安排了外向的人,所以s是三进制的数
+    其中0代表没有人,1代表内向的人,2代表外向的人
+     */
+    public static int MAXN = 5;
+    public static int MAXM = 5;
+    public static int MAXP = 7;
+    public static int MAXS= (int) Math.pow(3,MAXM);
+    public static int n,m,maxs;
+    public static int[][][][][] dp = new int[MAXN][MAXM][MAXS][MAXP][MAXP];
+    public static int getMaxGridHappiness(int rows,int cols,int in,int ex) {
+        //保证列是更小的那个,这样状态s更小
+        n = Math.max(rows,cols);
+        m = Math.min(rows,cols);
+        maxs = (int) Math.pow(3,m);
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < m;j++){
+                for(int s = 0;s < maxs;s++){
+                    for(int a = 0;a <= in;a++){
+                        for(int b = 0;b <= ex;b++){
+                            dp[i][j][s][a][b] = -1;
+                        }
+                    }
+                }
+            }
+        }
+        return f(0,0,0,in,ex,1);
+    }
+    //这里bit等于3的j次方,bit不是关键可变参数,因为bit的值是收到j影响的
+    public static int f(int i,int j,int s,int a,int b,int bit){
+        if(i == n){
+            return 0;
+        }
+        if(j == m){
+            return f(i + 1,0,s,a,b,1);
+        }
+        if(dp[i][j][s][a][b] != 0){
+            return dp[i][j][s][a][b];
+        }
+        int ans = f(i,j + 1,set(s,bit,0),a,b,bit * 3);
+        int up = get(s,bit);
+        int left = j == 0 ? 0 : get(s,bit / 3);
+        int neighbor = 0;
+        //pre代表,如果放置人,那么总的幸福感会怎么变化?
+        int pre = 0;
+        if(up != 0){
+            neighbor++;
+            pre += up == 1 ? -30 : 20;
+        }
+        if(left != 0){
+            neighbor++;
+            pre += left == 1 ? -30 : 20;
+        }
+        if(a > 0){
+            ans = Math.max(ans,pre + 120 - neighbor * 30 + f(i,j + 1,set(s,bit,1),a - 1,b,bit * 3));
+        }
+        if(b > 0){
+            ans = Math.max(ans,pre + 40 + neighbor * 20 + f(i,j + 1,set(s,bit,2),a,b - 1,bit * 3));
+        }
+        dp[i][j][s][a][b] = ans;
+        return ans;
+    }
+
+    //此时bit是3的j次方,返回s第j号格的值
+    public static int get(int s,int bit){
+        return s / bit % 3;
+    }
+    //set方法,将某一位改成想改为的值
+    //此时不能像二进制状压dp一样直接用位运算解决
+    //此时只能将原来的s数字当前位减为0然后加上想改的值在当前位的十进制的值
+    public static int set(int s,int bit,int v){
+        return s - get(s,bit) * bit + v * bit;
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

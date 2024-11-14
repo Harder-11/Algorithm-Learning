@@ -1,0 +1,100 @@
+import java.lang.*;
+import java.io.*;
+import java.util.*;
+
+
+public class Learn {
+    /*
+    轮廓线dp
+    前置知识:把状态s的第j位的状态设为0,其他位置不变:s = s & (~(1 << j))
+     */
+
+    /*
+    题目1:种草的方法数(p1879)
+    给定一个n*m的二维网格grid
+    网格里只有0、1两种值，0表示该田地不能种草，1表示该田地可以种草
+    种草的时候，任何两个种了草的田地不能相邻，相邻包括上、下、左、右四个方向
+    你可以随意决定种多少草，只要不破坏上面的规则即可
+    返回种草的方法数，答案对100000000取模
+     */
+    /*
+    先看普通状压dp,定义函数f(i,s):当前来到第i行,i-1行种草的状态是s,在不违反规则的前提下,返回种草的方案数
+    那么此时左边和上边只要种了草,那么就不种,否则就有两种情况,种或者不种
+    此时的时间复杂度就是n * (1 << m) * (1 << m)(dfs的对二叉树的展开的时间复杂度)
+    所以此时dfs过于耗时(每次dfs都是2^m)
+     */
+    public static int MAXN = 12;
+    public static int MAXM = 12;
+    public static int MOD = 100000000;
+    public static int[][] grid = new int[MAXN][MAXM];
+    public static int[][] dp = new int[MAXN][1 << MAXM];
+    public static int n,m,maxs;
+    public static int compute(){
+        for(int i = 0;i < n;i++){
+            for(int s = 0;s < maxs;s++){
+                dp[i][s] = -1;
+            }
+        }
+        return f(0,0);
+    }
+    public static int f(int i,int s){
+        if(i == n){
+            return 1;
+        }
+        if(dp[i][s] != -1){
+            return dp[i][s];
+        }
+        int ans = dfs(i,0,s,0);
+        dp[i][s] = ans;
+        return ans;
+    }
+    //ss这里是本行选取的状态
+    //s是上一行的状态
+    //当前来到i行j列
+    public static int dfs(int i,int j,int s,int ss){
+        //每当来到最后一列,那么来到i+1行调用f函数
+        if(j == m){
+            return f(i + 1,ss);
+        }
+        //分支1:做出不种草的决定
+        int ans = dfs(i,j + 1,s,ss);
+        //如果此时要种草,那么要满足一下三个条件
+        //grid[i][j]==1,左边的没种过草或者在第0列,上面的也没种过草
+        if(grid[i][j] == 1 && (j == 0 || get(ss,j - 1) == 0) && get(s,j) == 0){
+            ans = (ans + dfs(i,j + 1,s,set(ss,j,1))) % MOD;
+        }
+        return ans;
+    }
+    public static int get(int s,int j){
+        return (s >> j) & 1;
+    }
+    //状态s中j为的状态设为v,然后把新的值返回
+    public static int set(int s,int j,int v){
+        return v == 0 ? (s & (~(1 << j))) : (s | (1 << j));
+    }
+
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        in.nextToken();
+        n = (int) in.nval;
+        in.nextToken();
+        m = (int) in.nval;
+        maxs = 1 << m;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                in.nextToken();
+                grid[i][j] = (int) in.nval;
+            }
+        }
+        out.println(compute());
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+
+

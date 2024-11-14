@@ -1,0 +1,195 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    public class TreeNode {
+        int val;
+        TreeNode left;
+        TreeNode right;
+        TreeNode() {}
+        TreeNode(int val) { this.val = val; }
+        TreeNode(int val, TreeNode left, TreeNode right) {
+            this.val = val;
+            this.left = left;
+            this.right = right;
+        }
+    }
+    /*
+    题目1:监控二叉树
+    给定一个二叉树，我们在树的节点上安装摄像头。
+    点上的每个摄影头都可以监视其父对象、自身及其直接子对象。
+    计算监控树的所有节点所需的最小摄像头数量。
+
+    贪心思路:对于最底层的结点,如果在最底层放摄像头,那么只会影响父节点,所以此时就放在
+    父亲节点上.定义,0状态:x无覆盖;2状态:x有覆盖,因为x上放了摄像头;1状态:x有覆盖,并且x上无摄像头
+    那么可以分类讨论:对于根节点x
+    如果结点左右返回状态都是0,那么此时x一定是2状态
+    如果左是1,右是1,那么此时一定是不放摄像头(贪心),因为让父亲节点放摄像头明显更好,此时是状态0
+    如果左是1,右是2,那么x肯定不放摄像头,x是状态1,,同理左2右1和左2右2都是状态1
+     */
+
+    //在不得不放相机时ans++
+    public static int ans;
+    public static int minCameraCover(TreeNode root) {
+        //此时最上的根节点是无覆盖状态,所以此时还要ans++
+        if(f(root) == 0){
+            ans++;
+        }
+        return ans;
+    }
+    //递归含义:
+    //假设x上方一定有父亲的情况下,这个假设很重要
+    //x为头的整棵树,最终想都覆盖
+    //并且想使用最少的摄像头,x应该是什么样的状态
+    //返回值含义:
+    //0:x是无覆盖的状态,x下方的节点已经被覆盖了
+    //1:x是覆盖状态,x上没有摄像头,x下方的节点已经被覆盖
+    //2:x是覆盖状态,x上有摄像头,x下方的结点已经被覆盖
+    public static int f(TreeNode x){
+        //空树天然就是被覆盖的状态,但是没摄像头,所以是1
+        if(x == null){
+            return 1;
+        }
+        int left = f(x.left);
+        int right = f(x.right);
+        if(left == 0 || right == 0){
+            ans++;
+            return 2;
+        }
+        if(left == 1 && right == 1){
+            return 0;
+        }
+        return 1;
+    }
+    /*
+    题目2:路径总和III
+    给定一个二叉树的根节点 root ，和一个整数 targetSum
+    求该二叉树里节点值之和等于 targetSum 的 路径 的数目。
+    路径 不需要从根节点开始，也不需要在叶子节点结束，
+    但是路径方向必须是向下的（只能从父节点到子节点）。
+
+    思路:从上到下,用Presum来表示累加和,比如说求到了从根节点到当前结点的前缀和是100
+    ,target=10,那么就找是否有前缀和是90的情况,对于preSum要注意还原现场
+     */
+    public static int pathSum(TreeNode root, int targetSum) {
+        HashMap<Long,Integer> presum = new HashMap<>();
+        presum.put(0L,1);
+        return f(root,targetSum,0,presum);
+    }
+    public static int f(TreeNode x,int target,long sum,HashMap<Long,Integer> presum){
+        if(x == null){
+            return 0;
+        }
+        sum += x.val;
+        int ans = presum.getOrDefault(sum - target,0);
+        presum.put(sum,presum.getOrDefault(sum,0) + 1);
+        ans += f(x.left,target,sum,presum);
+        ans += f(x.right,target,sum,presum);
+        //还原现场
+        presum.put(sum,presum.get(sum) - 1);
+        return ans;
+    }
+    /*
+    题目3:到达首都的最少油耗
+    给你一棵 n 个节点的树（一个无向、连通、无环图），每个节点表示一个城市，
+    编号从 0 到 n - 1 ，且恰好有 n - 1 条路。0 是首都。给你一个二维整数数组 roads ，
+    其中 roads[i] = [ai, bi] ，表示城市 ai 和 bi 之间有一条 双向路 。
+    每个城市里有一个代表，他们都要去首都参加一个会议。
+    每座城市里有一辆车。给你一个整数 seats 表示每辆车里面座位的数目。
+    城市里的代表可以选择乘坐所在城市的车，或者乘坐其他城市的车。
+    相邻城市之间一辆车的油耗是一升汽油。
+    请你返回到达首都最少需要多少升汽油。
+    可能性,以x结点为头结点,那么此时x这棵树的耗油的总量是所有子树的耗油之和,
+    然后加上每棵子树到达x需要耗油n(人数)/seats向上取整
+    如何建图?
+     */
+    //p是父亲节点的编号,这样可以避免递归往上走
+    //将-1当做0的虚拟父节点
+    public static void f(ArrayList<ArrayList<Integer>> graph,int seats,int u,int p,int[] size,long[] cost){
+        size[u] = 1;
+        for(int v : graph.get(u)){
+            if(v != p){
+                f(graph,seats,v,u,size,cost);
+                size[u] += size[v];
+                cost[u] += cost[v];
+                cost[u] += (size[v] + seats - 1) / seats;
+            }
+        }
+    }
+    public long minimumFuelCost(int[][] roads, int seats) {
+        int n = roads.length + 1;
+        ArrayList<ArrayList<Integer>> graph = new ArrayList<>();
+        for(int i = 0;i < n;i++){
+            graph.add(new ArrayList<>());
+        }
+        for(int[] r : roads){
+            graph.get(r[0]).add(r[1]);
+            graph.get(r[1]).add(r[0]);
+        }
+        int[] size = new int[n];
+        long[] cost = new long[n];
+        f(graph,seats,0,-1,size,cost);
+        return cost[0];
+    }
+    /*
+    题目4:相邻字符不同的最长路径
+    给你一棵 树（即一个连通、无向、无环图），根节点是节点 0 ，
+    这棵树由编号从 0 到 n - 1 的 n 个节点组成。
+    用下标从 0 开始、长度为 n 的数组 parent 来表示这棵树，其中 parent[i] 是节点 i 的父节点，
+    由于节点 0 是根节点，所以 parent[0] == -1 。
+    另给你一个字符串 s ，长度也是 n ，其中 s[i] 表示分配给节点 i 的字符。
+    请你找出路径上任意一对相邻节点都没有分配到相同字符的 最长路径 ，并返回该路径的长度。
+
+    情况(1)不要x结点,那么就在子树里面找最优解
+    情况(2)要x结点,那么就是找到两个最长的子树+1(根节点)
+    所以需要每棵子树的信息有:头结点出发往下最长相邻不重复的最长长度和最长路径(不需要从头结点出发)
+     */
+    public static class Info{
+        public int maxPathFromHead;
+        public int maxPath;
+        public Info(int a,int b){
+            maxPathFromHead = a;
+            maxPath = b;
+        }
+    }
+    public static Info f(char[] s,ArrayList<ArrayList<Integer>> graph,int u){
+        if(graph.get(u).isEmpty()){
+            //此时u结点是叶节点
+            return new Info(1,1);
+        }
+        int max1 = 0;
+        int max2 = 0;
+        int maxPath = 1;
+        for(int v : graph.get(u)){
+            Info nextInfo = f(s,graph,v);
+            maxPath = Math.max(maxPath,nextInfo.maxPath);
+            if(s[u] != s[v]){
+                if(nextInfo.maxPathFromHead > max1){
+                    max2 = max1;
+                    max1 = nextInfo.maxPathFromHead;
+                } else if(nextInfo.maxPathFromHead > max2){
+                    max2 = nextInfo.maxPathFromHead;
+                }
+            }
+        }
+        int maxPathFromHead = max1 + 1;
+        maxPath = Math.max(maxPath,max1 + max2 + 1);
+        return new Info(maxPathFromHead,maxPath);
+    }
+    public static int longestPath(int[] parent, String str) {
+        int n = parent.length;
+        char[] s = str.toCharArray();
+        ArrayList<ArrayList<Integer>> graph = new ArrayList<>();
+        for(int i = 0;i < n;i++){
+            graph.add(new ArrayList<>());
+        }
+        for(int i = 1;i < n;i++){
+            graph.get(parent[i]).add(i);
+        }
+        return f(s,graph,0).maxPath;
+    }
+}
+
+

@@ -1,0 +1,312 @@
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+import java.util.stream.Stream;
+
+
+public class Learn {
+    /*
+    最长递增子序列问题及其扩展
+    以及最长不下降子序列
+    最优解:时间复杂度O(nlogn),空间复杂度O(n)
+     */
+
+    /*
+    对于最长递增子序列问题:
+    dp[i]:以i位置的数做结尾的最长递增子序列长度
+     */
+
+    //时间复杂度O(n^2)的做法,每次遍历到i都遍历前面所有的数,遇到比自己大的数就看dp表是否能增加
+    public static int lengthOfLIS1(int[] nums){
+        int n = nums.length;
+        int[] dp = new int[n];
+        int ans = 0;
+        for(int i = 0;i < n;i++){
+            dp[i] = 1;
+            for(int j = 0;j < i;j++){
+                if(nums[j] < nums[i]){
+                    dp[i] = Math.max(dp[i],dp[j] + 1);
+                }
+            }
+            ans = Math.max(ans,dp[i]);
+        }
+        return ans;
+    }
+    //使用二分搜索,时间复杂度O(nlogn)(最优解)
+    //使用ends数组,代表目前所有长度为i+1的递增子序列的最小(值)结尾,这样可以保证ends数组是有序的
+    //每次在ends数组中寻找大于等于nums[i]的最左侧的值,如果没有这个值,那么就扩充ends数组
+    public static int lengthOfLIS2(int[] nums){
+        int n = nums.length;
+        int[] ends = new int[n];
+        //len来表示ends数组目前的有效区域,最后的len的大小就是最长递增子序列的长度
+        //ends数组中的有效区域一定是严格地单调递增的
+        int len = 0;
+        for(int i = 0,find;i < n;i++){
+            find = bs1(ends,len,nums[i]);
+            if(find == -1){
+                ends[len++] = nums[i];
+            } else {
+                ends[find] = nums[i];
+            }
+        }
+        return len;
+    }
+    public static int bs1(int[] ends,int len,int num){
+        int l = 0,r = len - 1,ans = -1;
+        while(l <= r){
+            int mid = (l + r) >> 1;
+            if(ends[mid] >= num){
+                //此时ans是符合大于等于num的条件,所以在ends[mid]>=num
+                //这一条件下更新
+                ans = mid;
+                r = mid - 1;
+            } else {
+                l = mid + 1;
+            }
+        }
+        return ans;
+    }
+    //最长不下降子序列(可以选择一样大小的数字)
+    //和最长递增子序列的思路一样,只不过在二分时是寻找大于nums[i]的最左侧位置
+    public static int bs2(int[] ends,int len,int num){
+        int l = 0,r = len - 1,ans = -1;
+        while(l <= r){
+            int m = (l + r) >> 1;
+            if(ends[m] > num){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    /*
+    俄罗斯套娃信封问题:
+    给你一个二维整数数组 envelopes ，其中 envelopes[i] = [wi, hi],
+    表示第 i 个信封的宽度和高度。
+    当另一个信封的宽度和高度都比这个信封大的时候，这个信封就可以放进另一个信封里，
+    请计算最多能有多少个信封能组成一组俄罗斯套娃信(即可以把一个信封放到另一个信封里面)
+    注意：不允许旋转信封。
+
+    思路:将信封的宽度进行从小到大排序,如果宽度一样,那么高度从大到小排
+    排完序后,把信封的高度提取出来,组成一个数组,然后在这个数组中求最长递增子序列长度
+    就是答案,高度倒序排就是防止将宽度一样的信封都算上
+     */
+    public int maxEnvelopes(int[][] envelopes) {
+        int n = envelopes.length;
+        Arrays.sort(envelopes,(a,b)->a[0] != b[0] ? (a[0] - b[0]) : (b[1] - a[1]));
+        int[] ends = new int[n];
+        int len = 0;
+        for(int i = 0,find,num;i < n;i++){
+            num = envelopes[i][1];
+            find = bs(ends,len,num);
+            if(find == -1){
+                ends[len++] = num;
+            } else {
+                ends[find] = num;
+            }
+        }
+        return len;
+    }
+    public int bs(int[] ends,int len,int num){
+        int ans = -1,l = 0,r = len - 1;
+        while(l <= r){
+            int m = (l + r) >> 1;
+            if(ends[m] >= num){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    /*
+    题目3:使k数组递增的最少操作次数
+    给你一个下标从 0 开始包含 n 个正整数的数组 arr ，和一个正整数 \79425863+ 。
+    如果对于每个满足k<=i<=n-1的下标i,都有arr[i-k]<=arr[i],那么我们称arr是K递增的。
+    比方说，arr = [4, 1, 5, 2, 6, 2] 对于 k = 2 是 K 递增的，因为：
+    arr[0] <= arr[2] (4 <= 5)
+    arr[1] <= arr[3] (1 <= 2)
+    arr[2] <= arr[4] (5 <= 6)
+    arr[3] <= arr[5] (2 <= 2)
+    但是,相同的数组arr对于k=1不是K递增的(因为arr[0]>arr[1])
+    对于 k = 3也不是K递增的(因为 arr[0] > arr[3])。
+    每一次 操作 中，你可以选择一个下标 i 并将 arr[i] 改成任意 正整数。
+    请你返回对于给定的 k ，使数组变成 K 递增的 最少操作次数 。
+
+    对于每一组的元素,求最长递增子序列
+     */
+    public static int MAXN = 100001;
+    public static int[] nums = new int[MAXN];
+    public static int[] ends = new int[MAXN];
+    public int kIncreasing(int[] arr, int k) {
+        int n = arr.length;
+        int ans = 0;
+        for(int i = 0,size;i < k;i++){
+            size = 0;
+            for(int j = i;j < n;j += k){
+                nums[size++] = arr[j];
+            }
+            ans += size - lengthOfNonDecreasing(size);
+        }
+        return ans;
+    }
+    public static int lengthOfNonDecreasing(int size){
+        int len = 0;
+        for(int i = 0,find;i < size;i++){
+            find = bs(len,nums[i]);
+            if(find == -1){
+                ends[len++] = nums[i];
+            } else {
+                ends[find] = nums[i];
+            }
+        }
+        return len;
+    }
+    public static int bs(int len,int num){
+        int ans = -1,l = 0,r = len - 1;
+        while(l <= r){
+            int m = (l + r) >> 1;
+            if(ends[m] > num){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    /*
+    最长数对链
+    给你一个由 n 个数对组成的数对数组 pairs
+    其中 pairs[i] = [lefti, righti] 且 lefti < righti 。
+    现在，我们定义一种 跟随 关系，当且仅当 b < c 时，
+    数对 p2 = [c, d] 才可以跟在 p1 = [a, b] 后面。我们用这种形式来构造数对链 。
+    找出并返回能够形成的 最长数对链的长度 。
+    你不需要用到所有的数对，你可以以任何顺序选择其中的一些数对来构造。
+
+    思路:将开始位置由小到大排好序,结束位置不用管
+    往ends数组中加入数对的结尾,每次更新ends数组中的值为更小值
+    注意:本题可以使用贪心,把结束位置按从小到大排序
+     */
+    public int findLongestChain(int[][] pairs) {
+        int n = pairs.length;
+        Arrays.sort(pairs,(a,b)->a[0] - b[0]);
+        int len = 0;
+        for(int[] pair : pairs){
+            int find = bs(ends,len,pair[0]);
+            if(find == -1){
+                ends[len++] = pair[1];
+            } else {
+                ends[find] = Math.min(ends[find],pair[1]);
+            }
+        }
+        return len;
+    }
+    /*
+    有一次修改机会的最长不下降子序列(p8776 提高+/省选-)
+    给的一个arr长度为n,一个整数k,你只有一次机会,可以将其中连续的k个数全修改为任意一个
+    值,这次机会你也可以不用,请返回最长不下降子序列长度
+    1<=k,n<=10^5   1<=arr[i]<=10^6
+
+    思路:枚举,假设k=3,在枚举到4位置(b)时,那么把1~3位置都变成b,然后计算0~0范围内最大递增
+    子序列且最后一个数不超过b,然后在4位置开始找后面的最大递增子序列
+     */
+    public static int MAXN1 = 100001;
+    public static int[] arr = new int[MAXN1];
+    public static int[] right = new int[MAXN1];
+    public static int[] ends1 = new int[MAXN1];
+    public static int n,k;
+    
+    public static int compute(){
+        right();
+        //这句话可以不要,因为len限制了二分的范围,即使在compute方法中ends1数组已经被使用过了
+        Arrays.fill(ends1,0);
+        int len = 0;
+        int ans = 0;
+        for(int i = 0,j = k,find,left;j < n;i++,j++){
+            find = bs2(len,arr[j]);
+            //如果find == -1,说明了此时前部分的>=arr[j]的值不存在,所以此时left的值就是
+            //前部分最长不减子序列的长度就是len,否则是find的值
+            left = find == -1 ? len : find;
+            ans = Math.max(ans,left + k + right[j]);
+            //i位置是每一次从窗口里暴露出来的位置
+            find = bs2(len,arr[i]);
+            if(find == -1){
+                ends1[len++] = arr[i];
+            } else {
+                ends1[find] = arr[i];
+            }
+        }
+        //当窗口到达最右侧,此时右侧没有元素,此时最大递增的子序列长度就是len+k
+        ans = Math.max(ans,len + k);
+        return ans;
+    }
+    public static int bs2(int len,int num){
+        int l = 0,r = len - 1,ans = -1;
+        while(l <= r){
+            int m = (l + r) >> 1;
+            if(ends1[m] > num){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    public static int bs1(int len,int num){
+        int l = 0,r = len - 1,ans = -1;
+        while(l <= r){
+            int m = (l + r) >> 1;
+            //由于此时从右往左遍历,然后找最长的不增子序列,所以此时ends1数组是倒序
+            //所以此时ends1[m] < num的情况才是成立的,所以此时更新ans
+            if(ends1[m] < num){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    //生成辅助数组right
+    //right[i]:一定一arr[i]作为开头的情况下,arr[i...]上最长不下降子序列的长度是多少
+    //一定是一arr[i]作为开头,等同与从n-1开始,从右往左遍历,以arr[i]做结尾的最长不上升子序列
+    //那么此时找的是小于arr[i]的最左侧的元素
+    public static void right(){
+        int len = 0;
+        for(int i = n - 1,find;i >= 0;i--){
+            find = bs1(len,arr[i]);
+            if(find == -1){
+                ends1[len++] = arr[i];
+                right[i] = len;
+            } else {
+                ends1[find] = arr[i];
+                right[i] = find + 1;
+            }
+        }
+    }
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            in.nextToken();
+            k = (int) in.nval;
+            for(int i = 0;i < n;i++){
+                in.nextToken(); arr[i] = (int) in.nval;
+            }
+            System.out.println(compute());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+
+

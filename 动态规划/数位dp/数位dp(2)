@@ -1,0 +1,361 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //数位dp下
+    /*
+    题目1:windy数(p2657)
+    不含前导0且相邻两个数字之差至少为2的正整数被称为windy数,windy想知道[a,b]范围内总共有多少
+    个windy数
+
+    思路:实际就是0~300的windy数减去0~99范围的windy数
+    如何计算0~num上的windy数?
+     */
+    public static int MAXLEN = 11;
+    public static int[][][] dp = new int[MAXLEN][11][2];
+    public static void build(int len){
+        for(int i = 0;i <= len;i++){
+            for(int j = 0;j <= 10;j++){
+                dp[i][j][0] = -1;
+                dp[i][j][1] = -1;
+            }
+        }
+    }
+    public static int compute(int a,int b){
+        return cnt(b) - cnt(a - 1);
+    }
+    public static int cnt(int num){
+        if(num == 0){
+            return 1;
+        }
+        int len = 1;
+        int offset = 1;
+        int tmp = num / 10;
+        while(tmp > 0){
+            len++;
+            offset *= 10;
+            tmp /= 10;
+        }
+        build(len);
+        return f(num,offset,len,10,0);
+    }
+    //offset完全由len决定,方便提取num某一位的数字
+    //从num最高位开始,还剩下len位没有决定
+    //前一位的数字是pre,如果pre == 10,那么说明从来没有选择过数字
+    //如果之前的位已经确定比num小,那么free == 1,表示接下来的数字可以自由选择
+    //如果之前的位和num一样,那么free == 0,表示接下来的数字不能大于num当前位的数字
+    //返回<=num的windy数有多少个
+    public static int f(int num,int offset,int len,int pre,int free){
+        if(len == 0){
+            return 1;
+        }
+        if(dp[len][pre][free] != -1){
+            return dp[len][pre][free];
+        }
+        int cur = num / offset % 10;
+        int ans = 0;
+        if(free == 0){
+            if(pre == 10){
+                ans += f(num,offset / 10,len - 1,10,1);
+                for(int i = 1;i < cur;i++){
+                    ans += f(num,offset / 10,len - 1,i,1);
+                }
+                ans += f(num,offset / 10,len - 1,cur,0);
+            } else {
+                for(int i = 0;i <= 9;i++) {
+                    if (i <= pre - 2 || i >= pre + 2) {
+                        if (i < cur) {
+                            ans += f(num, offset / 10, len - 1, i, 1);
+                        } else if (i == cur) {
+                            ans += f(num, offset / 10, len - 1, i, 0);
+                        }
+                    }
+                }
+            }
+        } else {
+            if(pre == 10){
+                ans += f(num,offset / 10,len - 1,10,1);
+                for(int i = 1;i <= 9;i++){
+                    ans += f(num,offset / 10,len - 1,i,1);
+                }
+            } else {
+                for(int i = 0;i <= 9;i++){
+                    if(i <= pre - 2 || i >= pre + 2){
+                        ans += f(num,offset / 10,len - 1,i,1);
+                    }
+                }
+            }
+        }
+        dp[len][pre][free] = ans;
+        return ans;
+    }
+    public static void main(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            int a = (int) in.nval;
+            in.nextToken();
+            int b = (int) in.nval;
+            System.out.println(compute(a,b));
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目2:萌数
+    如果一个数字,存在长度至少为2的回文子串,那么这种数字被称为萌数,比如101,110,111,1234321,45568
+    求[l,r]范围内,有多少萌数,由于答案可能很大,所以对1e9+7取余
+    l,r <= 10^1000
+
+    思路:算0~r范围的萌数和0~l范围的萌数,然后计算l是不是萌数,如果是就答案+1
+     */
+    public static int MOD = (int) 1e9 + 7;
+    public static int MAXN = 1001;
+    public static int[][][][] dp1 = new int[MAXN][11][11][2];
+    public static void build1(int n){
+        for(int a = 0;a < n;a++){
+            for(int b = 0;b <= 10;b++){
+                for(int c = 0;c <= 10;c++){
+                    for(int d = 0;d < 2;d++){
+                        dp1[a][b][c][d] = -1;
+                    }
+                }
+            }
+        }
+    }
+    public static boolean check(char[] l){
+        //注意这里的特判!!!!洛谷正好会hack这个特判
+        if(l[0] == l[1]) return true;
+        for(int i = 2;i < l.length;i++){
+            if(l[i] == l[i - 1] || l[i] == l[i - 2]){
+                return false;
+            }
+        }
+        return true;
+    }
+    //返回0~num范围上萌数有多少个
+    //正难则反,由于不好找萌数,那么就找不是萌数的数,然后用总数减去不是萌数的个数
+    public static int cnt(char[] nums){
+        if(nums[0] == '0'){
+            return 0;
+        }
+        int n = nums.length;
+        //利用同余原理将nums数组取余MOD,变成all(Long)
+        long all = 0L;
+        long base = 1;
+        for(int i = n - 1;i >= 0;i--){
+            all = (all + base * (nums[i] - '0')) % MOD;
+            base = (base * 10) % MOD;
+        }
+        build1(n);
+        return (int)((all - f(nums,0,10,10,0) + MOD) % MOD);
+    }
+    //不是萌数,那么就不含回文串长度大于等于2的部分
+    //对于一个萌数,那么必然会出现对于一个位置i,nums[i]==nums[i-1]或者nums[i]==nums[i-2]
+    //有两个限制,来到的i必须<=num,并且这个数的前一位和前前一位不能和本位相等,那么利用参数
+    //pp代表前前位,p代表前一位,如果值是10,那么表示哪一位没有选择过数字,free就是能不能自由选择
+    public static int f(char[] nums,int i,int pp,int p,int free){
+        if(i == nums.length){
+            return 1;
+        }
+        if(dp1[i][pp][p][free] != -1){
+            return dp1[i][pp][p][free];
+        }
+        int ans = 0;
+        //如果free == 0并且p == 10,说明处理的是第一位,那么此时cur是从1开始遍历
+        if(free == 0){
+            if(p == 10){
+                ans = (ans + f(nums,i + 1,10,10,1)) % MOD;
+                for(int cur = 1;cur < nums[i] - '0';cur++){
+                    ans = (ans + f(nums,i + 1,10,cur,1)) % MOD;
+                }
+                ans = (ans + f(nums,i + 1,10,nums[i] - '0',0)) % MOD;
+            } else {
+                for(int cur = 0;cur < nums[i] - '0';cur++){
+                    if(pp != cur && p != cur) {
+                        ans = (ans + f(nums, i + 1, p, cur, 1)) % MOD;
+                    }
+                }
+                if(pp != nums[i] - '0' && p != nums[i] - '0') {
+                    ans = (ans + f(nums, i + 1, p, nums[i] - '0', 0)) % MOD;
+                }
+            }
+        } else {
+            //此时说明已经没有选一些数字了(现在还一个数没选,但是位数已经到后面了)
+            if(p == 10){
+                ans = (ans + f(nums,i + 1,10,10,1)) % MOD;
+                for(int cur = 1;cur <= 9;cur++){
+                    ans = (ans + f(nums,i + 1,p,cur,1)) % MOD;
+                }
+            } else {
+                for(int cur = 0;cur <= 9;cur++){
+                    if(pp != cur && p != cur){
+                        ans = (ans + f(nums,i + 1,p,cur,1)) % MOD;
+                    }
+                }
+            }
+        }
+        dp1[i][pp][p][free] = ans;
+        return ans;
+    }
+    public static int compute(char[] l,char[] r){
+        int ans = (cnt(r) - cnt(l) + MOD) % MOD;
+        if(check(l)){
+            ans = (ans + 1) % MOD;
+        }
+        return ans;
+    }
+    public static void main1(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        String[] strs = br.readLine().split(" ");
+        System.out.println(compute(strs[0].toCharArray(),strs[1].toCharArray()));
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目3:不含连续1的数
+    给定一个正整数 n ，请你统计在 [0, n] 范围的非负整数中，有多少个整数的二进制表示中不存在 连续的 1 。
+
+    思路:先解决一个子问题,给n位,可以自由填1和0,问不能有连续的1有几种可能?
+    假如有5位,随便填,那么第一位有两种情况,如果第一位填0,那么就成了后四位随便填,如果第一位填
+    1,那么第二位肯定填0,称为后三位随便发挥,那么f(i)=f(i-1)+f(i-2)
+    之后就可以使用数位dp解决
+     */
+    public static int findIntegers(int n){
+        int[] cnt = new int[31];
+        cnt[0] = 1;
+        cnt[1] = 2;
+        for(int i = 2;i <= 30;i++){
+            cnt[i] = cnt[i - 1] + cnt[i - 2];
+        }
+        return f(cnt,n,30);
+    }
+    //cnt[len]:二进制如果有len位,所有的二进制状态中不存在连续1的状态有多少个
+    //从num二进制形式的高位开始,当前来到i位,之前的位完全和num一样
+    //返回<=num且不存在连续的1的状态有多少个
+    public static int f(int[] cnt,int num,int i){
+        if(i == -1){
+            return 1;
+        }
+        int ans = 0;
+        if((num & (1 << i)) != 0){
+            //此时遇到num的位数是1,那么此时当前位i选0的情况下,那么后面位可以自由选
+            //此时直接加上cnt[i](i是9的话,此时处理的是从右往左第10位,所以不是cnt[i-1])
+            ans += cnt[i];
+            if((num & (1 << (i + 1))) != 0){
+                //如果前一位和本位都是1,那么不合法,直接返回
+                return ans;
+            }
+        }
+        //之前的最高位和num一样,且合法,那么去i-1递归
+        ans += f(cnt,num,i - 1);
+        return ans;
+    }
+    //由于是单决策,那么可以将递归改为迭代
+    public static int findIntegers2(int n){
+        int[] cnt = new int[31];
+        cnt[0] = 1;
+        cnt[1] = 2;
+        for(int i = 2;i <= 30;i++){
+            cnt[i] = cnt[i - 1] + cnt[i - 2];
+        }
+        int ans = 0;
+        for (int i = 30; i >= -1; i--) {
+            if (i == -1) {
+                ans++;
+                break;
+            }
+            if ((n & (1 << i)) != 0) {
+                ans += cnt[i];
+                if ((n & (1 << (i + 1))) != 0) {
+                    break;
+                }
+            }
+        }
+        return ans;
+    }
+    /*
+    题目4:数字计数(p2602)
+    给定两个正整数,求在[a,b]中的所有整数,每个数码各出现了多少次
+    比如问10-100数字5出现了多少次?15,25,35,45,50...都包含了数码5
+    输出一行10个整数,分别表示0~9在[a,b]中出现了多少次
+
+    a,b可以转化为b到d的数码出现次数 减去 a-1到d数码出现的次数
+    对于一个数,可以做一下的讨论,当来到cur位时,如果此时处理的d是5的出现次数
+    假设此时最大数是3623???,此时来到从左往右的第四位(3),那么此时对于可以选的数字
+    ,此时的cur < d,前三位可以是从000~361,然后第四位是5,后三位可以随便选择(000~999)
+    如果某一位数字>d,那么此时前三位可以是(000~362)和后三位的(000~999)
+    当某一位数字==d时,那么此时后三位就不能随便选择,比如是3625782,那么此时后三位只能选000~782
+    特殊的,d==0,num==36200,由于是从1开始算到num,当cur来到个位时
+    此时不能是00000,应该从00010开始计算
+     */
+    public static long digitsCount(int d,long a,long b){
+        return count(b,d) - count(a - 1,d);
+    }
+    public static long count(long num,int d){
+        long ans = 0;
+        //left:当前位左边的情况数
+        //right:当前为右边的情况数
+        //当前位是cur
+        for(long right = 1,tmp = num,left,cur;tmp != 0;right *= 10,tmp /= 10) {
+            //情况1:
+            //d!=0
+            //1~30583,d=5
+            //cur<d的情况
+            //个位cur=3:0000~3057 5
+            //个位上没有额外加,后面没有数了
+            //cur>d的情况
+            //十位cur=8:000~304 5 0~9
+            //十位上额外加305 5 0~9
+            //cur==d的情况
+            //百位cur=5:00~29 5 00~99
+            //百位上额外加 : 30 5 00~83
+            //....
+            //情况2:d==0
+            //cur>d的情况
+            //个位数cur=3,0001~3057 0
+            //个位上额外加:3058 0
+            //cur>d,十位cur=8:001~304 0 0~9,额外加上305 0 0~9(如果前面是000,那么此时十位的0就写不出来了,前面全是0,所以的001)
+            //cur>d,百位cur=5,01~29 0 00~99,额外加上30 0 00~99
+            //cur==d的情况,千位cur-0:1~2 0 000~999,额外加上3 0 000~583
+            left = tmp / 10;
+            cur = tmp % 10;
+            //单独讨论d==0,当d==0时左边的数字不能全选0
+            if(d == 0){
+                left--;
+            }
+            ans += left * right;
+            if(cur > d){
+                ans += right;
+            } else if(cur == d){
+                //此时就是去cur右边的数字然后+1(00~最大,所以+1)
+                ans += num % right + 1;
+            }
+        }
+        return ans;
+    }
+    public static void main2(String[] args) throws IOException{
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            long a = (long) in.nval;
+            in.nextToken();
+            long b = (long) in.nval;
+            for(int i = 0;i <= 9;i++){
+                System.out.print(digitsCount(i,a,b) + " ");
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+}
+

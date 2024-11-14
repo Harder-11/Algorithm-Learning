@@ -1,0 +1,268 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    dfn序:用深度优先遍历整棵树,给每个结点依次标记序号,编号从小到大的顺序就是dfn序
+    dfn序+每棵子树的大小,可以起到定位子树结点的作用,如果某个结点的dfn序是x,以这个结点
+    为根节点的子树大小是y,那么可以知道x~x+y-1所代表的结点都代表这棵子树的结点,
+    在收集dfn序的过程中顺便也要收集每个子树的大小
+     */
+    /*
+    题目1:移除子树后的二叉树高度
+    给你一棵 二叉树 的根节点 root ，树中有 n 个节点。
+    每个节点都可以被分配一个从 1 到 n 且互不相同的值。另给你一个长度为 m 的数组 queries 。
+    你必须在树上执行 m 个 独立 的查询，其中第 i 个查询你需要执行以下操作：
+    从树中 移除 以 queries[i] 的值作为根节点的子树。
+    题目所用测试用例保证 queries[i] 不 等于根节点的值。
+    返回一个长度为 m 的数组 answer ，其中 answer[i] 是执行第 i 个查询后树的高度。
+    注意：
+    查询之间是独立的，所以在每个查询执行后，树会回到其 初始 状态。
+    树的高度是从根到树中某个节点的 最长简单路径中的边数 。
+
+    思路:获取每个结点的dfn序号,然后获取每个结点作为根节点的树的大小size[]
+    然后获取每个结点的deep,那么此时对于每个查询,就可以利用dfn序数组和size数组获取整棵子树
+    的结点,然后在deep数组中找除开这些结点的最大值
+    为了方便找最大值,可以预处理一个maxl和maxr数组,比如结点的边号是0~7,去掉4,5,那么就是
+    在maxl的0~3范围找最大和maxr的6~7找最大,去二者的更大值
+     */
+    public class TreeNode {
+        int val;
+        TreeNode left;
+        TreeNode right;
+        TreeNode() {}
+        TreeNode(int val) { this.val = val; }
+        TreeNode(int val, TreeNode left, TreeNode right) {
+            this.val = val;
+            this.left = left;
+            this.right = right;
+        }
+    }
+    public static int MAXN = 100010;
+    public static int[] dfn = new int[MAXN];
+    public static int[] deep = new int[MAXN];
+    public static int[] size = new int[MAXN];
+    public static int[] maxl = new int[MAXN];
+    public static int[] maxr = new int[MAXN];
+    public static int dfnCnt;
+    public static void f(TreeNode x,int k){
+        int i = ++dfnCnt;
+        dfn[x.val] = i;
+        deep[i] = k;
+        size[i] = 1;
+        if(x.left != null){
+            f(x.left,k + 1);
+            size[i] += size[dfn[x.left.val]];
+        }
+        if(x.right != null){
+            f(x.right,k + 1);
+            size[i] += size[dfn[x.right.val]];
+        }
+    }
+    public static int[] treeQueries(TreeNode root, int[] queries) {
+        dfnCnt = 0;
+        f(root,0);
+        for(int i = 1;i <= dfnCnt;i++){
+            maxl[i] = Math.max(maxl[i - 1],deep[i]);
+        }
+        maxr[dfnCnt + 1] = 0;
+        for(int i = dfnCnt;i >= 1;i--){
+            maxr[i] = Math.max(maxr[i + 1],deep[i]);
+        }
+        int m = queries.length;
+        int[] ans = new int[m];
+        for(int i = 0;i < m;i++){
+            int leftMax = maxl[dfn[queries[i]] - 1];
+            int rightMax = maxr[dfn[queries[i]] + size[dfn[queries[i]]]];
+            ans[i] = Math.max(leftMax,rightMax);
+        }
+        return ans;
+    }
+    /*
+    题目2:从图中删除边的最小分数
+    存在一棵无向连通树，树中有编号从 0 到 n - 1 的 n 个节点， 以及 n - 1 条边。
+    给你一个下标从 0 开始的整数数组 nums ，长度为 n ，其中 nums[i] 表示第 i 个节点的值
+    另给你一个二维整数数组 edges ，长度为 n - 1 ，
+    其中 edges[i] = [ai, bi] 表示树中存在一条位于节点 ai 和 bi 之间的边。
+    删除树中两条不同的边以形成三个连通组件。对于一种删除边方案,定义如下步骤以计算其分数：
+    分别获取三个组件 每个 组件中所有节点值的异或值。
+    最大 异或值和 最小 异或值的 差值 就是这一种删除边方案的分数。
+    例如，三个组件的节点值分别是：[4,5,7]、[1,9] 和 [3,3,3] 。
+    三个异或值分别是 4 ^ 5 ^ 7 = 6、1 ^ 9 = 8 和 3 ^ 3 ^ 3 = 3 。
+    最大异或值是 8 ，最小异或值是 3 ，分数是 8 - 3 = 5 。
+    返回在给定树上执行任意删除边方案可能的 最小 分数。
+
+    思路:谁做头结点实际是一样的,那么规定编号是0的结点作为头结点
+    暴力枚举每次删除两条边,然后求分数的最大值,然后求dfn序,就可以得到每棵子树的异或值
+    然后对于切分出来的几部分,有以下情况
+    (1)切分出来的两个小部分没有关系,那么就是总异或值 ^ 两部分异或值
+    (2)切分出来一个小部分,然后在这个小部分的基础上继续切分,那么就是总异或值^切分出来的一整块异或值
+    可以通过dfn序和size来判断是哪一种情况
+     */
+    public static int MAXM = 1001;
+    public static int[] dfn1 = new int[MAXM];
+    public static int[] xor = new int[MAXM];
+    public static int[] size1 = new int[MAXM];
+    public static int dfnCnt1;
+    //当前来到原始编号,遍历u的整棵树
+    //树可以看做以任意一个结点为根节点
+    public static void f(int[] nums,ArrayList<ArrayList<Integer>> graph,int u){
+        int i = dfnCnt1++;
+        dfn1[u] = i;
+        xor[i] = nums[u];
+        size1[i] = 1;
+        for(int v : graph.get(u)){
+            //没分配过说明就是子树,如果分配过,那么dfn不是0,此时就可以避免重复计算
+            if(dfn1[v] == 0){
+                f(nums,graph,v);
+                xor[i] ^= xor[dfn1[v]];
+                size1[i] += size1[dfn1[v]];
+            }
+        }
+    }
+    public static int minimumScore(int[] nums,int[][] edges){
+        int n = nums.length;
+        ArrayList<ArrayList<Integer>> graph = new ArrayList<>();
+        for(int i = 0;i < n;i++){
+            graph.add(new ArrayList<>());
+        }
+        for(int[] edge : edges){
+            graph.get(edge[0]).add(edge[1]);
+            graph.get(edge[1]).add(edge[0]);
+        }
+        Arrays.fill(dfn1,0,n,0);
+        dfnCnt1 = 0;
+        f(nums,graph,0);
+        int m = edges.length;
+        int ans = Integer.MAX_VALUE;
+        for(int i = 0,a,b,pre,pos,sum1,sum2,sum3;i < m;i++){
+            a = Math.max(dfn1[edges[i][0]],dfn1[edges[i][1]]);
+            for(int j = i + 1;j < m;j++){
+                b = Math.max(dfn1[edges[j][0]],dfn1[edges[j][1]]);
+                //讨论pos是不是pre子树上的结点
+                if(a < b){
+                    pre = a;
+                    pos = b;
+                } else {
+                    pre = b;
+                    pos = a;
+                }
+                sum1 = xor[pos];
+                //此时pos是pre子树的结点,那么就是xor[pre]^xor[pos]就是sum2,除开pos子树
+                //的pre子树的总异或值,sum3就是最大块的异或值,sum1就是pos的异或值
+                if(pos < pre + size1[pre]){
+                    sum2 = xor[pre] ^ xor[pos];
+                    sum3 = xor[1] ^ xor[pre];
+                } else {
+                    sum2 = xor[pre];
+                    sum3 = xor[1] ^ sum1 ^ sum2;
+                }
+                ans = Math.min(ans,Math.max(Math.max(sum1,sum2),sum3) - Math.min(Math.min(sum1,sum2),sum3));
+            }
+        }
+        return ans;
+    }
+    /*
+    选课(p2014)
+    在大学里每个学生，为了达到一定的学分，必须从很多课程里选择一些课程来学习，
+    在课程里有些课程必须在某些课程之前学习,如高等数学总是在其它课程之前学习,现在有N门功课,每门课有个学分，
+    每门课有一门或没有直接先修课（若课程 a 是课程 b 的先修课即只有学完了课程 a，才能学习课程 b）。
+    一个学生要从这些课程里选择M门课程学习，问他能获得的最大学分是多少？
+    输入:第一行有两个整数N,M
+    接下来N行,第I+1行包括两个整数ki和si,ki表示第I门课的直接先修课,si表示第i门课的学分,若ki=0则没有直接先修课
+
+    普通解法的时间复杂度:O(n*每个节点的孩子平均数量 * m * m)
+    最优解:O(n * m),dfn序的利用 + 巧妙定义下的尝试
+    思路:添加上0号结点,然后将每棵树连成森林,那么此时答案一定是和0相连
+    假如对于根节点a,有三棵子树bcd,那么
+    (1)最后一棵子树不选,前两棵2棵子树挑课,挑4门
+    (2)第三棵子树要选,那么此时第三棵子树能选1,2,3门课,不能选4门,否则此时选不了a,没有连通性了
+    dp[i][j][k]:来到i号结点,在前j棵子树里面选课连续,并且选k门,获得的最大收益
+    (1)第j棵子树完全不考虑,那么dp[i][j-1][k];
+    (2)考虑第j棵子树,进行枚举,枚举s=min(j子树的结点个数,选的门数),dp[x][x的全部子树][s]+
+    dp[i][j-1][k-s]
+     */
+
+    //当前来到i号结点为头的子树
+    //只在i号结点,及其i号结点下方的前j棵子树上挑选结点
+    //一共挑选k个结点,并且保证挑选的结点连成一片
+    //返回最大的累加和
+    public static int MAXN1 = 301;
+    public static int[] nums = new int[MAXN1];
+    public static ArrayList<ArrayList<Integer>> graph;
+    static {
+        graph = new ArrayList<>();
+        for(int i = 0;i < MAXN1;i++){
+            graph.add(new ArrayList<>());
+        }
+    }
+    public static int[][][] dp = new int[MAXN1][][];
+    public static int n,m;
+    public static int f(int i,int j,int k){
+        if(k == 0){
+            return 0;
+        }
+        //没有子树,就只剩头结点,所以直接返回nums[i]
+        //只有1个名额也只能选i
+        if(j == 0 || k == 1){
+            return nums[i];
+        }
+        if(dp[i][j][k] != -1){
+            return dp[i][j][k];
+        }
+        int ans = f(i,j - 1,k);
+        int v = graph.get(i).get(j - 1);
+        for(int s = 1;s < k;s++){
+            ans = Math.max(ans,f(i,j - 1,k - s) + f(v,graph.get(v).size(),s));
+        }
+        dp[i][j][k] = ans;
+        return ans;
+    }
+    public static int compute(){
+        for(int i = 0;i <= n;i++){
+            dp[i] = new int[graph.get(i).size() + 1][m + 1];
+        }
+        for(int i = 0;i <= n;i++){
+            for(int j = 0;j < dp[i].length;j++){
+                for(int k = 0;k <= m;k++){
+                    dp[i][j][k] = -1;
+                }
+            }
+        }
+        return f(0,graph.get(0).size(),m);
+    }
+    public static void build(int n){
+        for(int i = 0;i <= n;i++){
+            graph.get(i).clear();
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF){
+            n = (int) in.nval;
+            in.nextToken();
+            //算上添加的0号虚拟节点
+            m = (int) in.nval + 1;
+            build(n);
+            for(int i = 1,pre;i <= n;i++){
+                in.nextToken();
+                pre = (int) in.nval;
+                graph.get(pre).add(i);
+                in.nextToken();
+                nums[i] = (int) in.nval;
+            }
+            System.out.println(compute());
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    //最优解,利用dfn序来优化
+}
+
+

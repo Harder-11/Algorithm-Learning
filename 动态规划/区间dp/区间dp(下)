@@ -1,0 +1,371 @@
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    //区间dp下(6道例题)
+    /*
+    题目1:完成配对需要的最少字符数量
+    给定一个有'[' ']' '(' ')'组成的字符串
+    请问最少插入多少个括号就能使这个字符串的所有括号正确配对
+    例如当前字符串是"([[])",那么插入一个']'即可满足,输出最少需要插入多少个字符
+
+    思路dp[l][r]:在s[l...r]范围内,至少要插入几个字符才能使字符串配对,答案是dp[0][n-1]
+    所以有以下可能性:
+    (1)s[l]=='(',s[r]==')',那么就直接讨论dp[l+1][r-1]
+    (2)还有可能是并列的情况,这样要进行划分,比如说"([]["情况,那么就要进行划分的区间dp
+    每枚举到m位置,就划分为l...m和m+1...r,两者相加就是答案
+     */
+    public static int compute(String str){
+        char[] s = str.toCharArray();
+        int n = s.length;
+        int[][] dp = new int[n][n];
+        for(int i = 0;i < n;i++){
+            for(int j = 0;j < n;j++){
+                dp[i][j] = -1;
+            }
+        }
+        return f(s,0,s.length - 1,dp);
+    }
+    //严格位置依赖的动态规划版本
+    public static int compute1(String str){
+        char[] s = str.toCharArray();
+        int n = s.length;
+        int[][] dp = new int[n][n];
+        for(int i = 0;i < n - 1;i++){
+            dp[i][i] = 1;
+            dp[i][i + 1] = (s[i] == '(' && s[i + 1] == ')') || (s[i] == '[' && s[i + 1] == ']') ? 0 : 2;
+        }
+        dp[n - 1][n - 1] = 1;
+        for(int l = n - 3;l >= 0;l--){
+            for(int r = l + 2;r < n;r++){
+                dp[l][r] = Integer.MAX_VALUE;
+                if((s[l] == '(' && s[r] == ')') || (s[l] == '[' && s[r] == ']')){
+                    dp[l][r] = dp[l + 1][r - 1];
+                }
+                for(int k = l;k < r;k++){
+                    dp[l][r] = Math.min(dp[l][r],dp[l][k] + dp[k + 1][r]);
+                }
+            }
+        }
+        return dp[0][n - 1];
+    }
+    public static int f(char[] s,int l,int r,int[][] dp){
+        if(l == r){
+            return 1;
+        }
+        if(l == r - 1){
+            if((s[l] == '(' && s[r] == ')') || (s[l] == '[' && s[r] == ']')){
+                return 0;
+            } else {
+                return 2;
+            }
+        }
+        if(dp[l][r] != -1){
+            return dp[l][r];
+        }
+        int p1 = Integer.MAX_VALUE;
+        if((s[l] == '(' && s[r] == ')') || (s[l] == '[' && s[r] == ']')){
+            p1 = f(s,l + 1,r - 1,dp);
+        }
+        int p2 = Integer.MAX_VALUE;
+        for(int m = l;m < r;m++){
+            p2 = Math.min(p2,f(s,l,m,dp) + f(s,m + 1,r,dp));
+        }
+        int ans = Math.min(p1,p2);
+        dp[l][r] = ans;
+        return ans;
+
+    }
+    public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        String str = br.readLine();
+        System.out.println(compute(str));
+        out.flush();
+        out.close();
+        br.close();
+
+    }
+    /*
+    涂色 & 奇怪的打印机
+    假设你有一块长度为5的木板,初识时没有涂上任何颜色
+    你希望把它的5个单位长度分别涂上红,绿,蓝,绿,红
+    用一个长度为5的字符串表示这个目标:RGBGR
+    每次你可以把一段连续的木板涂成一个给定的颜色,后涂的颜色覆盖先涂的颜色
+    例如第一次把木板涂成RRRRR
+    第二次涂成RGGGR
+    第三次涂成RGBGR,达成目标,返回尽量少的涂色次数
+
+    思路:dp[l][r]:在l...r范围内刷成给定的颜色至少涂几次
+    加入l...r上左右边缘都是一种颜色,那么此时可以看做处理左边界时顺带把右边界解决了
+    那么此时就是dp[l][r-1],或者是dp[l+1][r],二者都可以
+    注意,此时不能看做1+dp[l+1][r-1],因为有可能把内部的元素一起刷了,比如说是AAAAA,这样会
+    导致答案变大
+    如果s[l] != s[r],那么就是切分点问题,那么就找切点m,找到dp[l][m]+dp[m+1][r]
+     */
+    public static int compute2(String str){
+        char[] s = str.toCharArray();
+        int n = s.length;
+        int[][] dp = new int[n][n];
+        dp[n - 1][n - 1] = 1;
+        for(int i = 0;i < n - 1;i++){
+            dp[i][i] = 1;
+            dp[i][i + 1] = s[i] == s[i + 1] ? 1 : 2;
+        }
+        for(int l = n - 3,ans;l >= 0;l--){
+            for(int r = l + 2;r < n;r++){
+                if(s[l] == s[r]){
+                    dp[l][r] = dp[l][r - 1];
+                    //dp[l][r] = dp[l + 1][r];
+                } else {
+                    ans = Integer.MAX_VALUE;
+                    for(int m = l;m < r;m++){
+                        ans = Math.min(ans,dp[l][m] + dp[m + 1][r]);
+                    }
+                    dp[l][r] = ans;
+                }
+            }
+        }
+        return dp[0][n - 1];
+    }
+
+    public static void main1(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        String str = br.readLine();
+        compute2(str);
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    题目3:合唱队
+    有n个身高为hi的人排队列,第一个人直接进队列,后面的人和他前一个比较身高,如果比前一个人身高
+    更高,那么就把他插入当前队列的最右边,如果更矮就插到最左边,当这n个人全部插入之后,得到最终的
+    理想队形,问有多少种初始的队形可以获得理想的队形
+    第一行输入一个整数n,第二行n个整数代表理想队形,最后答案取模19650827
+    n<1000;1000<hi<2000
+
+    思路:比如说想形成4,6,2,8,分为以下可能性
+    (1)4是最后的进入的,那么之前的状况就是[6,2,8],此时又分为两种,6最后进来(a)或者8最后进来(b)
+    (2)8是最后的进入的,那么正确的情况激素[4,6,2],此时又分为4之后进来的(c)还是2最后进来的(d)
+    那么最终的方法数就是a+b+c+d
+    主要还要讨论位置合不合理,比如2,6,4,1,此时就不能分为1最后,因为1比任何数都小,不可能最后进入还在最右边
+    那么就定义dp[l][r][0],代表在l...r范围内左端点是最后进来的,dp[l][r][1],代表右端点是最后进来的
+    对于[a,b,....,c,d],a是l位置,d是r位置,如果a<b,那么能获得dp[l+1][r][0]
+    如果a<d,那么能获得dp[l+1][r][1],同理,讨论d,和c与a作比较
+     */
+    public static int[] nums = new int[1001];
+    public static int[][] dp = new int[1001][2];
+    public static int n;
+    public static int mod = 19650827;
+    public static int compute3(){
+        int[][][] dp = new int[n + 1][n + 1][2];
+        //特殊情况,只有两个数的情况下,如果nums[i]<nums[i+1],比如说是3,4,那么就有可能是3最后
+        //加入,此时满足情况,dp表+1;也有可能是4最后进,满足题意,dp表+1
+        for(int i = 1;i < n;i++){
+            if(nums[i] < nums[i + 1]){
+                dp[i][i + 1][0] = 1;
+                dp[i][i + 1][1] = 1;
+            }
+        }
+        for(int l = n - 2;l >= 1;l--){
+            for(int r = l + 2;r <= n;r++){
+                if(nums[l] < nums[l + 1]){
+                    dp[l][r][0] = (dp[l][r][0] + dp[l + 1][r][0]) % mod;
+                }
+                if(nums[l] < nums[r]){
+                    dp[l][r][0] = (dp[l][r][0] + dp[l + 1][r][1]) % mod;
+                }
+                if(nums[r] > nums[l]){
+                    dp[l][r][1] = (dp[l][r][1] + dp[l][r - 1][0]) % mod;
+                }
+                if(nums[r] > nums[r - 1]){
+                    dp[l][r][1] = (dp[l][r][1] + dp[l][r - 1][1]) % mod;
+                }
+            }
+        }
+        return (dp[1][n][0] + dp[1][n][1]) % mod;
+    }
+
+
+    public static void main2(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        StreamTokenizer in = new StreamTokenizer(br);
+        PrintWriter out = new PrintWriter(new OutputStreamWriter(System.out));
+        while(in.nextToken() != StreamTokenizer.TT_EOF) {
+            n = (int) in.nval;
+            for(int i = 1;i <= n;i++){
+                in.nextToken(); nums[i] = (int) in.nval;
+            }
+            if(n == 1){
+                System.out.println(1);
+            } else {
+                System.out.println(compute3());
+            }
+        }
+        out.flush();
+        out.close();
+        br.close();
+    }
+    /*
+    移除盒子
+    给出一些不同颜色的盒子 boxes ，盒子的颜色由不同的正数表示。
+    你将经过若干轮操作去去掉盒子，直到所有的盒子都去掉为止。
+    每一轮你可以移除具有相同颜色的连续 k 个盒子（k >= 1）
+    这样一轮之后你将得到 k * k 个积分。
+    返回 你能获得的最大积分和 。
+     */
+    //boxes:[l...r]范围上要消除,前面跟着k个连续的和boxes[l]颜色一样的盒子
+    //比如颜色是5 5 5 5 5 6 7 5
+    //         0 1 2 3 4 5 6 7
+    //那么就是f(3,7,3),前面跟着3个和boxes[3]==5一样值的5
+    //在这种情况下返回最大得分
+    //有两种可能性:
+    //(1)前缀先消,将和boxes[l]一样的(包括前面的和后面连续的)一起消去
+    //(2)前缀跟后(枚举),比如说l位置前面有k个2,l包括自己+后面一共有s-k个连续的2
+    //那么此时前面s个2就挨个枚举与后面的2连接起来,看谁的得到值最大
+    public static int f(int[] boxes,int l,int r,int k,int[][][] dp){
+        if(l > r){
+            return 0;
+        }
+        if(dp[l][r][k] > 0){
+            return dp[l][r][k];
+        }
+        //s来到连续的2的最后一个位置
+        int s = l;
+        while(s + 1 <= r && boxes[l] == boxes[s + 1]){
+            s++;
+        }
+        //此时boxes[l...s]都是一种颜色,boxes[s+1]就不是同一种颜色了
+        //cnt是总前缀数量:之前的相同前缀(k个) + l...s这个这部分相同颜色的个数
+        int cnt = k + s - l + 1;
+        //可能性1:前缀先消
+        int ans = cnt * cnt + f(boxes,s + 1,r,0,dp);
+        for(int m = s + 2;m <= r;m++){
+            if(boxes[l] == boxes[m] && boxes[m - 1] != boxes[m]){
+                ans = Math.max(ans,f(boxes,s + 1,m - 1,0,dp) + f(boxes,m,r,cnt,dp));
+            }
+        }
+        dp[l][r][k] = ans;
+        return ans;
+    }
+    public static int removeBoxes(int[] boxes) {
+        int n = boxes.length;
+        int[][][] dp = new int[n][n][n];
+        return f(boxes,0,n - 1,0,dp);
+    }
+    /*
+    题目5:合并石头的最低成本
+    有 n 堆石头排成一排，第 i 堆中有 stones[i] 块石头。
+    每次 移动 需要将 连续的 k 堆石头合并为一堆，而这次移动的成本为这 k 堆中石头的总数。
+    返回把所有石头合并成一堆的最低成本。如果无法合并成一堆，返回 -1 。
+
+    思路:首先特判,如果(n-1)%(k-1)==0,那么最终可以合并成一堆,否则就不行,直接返回-1
+    对于a b c d e f g h i,k=3,可以做以下的讨论,a合并成1分+b~i合并成2份,那么此时最终就是1份,
+    或者a~c合并成1份,d~i合并成2份,以此类推
+    由于当k已经确定,那么最后得到的堆数是完全取决于每次参与合并的石头的堆数的,并且每一堆递增(k-1)个
+    那么dp[l][r]:从l...r范围上逢k合并,就是值范围上合并到不能再合并需要的代价最低是多少
+     */
+    public int mergeStones(int[] stones, int k) {
+        int n = stones.length;
+        if((n - 1) % (k - 1) != 0){
+            return -1;
+        }
+        //求前缀和数组,方便求区间的累加和,开n+1是在0位置放0,方便计算1~k位置的累加和
+        int[] presum = new int[n + 1];
+        for(int i = 0,j = 1,sum = 0;i < n;i++,j++){
+            sum += stones[i];
+            presum[j] = sum;
+        }
+        //dp[l][r]:l...r范围内的石头,合并到不能再合并,份数是确定的,最小代价是多少
+        //对于特殊情况,l==r,此时只有一堆石头,无法合并,所以代价是0,不用填
+        int[][] dp = new int[n][n];
+        for(int l = n - 2,ans;l >= 0;l--){
+            for(int r = l + 1;r < n;r++){
+                ans = Integer.MAX_VALUE;
+                for(int m = l;m < r;m += k - 1){
+                    ans = Math.min(ans,dp[l][m] + dp[m + 1][r]);
+                }
+                //如果最终一定能化为1份,那么就再加上最后一次的合并代价
+                if((r - l) % (k - 1) == 0){
+                    ans += presum[r + 1] - presum[l];
+                }
+                dp[l][r] = ans;
+            }
+        }
+        return dp[0][n - 1];
+    }
+    /*
+    题目6:统计不同回文子序列
+    给你一个字符串 s ，返回 s 中不同的非空回文子序列个数 。
+    由于答案可能很大，请返回对 10^9 + 7 取余 的结果。
+    字符串的子序列可以经由字符串删除 0 个或多个字符获得。
+    如果一个序列与它反转后的序列一致，那么它是回文序列。
+    如果存在某个 i , 满足 ai != bi ，则两个序列 a1, a2, ... 和 b1, b2, ... 不同。
+
+    思路:dp[i][j]:在i...j范围内有多少不同的回文子序列,有以下情况
+    当s[i]!=s[j],那么这两个字符包括上中间的字符肯定不是回文子序列
+    (1)s[i]!=s[j],dp[i][j-1]+dp[i+1][j]-dp[i+1][j-1]
+    (2)s[i]==s[j]==a,又分为以下情况
+    a.i...j内部无a,dp[i+1][j-1]*2+2,这里*2是因为两端填上a后从i+1~j-1范围上的回文子序列都可以
+    和这两个a结合再形成回文子序列,那么*2,然后填上的a组成了aa和a这两种回文子序列,所以*2+2
+    b.i...j内部有一个a,dp[i+1][j-1]*2+1,这种情况单独a的回文子序列已经算过了,所以只有aa这种情况
+    注意,对于aaa这种情况已经在dp[i+1][j-1]*2这种情况里面了
+    c.i...j内部不止一个a,dp[i+1][j-1]*2-dp[l+1][r-1],此时i的右侧离i最近的a位置是l,j的左侧离j最近
+    的a位置是r,此时有可能有重复回文子序列存在,比如说"atassaka",因为对于l+1和r-1本身是还要算这一部分的
+    相当于重复算了一次dp[l+1][r-1];
+     */
+    public int countPalindromicSubsequences(String str) {
+        int mod = 1000000007;
+        char[] s = str.toCharArray();
+        //因为要找离左边和右边最近的a,那么就有一个预处理结构,方便找到最近的a
+        int n = s.length;
+        int[] last = new int[256];
+        //离r最近的a
+        int[] left = new int[n];
+        Arrays.fill(last,-1);
+        for(int i = 0;i < n;i++){
+            left[i] = last[s[i]];
+            last[s[i]] = i;
+        }
+        //离l最近的a
+        int[] right = new int[n];
+        //这里填n是为放方便后面通过l与r的大小比较来确定l~r范围内是否有a字符
+        Arrays.fill(last,n);
+        for(int i = n - 1;i >= 0;i--){
+            right[i] = last[s[i]];
+            last[s[i]] = i;
+        }
+        long[][] dp = new long[n][n];
+        for(int i = 0;i < n;i++){
+            dp[i][i] = 1;
+        }
+        for(int i = n - 2,l,r;i >= 0;i--){
+            for(int j = i + 1;j < n;j++){
+                if(s[i] != s[j]){
+                    dp[i][j] = dp[i + 1][j] + dp[i][j + 1] - dp[i + 1][j - 1] + mod;
+                } else {
+                    l = right[i];
+                    r = left[j];
+                    //l > r说明了i...j内部没有s[i]字符
+                    if(l > r){
+                        dp[i][j] = dp[i + 1][j - 1] * 2 + 2;
+                    } else if(l == r){
+                        dp[i][j] = dp[i + 1][j - 1] * 2 + 1;
+                    } else {
+                        dp[i][j] = dp[i + 1][j - 1] * 2 - dp[l + 1][r - 1] + mod;
+                    }
+                }
+                dp[i][j] %= mod;
+            }
+        }
+        return (int)(dp[0][n - 1] % mod);
+    }
+}
+
+

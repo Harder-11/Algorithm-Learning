@@ -1,0 +1,252 @@
+import java.nio.Buffer;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+
+
+public class Learn {
+    /*
+    子数组最大累加和问题与拓展
+     */
+
+    /*
+    题目1:子数组最大累加和
+    给你一个整数数组 nums ，请你找出一个具有最大和的连续子数组（子数组最少包含一个元素），
+    返回其最大和。
+
+    思路:以i位置结尾的情况下往左延伸的能够得到的最大和
+    那么对于每个位置i有两种情况
+    (1)dp[i] = nums[i]
+    (2)dp[i] = dp[i-1]+nums[i]
+     */
+    //动态规划
+    public static int maxSubArray(int[] nums){
+        int n = nums.length;
+        //dp[i]:子数组必须以i位置的数做结尾,往左能延伸出来的最大累加和
+        int[] dp = new int[n];
+        dp[0] = nums[0];
+        int ans = nums[0];
+        for(int i = 1;i < n;i++){
+            dp[i] = Math.max(nums[i],dp[i - 1] + nums[i]);
+            ans = Math.max(ans,dp[i]);
+        }
+        return ans;
+    }
+    //空间压缩,用一个变量滚动下去
+    public static int maxSubArray1(int[] nums){
+        int n = nums.length;
+        int pre = nums[0];
+        int ans = nums[0];
+        for(int i = 1;i < n;i++){
+            pre = Math.max(nums[i],pre + nums[i]);
+            ans = Math.max(ans,pre);
+        }
+        return ans;
+    }
+    /*
+    不能选相邻元素的最大累加和问题(打家劫舍)
+    你是一个专业的小偷，计划偷窃沿街的房屋。
+    每间房内都藏有一定的现金，影响你偷窃的唯一制约因素就是相邻的房屋装有相互连通的防盗系统，
+    如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。
+    给定一个代表每个房屋存放金额的非负整数数组，计算你不触动警报装置的情况下 ，
+    一夜之内能够偷窃到的最高金额。
+
+    思路:对于每个位置i,dp[i]表示在0~i范围上,可以自由选择数字,但是不能选择相邻数组得到的最大累加和
+    那么有两种情况
+    (1)不要i位置的数字,那么就转移到dp[i-1];
+    (2)要i位置的数字,dp[i-2]+nums[i]或者是nums[i]
+     */
+    public int rob(int[] nums) {
+        int n = nums.length;
+        if(n == 1) return nums[0];
+        if(n == 2) return Math.max(nums[0],nums[1]);
+        int[] dp = new int[n];
+        dp[0] = nums[0];
+        dp[1] = Math.max(nums[0],nums[1]);
+        for(int i = 2;i < n;i++){
+            //本题其实不用Math.max(nums[i],dp[i - 2] + nums[i]),直接写dp[i-2]+nums[i]
+            //因为没有负数,但是如果有负数存在的话就要填上这一句
+            dp[i] = Math.max(dp[i - 1],Math.max(nums[i],dp[i - 2] + nums[i]));
+        }
+        return dp[n - 1];
+    }
+    //空间压缩
+    public int rob1(int[] nums){
+        int n = nums.length;
+        if(n == 1) return nums[0];
+        if(n == 2) return Math.max(nums[0],nums[1]);
+        int prepre = nums[0];
+        int pre = Math.max(nums[0],nums[1]);
+        for(int i = 2,cur;i < n;i++){
+            cur = Math.max(pre,Math.max(nums[i],prepre + nums[i]));
+            prepre = pre;
+            pre = cur;
+        }
+        return pre;
+    }
+    /*
+    题目3:环形数组的最大累加和
+    给定一个长度为 n 的环形整数数组 nums ，返回 nums 的非空 子数组 的最大可能和 。
+    环形数组 意味着数组的末端将会与开头相连呈环状。
+    形式上， nums[i] 的下一个元素是 nums[(i + 1) % n] ，
+    nums[i] 的前一个元素是 nums[(i - 1 + n) % n] 。
+    子数组 最多只能包含固定缓冲区 nums 中的每个元素一次。
+    形式上，对于子数组 nums[i], nums[i + 1], ..., nums[j] ，
+    不存在 i <= k1, k2 <= j 其中 k1 % n == k2 % n 。
+
+    思路:对于环形数组,答案的可能性有两种,即被隔断和不被隔断
+    如果是隔断的,那么肯定是开头要一部分,结尾要一部分,那么就是整体的累加和 - 子数组的最小累加和
+    如果不隔断,那么就成了题目一,取二者的最大值
+    特例:如果一个数组中的最小累加和 = 整体的累加和,那么按照之前的思路,就要把整体的元素全部减去
+    那么最后答案就是0,但是答案的数组不能是空,所以要特判时候有minsum == sum,如果相等,那么就
+    返回的maxsum
+     */
+    public int maxSubarraySumCircular(int[] nums) {
+        int n = nums.length,sum = nums[0],maxsum = nums[0],minsum = nums[0];
+        for(int i = 1,maxpre = nums[0],minpre = nums[0];i < n;i++){
+            sum += nums[i];
+            maxpre = Math.max(nums[i],nums[i] + maxpre);
+            maxsum = Math.max(maxpre,maxsum);
+            minpre = Math.min(nums[i],nums[i] + minpre);
+            minsum = Math.min(minsum,minpre);
+        }
+        return sum == minsum ? maxsum : Math.max(maxsum,sum - minsum);
+    }
+    /*
+    题目4:环形数组中不能选择相邻元素的最大累加和(打家劫舍II)
+    一个专业的小偷，计划偷窃一个环形街道上沿街的房屋，每间房内都藏有一定的现金。
+    这个地方所有的房屋都 围成一圈 ，这意味着第一个房屋和最后一个房屋是紧挨着的。
+    同时，相邻的房屋装有相互连通的防盗系统，如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警 。
+    给定一个代表每个房屋存放金额的非负整数数组nums,请计算在不触动警报装置的情况下,今晚能够偷窃到的最高金额。
+
+     思路:分为两种,一种是要0位置的,一种是不要0位置的
+     如果不要0位置的,那么就是打家劫舍I,从1 ~ n-1
+     */
+    public int robII(int[] nums) {
+        int n = nums.length;
+        if(n == 1){
+            return nums[0];
+        }
+        return Math.max(best(nums,1,n - 1),nums[0] + best(nums,2,n - 2));
+    }
+    public static int best(int[] nums,int l,int r){
+        if(l > r){
+            return 0;
+        }
+        if(l == r){
+            return nums[l];
+        }
+        if(l + 1 == r){
+            return Math.max(nums[l + 1],nums[l]);
+        }
+        int lastLast = nums[l];
+        int last = Math.max(nums[l],nums[l + 1]);
+        for(int i = l + 2,cur;i <= r;i++){
+            cur = Math.max(last,Math.max(nums[i],nums[i] + lastLast));
+            lastLast = last;
+            last = cur;
+        }
+        return last;
+    }
+    /*
+    题目5:打家劫舍IV
+    沿街有一排连续的房屋。每间房屋内都藏有一定的现金。
+    现在有一位小偷计划从这些房屋中窃取现金。
+    由于相邻的房屋装有相互连通的防盗系统，所以小偷 不会窃取相邻的房屋 。
+    小偷的 窃取能力 定义为他在窃取过程中能从单间房屋中窃取的 最大金额 。
+    给你一个整数数组 nums 表示每间房屋存放的现金金额。
+    形式上，从左起第 i 间房屋中放有 nums[i] 美元。
+    另给你一个整数 k ，表示窃贼将会窃取的 最少 房屋数。小偷总能窃取至少 k 间房屋。
+    返回小偷的最小窃取能力。
+
+    这个思路很明显:盗取能力是有一个范围的从min(nums)~max(nums),那么利用二分答案寻找最小
+    的盗窃能力
+     */
+    public int minCapability(int[] nums, int k) {
+        int n = nums.length,l = nums[0],r = nums[0];
+        for(int i = 1;i < n;i++){
+            l = Math.min(l,nums[i]);
+            r = Math.max(r,nums[i]);
+        }
+        int m,ans = 0;
+        while(l <= r){
+            m = (l + r) >> 1;
+            if(mostRob(nums,n,m) >= k){
+                ans = m;
+                r = m - 1;
+            } else {
+                l = m + 1;
+            }
+        }
+        return ans;
+    }
+    public int mostRob(int[] nums,int n,int ability){
+        if(n == 1){
+            return nums[0] <= ability ? 1 : 0;
+        }
+        if(n == 2){
+            return (nums[0] <= ability || nums[1] <= ability) ? 1 : 0;
+        }
+        int[] dp = new int[n];
+        dp[0] = nums[0] <= ability ? 1 : 0;
+        dp[1] = (nums[0] <= ability || nums[1] <= ability) ? 1 : 0;
+        for(int i = 2;i < n;i++){
+            dp[i] = Math.max(dp[i - 1],(nums[i] <= ability ? 1 : 0) + dp[i - 2]);
+        }
+        return dp[n - 1];
+    }
+    //继续优化,使用贪心
+    //能偷就偷,不用原则,因为是算房间数而不是累加和
+    //尽早偷还可以使后面的范围更大,所以这样一定是正确的
+    public static int mostRob3(int[] nums,int n,int ability){
+        int ans = 0;
+        for(int i = 0;i < n;i++){
+            if(nums[i] <= ability){
+                ans++;
+                i++;
+            }
+        }
+        return ans;
+    }
+    /*
+    题目6:子矩阵最大累加和问题
+    给定一个二维数组grid,找到其中子矩阵的最大累加和
+    返回拥有最大累加和的子矩阵左上角和右下角的坐标
+    如果有多个子矩阵都拥有最大累加和,返回哪一个都可以
+
+    思路,对于从up行到down行进行压缩,将从up到down的这几行的每一列全部累加起来加入到nums数组
+    中,然后在nums数组中寻找最大累加和
+     */
+    public static int[] getMaxMatrix(int[][] grid){
+        int n = grid.length;
+        int m = grid[0].length;
+        int max = Integer.MIN_VALUE;
+        int a = 0,b = 0,c = 0,d = 0;
+        int[] nums = new int[m];
+        for(int up = 0;up < n;up++){
+            //每次up向下移动时就将nums全部覆盖为0
+            Arrays.fill(nums,0);
+            for(int down = up;down < n;down++){
+                //从down开始,每一层都加上down层的元素
+                for(int l = 0,r = 0,pre = Integer.MIN_VALUE;r < m;r++){
+                    nums[r] += grid[down][r];
+                    if(pre >= 0){
+                        pre += nums[r];
+                    } else {
+                        pre = nums[r];
+                        l = r;
+                    }
+                    if(pre > max){
+                        max = pre;
+                        a = up;
+                        b = l;
+                        c = down;
+                        d = r;
+                    }
+                }
+            }
+        }
+        return new int[]{a,b,c,d};
+    }
+}
+
